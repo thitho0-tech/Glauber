@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,20 +8,28 @@ import { Clapperboard, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
-export default function Login() {
+export default function UpdatePassword() {
   const nav = useNavigate();
-  const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
+  const [confirmar, setConfirmar] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function entrar(e: React.FormEvent) {
+  async function atualizar(e: React.FormEvent) {
     e.preventDefault();
+    if (senha.length < 8) {
+      toast.error("Senha precisa ter pelo menos 8 caracteres");
+      return;
+    }
+    if (senha !== confirmar) {
+      toast.error("As senhas não coincidem");
+      return;
+    }
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
+    const { error } = await supabase.auth.updateUser({ password: senha });
     setLoading(false);
     if (error) return toast.error(error.message);
-    toast.success("Bem-vindo de volta!");
-    nav("/", { replace: true });
+    toast.success("Senha atualizada!");
+    nav("/login");
   }
 
   return (
@@ -31,35 +39,24 @@ export default function Login() {
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
             <Clapperboard className="h-6 w-6" />
           </div>
-          <CardTitle className="mt-3 text-2xl">Entrar no Glauber</CardTitle>
-          <CardDescription>Gestão de produções audiovisuais</CardDescription>
+          <CardTitle className="mt-3 text-2xl">Nova senha</CardTitle>
+          <CardDescription>Escolha uma senha com pelo menos 8 caracteres</CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={entrar} className="space-y-4">
+          <form onSubmit={atualizar} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Label htmlFor="senha">Nova senha</Label>
+              <Input id="senha" type="password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="senha">Senha</Label>
-              <Input id="senha" type="password" value={senha} onChange={(e) => setSenha(e.target.value)} required />
-            </div>
-            <div className="flex justify-end">
-              <Link to="/reset-password" className="text-sm text-primary hover:underline">
-                Esqueci minha senha
-              </Link>
+              <Label htmlFor="confirmar">Confirmar senha</Label>
+              <Input id="confirmar" type="password" minLength={8} value={confirmar} onChange={(e) => setConfirmar(e.target.value)} required />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-              Entrar
+              Atualizar senha
             </Button>
           </form>
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Não tem conta?{" "}
-            <Link to="/signup" className="font-medium text-primary hover:underline">
-              Crie sua produtora
-            </Link>
-          </p>
         </CardContent>
       </Card>
     </div>

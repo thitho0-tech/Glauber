@@ -5,6 +5,8 @@ import { AuthGuard } from "@/components/auth/AuthGuard";
 import { AppLayout } from "@/components/layout/AppLayout";
 import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
+import ResetPassword from "@/pages/ResetPassword";
+import UpdatePassword from "@/pages/UpdatePassword";
 import Dashboard from "@/pages/Dashboard";
 import Projects from "@/pages/Projects";
 import ProjectDetail from "@/pages/ProjectDetail";
@@ -37,6 +39,8 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/od/:token" element={<PublicCallSheet />} />
           <Route path="/convite" element={<InviteAccept />} />
 

@@ -182,7 +182,11 @@ export default function Schedule() {
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button type="submit" disabled={criar.isPending}>{criar.isPending ? "Criando..." : "Criar planejamento"}</Button>
+                <span title={!minData || !maxData ? "Defina as datas do projeto primeiro" : undefined}>
+                  <Button type="submit" disabled={criar.isPending || !minData || !maxData}>
+                    {criar.isPending ? "Criando..." : "Criar planejamento"}
+                  </Button>
+                </span>
               </DialogFooter>
             </form>
           </DialogContent>
