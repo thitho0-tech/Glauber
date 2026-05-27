@@ -218,7 +218,7 @@ export default function Team() {
                   <div className="grid grid-cols-2 gap-3">
                     <FuncaoAvSelect funcoes={funcoesAv ?? []} />
                     <div className="space-y-1.5">
-                      <Label htmlFor="valor_contratacao_c">Valor de contratacao (R$)</Label>
+                      <Label htmlFor="valor_contratacao_c">Valor de contratação (R$)</Label>
                       <Input id="valor_contratacao_c" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
                     </div>
                   </div>
@@ -283,7 +283,7 @@ export default function Team() {
                   <div className="grid grid-cols-2 gap-3">
                     <FuncaoAvSelect funcoes={funcoesAv ?? []} />
                     <div className="space-y-1.5">
-                      <Label htmlFor="valor_contratacao_n">Valor de contratacao (R$)</Label>
+                      <Label htmlFor="valor_contratacao_n">Valor de contratação (R$)</Label>
                       <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
                     </div>
                   </div>
