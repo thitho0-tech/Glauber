@@ -142,7 +142,7 @@ export default function InviteAccept() {
             <Mail className="h-5 w-5 text-primary" /> Convite para projeto
           </CardTitle>
           <CardDescription>
-            Você foi convidado(a) para participar de um projeto no CINEFLOW.
+            Você foi convidado(a) para participar de um projeto no Glauber.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

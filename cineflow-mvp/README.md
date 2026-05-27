@@ -1,4 +1,4 @@
-# CINEFLOW — MVP
+# Glauber — MVP
 
 Plataforma SaaS para gestão de produções audiovisuais brasileiras. Stack: React 18 + Vite + TypeScript + Tailwind + shadcn/ui + Supabase.
 
@@ -88,4 +88,4 @@ cineflow-mvp/
 - Stripboard drag-and-drop
 
 ## Licença
-Proprietário — CINEFLOW © 2026
+Proprietário — Glauber © 2026

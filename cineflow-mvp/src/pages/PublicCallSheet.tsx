@@ -41,7 +41,7 @@ export default function PublicCallSheet() {
     <div className="min-h-screen bg-muted/30 p-4 md:p-8">
       <div className="mx-auto max-w-2xl space-y-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Clapperboard className="h-4 w-4" /> CINEFLOW · Ordem do Dia
+          <Clapperboard className="h-4 w-4" /> Glauber · Ordem do Dia
         </div>
         <Card>
           <CardHeader>
@@ -85,7 +85,7 @@ export default function PublicCallSheet() {
         )}
 
         <p className="pt-4 text-center text-xs text-muted-foreground">
-          Documento gerado pelo CINEFLOW. Em caso de mudança, uma nova versão será emitida e este link sempre mostrará a mais recente.
+          Documento gerado pelo Glauber. Em caso de mudança, uma nova versão será emitida e este link sempre mostrará a mais recente.
         </p>
       </div>
     </div>
