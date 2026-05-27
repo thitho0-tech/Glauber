@@ -1,0 +1,86 @@
+O Windows PowerShell
+Copyright (C) Microsoft Corporation. Todos os direitos reservados.
+
+Instale o PowerShell mais recente para obter novos recursos e aprimoramentos! https://aka.ms/PSWindows
+
+PS C:\Users\Thiago França> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy ocr-extract --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (ocr-extract): supabase/functions/ocr-extract/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: ocr-extract
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> vercel--prod
+  Inspect     https://vercel.com/cineflow-s-projects/cineflow-mvp/ApBFBV7ZKCUdqcx8cevEunFKZrsu
+▲ Production  https://cineflow-5x1a303lz-cineflow-s-projects.vercel.app
+▲ Aliased     https://cineflow-mvp.vercel.app
+
+✓ Ready in 29s
+> Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> vercel--prod
+  Inspect     https://vercel.com/cineflow-s-projects/cineflow-mvp/EZTkeEb1mTB7q5NsbV1WHWtk2eMC
+▲ Production  https://cineflow-6jik26vzy-cineflow-s-projects.vercel.app
+▲ Aliased     https://cineflow-mvp.vercel.app
+
+✓ Ready in 23s
+> Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy ocr-text-extract --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (ocr-text-extract): supabase/functions/ocr-text-extract/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: ocr-text-extract
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> vercel--prod
+  Inspect     https://vercel.com/cineflow-s-projects/cineflow-mvp/eZ67vkJE1KHDTbxyeMpUQYLPy1aY
+▲ Production  https://cineflow-ns23l3tjy-cineflow-s-projects.vercel.app
+▲ Aliased     https://cineflow-mvp.vercel.app
+
+✓ Ready in 24s
+> Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy ocr-text-extract
+WARNING: Docker is not running
+Uploading asset (ocr-text-extract): supabase/functions/ocr-text-extract/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: ocr-text-extract
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set GMAIL_USER=thitho0@gmail.com
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set GMAIL_APP_PASSWORD="vsag ciqt tiro eutu"
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set GMAIL_FROM_NAME=CINEFLOW
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy send-email --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (send-email): supabase/functions/send-email/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: send-email
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy send-email --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (send-email): supabase/functions/send-email/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: send-email
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy ocr-text-extract
+WARNING: Docker is not running
+Uploading asset (ocr-text-extract): supabase/functions/ocr-text-extract/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: ocr-text-extract
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy aceitar-convite --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (aceitar-convite): supabase/functions/aceitar-convite/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: aceitar-convite
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> vercel--prod
+  Inspect     https://vercel.com/cineflow-s-projects/cineflow-mvp/BtsWHegEw45dJ5GL514QLYGWGap6
+▲ Production  https://cineflow-qpihilcqh-cineflow-s-projects.vercel.app
+▲ Aliased     https://cineflow-mvp.vercel.app
+
+✓ Ready in 36s
+> Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>

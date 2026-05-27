@@ -1,0 +1,270 @@
+================================================================================
+                    GLAUBER — RESUMO DE ENTREGA
+          Roadmap Consolidado com Sprint 1A/1B (Command Center First)
+================================================================================
+
+Data: 26 de maio de 2026
+Status: ✅ COMPLETO - Pronto para implementação
+
+================================================================================
+O QUE MUDOU
+================================================================================
+
+ANTES (V1):
+  Sprint 1 (3-4 sem): Fundação Fiscal & Auth
+
+DEPOIS (V2) - ⭐ RECOMENDADO:
+  Sprint 1A (2-3 sem): Command Center + Auth [MÁXIMA PRIORIDADE]
+  Sprint 1B (2-3 sem): Fundação Fiscal
+
+Impacto: Retenção imediata vs confiança depois (psicologia antes de técnica)
+
+================================================================================
+ARQUIVOS CRIADOS/ATUALIZADOS
+================================================================================
+
+✅ NOVOS DOCUMENTOS (Estratégia + Operacional)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. GLAUBER_PRIORIDADE_MAXIMA_COMMAND_CENTER.md
+   • Documento estratégico original
+   • Por que Command Center é máxima prioridade AGORA
+   • Restruturação de Sprint 1 em 1A + 1B
+   • Schema, hooks React, success criteria
+   • Checklist de início
+   Tamanho: ~8 KB | Leitura: 20 min
+
+2. GLAUBER_COMANDO_IMEDIATO_SPRINT1A.md
+   • Guia operacional para execução
+   • O que fazer nos próximos 2 dias (Tech Lead, PM, Designer)
+   • Tasks detalhadas Sprint 1A + 1B
+   • Checklist Sprint 1A
+   • FAQ + respostas
+   Tamanho: ~6 KB | Leitura: 15 min
+
+3. ROADMAP_ATUALIZADO_V2_SPRINT1A_PRIORIDADE.md
+   • Visão completa do novo roadmap (7 sprints + 2 fases)
+   • Tabela de 7 sprints com durações
+   • Detalhes Sprint 1A: arquitetura, schema SQL, React code
+   • Detalhes Sprint 1B: fundação fiscal
+   • Comparação "psicologia vs técnica"
+   • Diferencial vs concorrentes
+   Tamanho: ~10 KB | Leitura: 25 min
+
+✅ DOCUMENTOS ATUALIZADOS (Versão Consolidada)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. GLAUBER_Sumario_Executivo.md
+   • Tabela de 7 sprints agora com Sprint 1A/1B
+   • Visão executiva em 2 páginas
+   • Atualizado ✅
+
+2. GLAUBER_CONTEXTO.md
+   • Seção "Roadmap em 7 Sprints" reescrita
+   • Sprint 1A: Command Center (psicologia)
+   • Sprint 1B: Fundação Fiscal (técnica)
+   • Atualizado ✅
+
+3. README_GLAUBER.md
+   • Matriz de decisão rápida atualizada
+   • "Por onde começamos?" agora mostra Sprint 1A
+   • Atualizado ✅
+
+✅ DOCUMENTOS MANTIDOS (Ainda válidos)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. GLAUBER_Roadmap_Consolidado_V1.docx
+   • Documento principal em Word (20+ páginas)
+   • Contém: 107 itens, 4 personas, 5 fundações, 7 sprints, rebranding
+   • ⚠️  Requer atualização manual Sprint 1A/1B (pendente)
+
+2. GLAUBER_Sprint1_Guia_Tecnico.md
+   • Guia técnico detalhado para Sprint 1
+   • Migrations SQL, componentes React, DoD
+   • ✅ Válido; usar parte "Fiscal" para Sprint 1B
+
+3. Auditoria_Usabilidade_4Personas.md
+   • Documento base: 750 linhas, 4 personas (Chico, Mariana, Tereza, Caio)
+   • Não mudou; continua como referência
+
+4. Relatório Master de Avaliação Técnica.pdf
+   • Documento base: 5 páginas, análise técnica
+   • Não mudou; continua como referência
+
+================================================================================
+ESTRUTURA VISUAL DO NOVO ROADMAP
+================================================================================
+
+Semana 1-3:     SPRINT 1A — Command Center + Auth ⭐
+                ├─ Dashboard realtime em tempo real
+                ├─ 4 visões segmentadas (DP, Diretor, AD, Colaborador)
+                ├─ Supabase Realtime (WebSocket)
+                ├─ Sucesso: < 2s load, < 500ms realtime
+                └─ ENTREGA: Usuário retido (psicologia)
+
+Semana 4-6:     SPRINT 1B — Fundação Fiscal
+                ├─ Storage privado
+                ├─ Locações, fornecedores, upload NF
+                ├─ Audit log, regime contratação
+                ├─ Integração com KPIs
+                └─ ENTREGA: Dashboard abastecido (confiança)
+
+Semana 7-9:     SPRINT 2 — Conversa Criativa
+                └─ Tarefas, atas, aprovação, @menção
+
+Semana 10-13:   SPRINT 3 — Decupagem Viva
+                └─ IA→registros, edição planos, versionamento
+
+Semana 14-17:   SPRINT 4 — Stripboard + DOOD + OD
+                └─ dia_cenas, DOOD, OD puxando cenas
+
+Semana 18-23:   SPRINT 5 — Frame.io Brasileiro
+                └─ Player timecode, rushes, takes
+
+Semana 24-28:   SPRINT 6 — Folha + Pacote Funcultura
+                └─ Orçamento 3 níveis, folha, RPA, pacote prestação
+
+Semana 29-31:   SPRINT 7 — Refinamentos + Lançamento
+                └─ Multi-produtora, CNPJ, versões, festivais
+
+TOTAL: 28 semanas (Sprint 1 = 4-6 semanas em 2 fases)
+
+================================================================================
+POR QUÊ COMMAND CENTER PRIMEIRO?
+================================================================================
+
+TWO FOUNDATIONS (precisam estar juntas, MAS EM ORDEM):
+
+1. PSICOLÓGICA (Sprint 1A): Usuário vê valor → continua usando
+   • Dashboard bonito em tempo real
+   • "Primeira impressão" importa
+   • DIFERENCIAL: Ninguém no Brasil tem isso (Movie Magic não, StudioBinder não)
+   • IMPACTO: Retenção imediata
+
+2. TÉCNICA (Sprint 1B): Dados corretos → confia na ferramenta
+   • Storage seguro, audit trail, NF parsing
+   • Precisa estar sólido, mas não precisa ser lindo
+   • IMPACTO: Confiança legal + segurança
+
+ORDEM ESTRATÉGICA:
+  Semana 1-3: Usuário apaixonado (psicologia)
+  Semana 4-6: Usuário confiante (técnica)
+  Resultado: Retenção 100%
+
+================================================================================
+PRÓXIMAS AÇÕES (24-48 HORAS)
+================================================================================
+
+TECH LEAD:
+  ☐ Validar Supabase Realtime (websocket em staging)
+  ☐ Testar load: 50+ usuários simultâneos
+  ☐ Planejar load testing infrastructure
+  ☐ Estimar pontos para Sprint 1A
+
+PM:
+  ☐ Comunicar mudança com DP (Tereza) + Produtor (Chico)
+  ☐ Validar que Command Center é "primeira coisa" que querem
+  ☐ Schedular kick-off para início Sprint 1A
+
+DESIGNER:
+  ☐ Sketchar 4 visões do Command Center
+  ☐ Paleta de cores para KPIs
+  ☐ Iconografia para métricas
+
+DEVOPS:
+  ☐ Preparar CI/CD para staging deploy rápido
+  ☐ Setup para testes de carga
+
+================================================================================
+DOCUMENTOS PARA DISTRIBUIR AO TIME
+================================================================================
+
+Para DP (Tereza) + Produtor (Chico):
+  → GLAUBER_Sumario_Executivo.md (15 min)
+  → GLAUBER_COMANDO_IMEDIATO_SPRINT1A.md (15 min)
+  → "Por que Command Center primeiro?" (5 min)
+
+Para Tech Lead:
+  → ROADMAP_ATUALIZADO_V2_SPRINT1A_PRIORIDADE.md (25 min)
+  → GLAUBER_COMANDO_IMEDIATO_SPRINT1A.md (15 min)
+  → GLAUBER_Sprint1_Guia_Tecnico.md (45 min)
+
+Para Designer:
+  → GLAUBER_CONTEXTO.md seção "Princípios de Design" (10 min)
+  → ROADMAP_ATUALIZADO_V2_SPRINT1A_PRIORIDADE.md (25 min)
+  → Mockups de 4 visões (criar)
+
+Para PM:
+  → GLAUBER_Sumario_Executivo.md (15 min)
+  → GLAUBER_CONTEXTO.md (30 min)
+  → ROADMAP_ATUALIZADO_V2_SPRINT1A_PRIORIDADE.md (25 min)
+
+================================================================================
+CHECKLIST SPRINT 1A (COMEÇAR EM BREVE)
+================================================================================
+
+Setup & Infra:
+  ☐ Tech Lead: validou Supabase Realtime + load test plan
+  ☐ PM: comunicou com DP/Produtor sobre prioridade
+  ☐ Designer: mockups das 4 visões
+  ☐ Criar migration 0024_projeto_kpis.sql
+  ☐ Setup CI/CD para staging deploy
+
+Development:
+  ☐ Criar componente <CommandCenter />
+  ☐ Criar hook useProjectKPIs(projectId)
+  ☐ Setup Supabase Realtime subscription
+  ☐ Implementar 4 visões segmentadas
+  ☐ Auth: senha 8 chars + Magic Link + RLS
+
+Testing & Validation:
+  ☐ Teste com 50+ usuários simultâneos
+  ☐ Validar: < 2s load, < 500ms realtime
+  ☐ Validação com DP/Produtor
+  ☐ Deploy staging
+
+================================================================================
+MÉTRICAS DE SUCESSO SPRINT 1A
+================================================================================
+
+✅ Dashboard carrega em < 2s
+✅ Realtime atualiza < 500ms após mudança
+✅ 4 visões segmentadas funcionam corretamente
+✅ Zero erros em 50+ usuários simultâneos
+✅ DP + Produtor dizem "é isso que esperava"
+✅ Alertas de edital aparecem corretamente
+
+================================================================================
+RESULTADO ESPERADO (FIM SPRINT 1A - SEMANA 3)
+================================================================================
+
+Usuário loga no GLAUBER
+  → vê um dashboard bonito, em tempo real
+  → mostra exatamente o que precisa saber sobre seu projeto
+  → "Isso é útil! Continuo usando"
+  → "Ninguém mais tem isso no mercado"
+
+IMPACTO:
+  ✅ Retenção imediata
+  ✅ Diferencial claro vs concorrentes
+  ✅ DP + Produtor já veem valor no dia 1
+
+================================================================================
+DÚVIDAS? VEJA:
+================================================================================
+
+"Por quê Command Center primeiro?"
+  → GLAUBER_COMANDO_IMEDIATO_SPRINT1A.md / "Possíveis Objeções"
+
+"Como é a arquitetura?"
+  → ROADMAP_ATUALIZADO_V2_SPRINT1A_PRIORIDADE.md / "Sprint 1A - Arquitetura"
+
+"Quais são as próximas ações?"
+  → GLAUBER_COMANDO_IMEDIATO_SPRINT1A.md / "Ação Imediata"
+
+"Quanto tempo vai levar?"
+  → Ambos os docs / "2-3 semanas Sprint 1A + 2-3 semanas Sprint 1B"
+
+================================================================================
+MERCADO ESTÁ ESPERANDO. VAMOS ENTREGAR.
+================================================================================

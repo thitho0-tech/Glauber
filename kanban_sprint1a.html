@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sprint 1A Kanban — GLAUBER</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 24px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+      color: #1a1a1a;
+      margin-bottom: 8px;
+      font-size: 28px;
+    }
+
+    .header p {
+      color: #666;
+      margin-bottom: 12px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .stat-box {
+      background: #f5f5f5;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-box .number {
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .stat-box .label {
+      font-size: 12px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    .kanban-board {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      min-height: 600px;
+    }
+
+    .column {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .column-header {
+      font-weight: 600;
+      padding-bottom: 12px;
+      border-bottom: 2px solid #e0e0e0;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .column-header.not-started {
+      border-bottom-color: #9e9e9e;
+    }
+
+    .column-header.in-progress {
+      border-bottom-color: #2196f3;
+    }
+
+    .column-header.review {
+      border-bottom-color: #ff9800;
+    }
+
+    .column-header.done {
+      border-bottom-color: #4caf50;
+    }
+
+    .column-count {
+      background: #f0f0f0;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    .tasks-container {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .task-card {
+      background: #f9f9f9;
+      border-left: 4px solid #667eea;
+      padding: 12px;
+      border-radius: 6px;
+      cursor: grab;
+      transition: all 0.2s;
+      font-size: 13px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .task-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .task-card.grabbing {
+      cursor: grabbing;
+      opacity: 0.7;
+    }
+
+    .task-id {
+      font-weight: 600;
+      color: #667eea;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .task-title {
+      color: #1a1a1a;
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+
+    .task-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #999;
+    }
+
+    .story-points {
+      background: #e8eaf6;
+      color: #667eea;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+
+    .dependencies {
+      background: #fff3cd;
+      color: #856404;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+    }
+
+    .column-over {
+      background: #f0f4ff;
+    }
+
+    .progress-bar {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .progress-title {
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: #1a1a1a;
+    }
+
+    .progress-bar-bg {
+      height: 8px;
+      background: #e0e0e0;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      transition: width 0.3s;
+      border-radius: 4px;
+    }
+
+    .progress-text {
+      font-size: 12px;
+      color: #666;
+      text-align: right;
+    }
+
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 12px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 12px;
+      color: #1565c0;
+    }
+
+    @media (max-width: 1200px) {
+      .kanban-board {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .stats {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🚀 Sprint 1A Kanban — GLAUBER</h1>
+      <p>Command Center + Auth (Dashboard Realtime) — Máxima Prioridade</p>
+      <div class="stats">
+        <div class="stat-box">
+          <div class="number" id="total-tasks">18</div>
+          <div class="label">Total Tasks</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="total-points">50</div>
+          <div class="label">Story Points</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="done-count">0</div>
+          <div class="label">Concluídas</div>
+        </div>
+        <div class="stat-box">
+          <div class="number" id="progress-pct">0%</div>
+          <div class="label">Progresso</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="kanban-board" id="kanban-board">
+      <div class="column" data-status="not-started">
+        <div class="column-header not-started">
+          <span>Não Iniciado</span>
+          <span class="column-count">18</span>
+        </div>
+        <div class="tasks-container" id="not-started"></div>
+      </div>
+
+      <div class="column" data-status="in-progress">
+        <div class="column-header in-progress">
+          <span>Em Progresso</span>
+          <span class="column-count">0</span>
+        </div>
+        <div class="tasks-container" id="in-progress"></div>
+      </div>
+
+      <div class="column" data-status="review">
+        <div class="column-header review">
+          <span>Review</span>
+          <span class="column-count">0</span>
+        </div>
+        <div class="tasks-container" id="review"></div>
+      </div>
+
+      <div class="column" data-status="done">
+        <div class="column-header done">
+          <span>Pronto ✅</span>
+          <span class="column-count">0</span>
+        </div>
+        <div class="tasks-container" id="done"></div>
+      </div>
+    </div>
+
+    <div class="progress-bar">
+      <div class="progress-title">Progresso Total</div>
+      <div class="progress-bar-bg">
+        <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+      </div>
+      <div class="progress-text" id="progress-text">0 de 50 pontos concluídos</div>
+    </div>
+
+    <div class="info-box">
+      💡 <strong>Dica:</strong> Arraste tasks entre colunas para atualizar status.
+      Os dados são salvos automaticamente. Use para acompanhar progresso diário da Sprint 1A.
+    </div>
+  </div>
+
+  <script>
+    const tasks = [
+      { id: '1A.1.1', title: 'Setup pasta `/dashboard`', points: 2, deps: 'Nenhuma', group: 'Dashboard' },
+      { id: '1A.1.2', title: 'Layout base dashboard', points: 3, deps: '1A.1.1', group: 'Dashboard' },
+      { id: '1A.1.3', title: 'Conectar Supabase Realtime', points: 3, deps: '1A.1.2', group: 'Dashboard' },
+
+      { id: '1A.2.1', title: 'Criar migration 0024', points: 2, deps: 'Nenhuma', group: 'Schema' },
+      { id: '1A.2.2', title: 'Definir schema projeto_kpis', points: 3, deps: '1A.2.1', group: 'Schema' },
+      { id: '1A.2.3', title: 'Criar triggers automáticos', points: 3, deps: '1A.2.2', group: 'Schema' },
+
+      { id: '1A.3.1', title: 'Hook useProjectKPIs()', points: 3, deps: '1A.1.3, 1A.2.3', group: 'Hook' },
+      { id: '1A.3.2', title: 'Testes do hook', points: 2, deps: '1A.3.1', group: 'Hook' },
+
+      { id: '1A.4.1', title: 'Visão DP/Produtor', points: 3, deps: '1A.3.1', group: 'Visões' },
+      { id: '1A.4.2', title: 'Visão Diretor', points: 3, deps: '1A.3.1', group: 'Visões' },
+      { id: '1A.4.3', title: 'Visão AD', points: 3, deps: '1A.3.1', group: 'Visões' },
+      { id: '1A.4.4', title: 'Visão Colaborador', points: 2, deps: '1A.3.1', group: 'Visões' },
+
+      { id: '1A.5.1', title: 'Validação senha 8 chars', points: 1, deps: 'Nenhuma', group: 'Auth' },
+      { id: '1A.5.2', title: 'Magic Link flow', points: 3, deps: '1A.5.1', group: 'Auth' },
+      { id: '1A.5.3', title: 'RLS por projeto', points: 3, deps: '1A.2.2', group: 'Auth' },
+
+      { id: '1A.6.1', title: 'Unit tests', points: 2, deps: '1A.3.2', group: 'Testes' },
+      { id: '1A.6.2', title: 'Integration tests', points: 3, deps: '1A.4.4', group: 'Testes' },
+      { id: '1A.6.3', title: 'Performance test', points: 3, deps: '1A.6.2', group: 'Testes' },
+
+      { id: '1A.7.1', title: 'Setup load test (50+ users)', points: 3, deps: '1A.6.3', group: 'Load' },
+
+      { id: '1A.8.1', title: 'Deploy staging', points: 2, deps: '1A.7.1', group: 'Deploy' },
+      { id: '1A.8.2', title: 'Validação com DP', points: 2, deps: '1A.8.1', group: 'Deploy' }
+    ];
+
+    // Load state from localStorage
+    function loadState() {
+      const saved = localStorage.getItem('kanban-sprint1a');
+      return saved ? JSON.parse(saved) : {};
+    }
+
+    function saveState() {
+      const state = {};
+      document.querySelectorAll('.task-card').forEach(card => {
+        state[card.dataset.id] = card.parentElement.id;
+      });
+      localStorage.setItem('kanban-sprint1a', JSON.stringify(state));
+      updateStats();
+    }
+
+    function createTaskCard(task) {
+      const card = document.createElement('div');
+      card.className = 'task-card';
+      card.draggable = true;
+      card.dataset.id = task.id;
+      card.innerHTML = `
+        <div class="task-id">${task.id}</div>
+        <div class="task-title">${task.title}</div>
+        <div class="task-meta">
+          <span class="story-points">${task.points} pts</span>
+          ${task.deps !== 'Nenhuma' ? `<span class="dependencies">${task.deps}</span>` : ''}
+        </div>
+      `;
+
+      card.addEventListener('dragstart', (e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        card.classList.add('grabbing');
+      });
+
+      card.addEventListener('dragend', (e) => {
+        card.classList.remove('grabbing');
+        document.querySelectorAll('.column').forEach(col => col.classList.remove('column-over'));
+      });
+
+      return card;
+    }
+
+    function initKanban() {
+      const state = loadState();
+      const containers = {
+        'not-started': document.getElementById('not-started'),
+        'in-progress': document.getElementById('in-progress'),
+        'review': document.getElementById('review'),
+        'done': document.getElementById('done')
+      };
+
+      // Adicionar tasks
+      tasks.forEach(task => {
+        const status = state[task.id] || 'not-started';
+        const card = createTaskCard(task);
+        containers[status].appendChild(card);
+      });
+
+      // Setup drag and drop
+      document.querySelectorAll('.tasks-container').forEach(container => {
+        container.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          container.parentElement.classList.add('column-over');
+        });
+
+        container.addEventListener('dragleave', (e) => {
+          if (e.target === container) {
+            container.parentElement.classList.remove('column-over');
+          }
+        });
+
+        container.addEventListener('drop', (e) => {
+          e.preventDefault();
+          container.parentElement.classList.remove('column-over');
+          const card = document.querySelector('[draggable="true"]');
+          if (card) {
+            container.appendChild(card);
+            saveState();
+          }
+        });
+      });
+
+      updateStats();
+    }
+
+    function updateStats() {
+      const done = document.querySelectorAll('#done .task-card').length;
+      const inProgress = document.querySelectorAll('#in-progress .task-card').length;
+      const review = document.querySelectorAll('#review .task-card').length;
+      const notStarted = document.querySelectorAll('#not-started .task-card').length;
+
+      // Atualizar contadores nas colunas
+      document.querySelectorAll('.column-count').forEach((count, idx) => {
+        const counts = [notStarted, inProgress, review, done];
+        count.textContent = counts[idx];
+      });
+
+      // Calcular pontos
+      const donePoints = Array.from(document.querySelectorAll('#done .task-card')).reduce((sum, card) => {
+        const taskId = card.dataset.id;
+        const task = tasks.find(t => t.id === taskId);
+        return sum + (task ? task.points : 0);
+      }, 0);
+
+      const totalPoints = 50;
+      const percentage = Math.round((donePoints / totalPoints) * 100);
+
+      document.getElementById('done-count').textContent = done;
+      document.getElementById('progress-pct').textContent = percentage + '%';
+      document.getElementById('progress-fill').style.width = percentage + '%';
+      document.getElementById('progress-text').textContent = `${donePoints} de ${totalPoints} pontos concluídos`;
+    }
+
+    // Inicializar
+    initKanban();
+  </script>
+</body>
+</html>

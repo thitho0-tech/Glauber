@@ -1,0 +1,298 @@
+O Windows PowerShell
+Copyright (C) Microsoft Corporation. Todos os direitos reservados.
+
+Instale o PowerShell mais recente para obter novos recursos e aprimoramentos! https://aka.ms/PSWindows
+
+PS C:\Users\Thiago França> cd C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
+Set-Location : Não é possível localizar um parâmetro posicional que aceite o argumento
+'França\Documents\Claude\Projects\Cineflow\cineflow-mvp'.
+No linha:1 caractere:1
++ cd C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Set-Location], ParameterBindingExc
+   eption
+    + FullyQualifiedErrorId : PositionalParameterNotFound,Microsoft.PowerShell.Command
+   s.SetLocationCommand
+
+PS C:\Users\Thiago França> C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
+C:\Users\Thiago : O termo 'C:\Users\Thiago' não é reconhecido como nome de cmdlet,
+função, arquivo de script ou programa operável. Verifique a grafia do nome ou, se um
+caminho tiver sido incluído, veja se o caminho está correto e tente novamente.
+No linha:1 caractere:1
++ C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mv ...
++ ~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Users\Thiago:String) [], CommandNotF
+   oundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\Thiago França> cd: C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
+cd: : O termo 'cd:' não é reconhecido como nome de cmdlet, função, arquivo de script
+ou programa operável. Verifique a grafia do nome ou, se um caminho tiver sido
+incluído, veja se o caminho está correto e tente novamente.
+No linha:1 caractere:1
++ cd: C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflo ...
++ ~~~
+    + CategoryInfo          : ObjectNotFound: (cd::String) [], CommandNotFoundExceptio
+   n
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\Thiago França> cd
+PS C:\Users\Thiago França> cd..
+PS C:\Users> C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
+C:\Users\Thiago : O termo 'C:\Users\Thiago' não é reconhecido como nome de cmdlet,
+função, arquivo de script ou programa operável. Verifique a grafia do nome ou, se um
+caminho tiver sido incluído, veja se o caminho está correto e tente novamente.
+No linha:1 caractere:1
++ C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mv ...
++ ~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Users\Thiago:String) [], CommandNotF
+   oundException
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users> cd \Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
+Set-Location : Não é possível localizar um parâmetro posicional que aceite o argumento
+'França\Documents\Claude\Projects\Cineflow\cineflow-mvp'.
+No linha:1 caractere:1
++ cd \Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Set-Location], ParameterBindingExc
+   eption
+    + FullyQualifiedErrorId : PositionalParameterNotFound,Microsoft.PowerShell.Command
+   s.SetLocationCommand
+
+PS C:\Users> cd C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp
+Set-Location : Não é possível localizar um parâmetro posicional que aceite o argumento
+'França\Documents\Claude\Projects\Cineflow\cineflow-mvp'.
+No linha:1 caractere:1
++ cd C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : InvalidArgument: (:) [Set-Location], ParameterBindingExc
+   eption
+    + FullyQualifiedErrorId : PositionalParameterNotFound,Microsoft.PowerShell.Command
+   s.SetLocationCommand
+
+PS C:\Users> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0011_b5_fase2_emails.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Write-Host "✓ Migration 0011 copiada (221 linhas)"
+✓ Migration 0011 copiada (221 linhas)
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0012_c1_contratos.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Write-Host "✓ Migration 0012 copiada"
+✓ Migration 0012 copiada
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0013_d1_figurino_arte.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0014_d2_personagens.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0015_d3_decupagem.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0016_c3_c4_rbac.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0017_d6_documentos.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase --version
+supabase : O termo 'supabase' não é reconhecido como nome de cmdlet, função, arquivo
+de script ou programa operável. Verifique a grafia do nome ou, se um caminho tiver
+sido incluído, veja se o caminho está correto e tente novamente.
+No linha:1 caractere:1
++ supabase --version
++ ~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (supabase:String) [], CommandNotFoundExc
+   eption
+    + FullyQualifiedErrorId : CommandNotFoundException
+
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> # Instala o Scoop se você ainda não tem
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> irm get.scoop.sh | iex
+Initializing...
+Downloading...
+AVISO: Falha na execução do programa 'git.exe': O executável especificado não é um
+aplicativo válido para esta plataforma de SO.No linha:600 caractere:13
++             git clone -q $SCOOP_PACKAGE_GIT_REPO $SCOOP_APP_DIR
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.
+Extracting...
+Creating shim...
+Adding ~\scoop\shims to your path.
+Scoop was installed successfully!
+Type 'scoop help' for instructions.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> # Instala o Supabase CLI
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> scoop bucketadd supabase https://github.com/supabase/scoop-bucket.git
+Checking repo... Falha na execução do programa 'git.exe': O executável especificado nãoé um aplicativo
+válido para esta plataforma de SO.No C:\Users\Thiago
+França\scoop\apps\scoop\current\lib\core.ps1:242 caractere:16
++         return & $git @ArgumentList
++                ~~~~~~~~~~~~~~~~~~~~.
+No C:\Users\Thiago França\scoop\apps\scoop\current\lib\core.ps1:242 caractere:16
++         return & $git @ArgumentList
++                ~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ResourceUnavailable: (:) [], ApplicationFailedException
+    + FullyQualifiedErrorId : NativeCommandFailed
+
+Falha na execução do programa 'git.exe': O executável especificado não é um aplicativo
+válido para esta plataforma de SO.No linha:9 caractere:13
++             & $using:git @using:ArgumentList
++             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~.
+    + CategoryInfo          : ResourceUnavailable: (:) [], ApplicationFailedException
+    + FullyQualifiedErrorId : NativeCommandFailed
+    + PSComputerName        : localhost
+
+OK
+The supabase bucket was added successfully.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> scoop install supabase
+Installing '7zip' (26.01) [64bit] from 'main' bucket
+7z2601-x64.msi (1,9 MB) [=====================================================] 100%
+Checking hash of 7z2601-x64.msi ... ok.
+Extracting 7z2601-x64.msi ... done.
+Linking ~\scoop\apps\7zip\current => ~\scoop\apps\7zip\26.01
+Creating shim for '7z'.
+Creating shim for '7zG'.
+Making C:\Users\Thiago França\scoop\shims\7zg.exe a GUI binary.
+Creating shim for '7zFM'.
+Making C:\Users\Thiago França\scoop\shims\7zfm.exe a GUI binary.
+Creating shortcut for 7-Zip\7-Zip File Manager (7zFM.exe)
+Creating shortcut for 7-Zip\7-Zip Help (7-zip.chm)
+Persisting Codecs
+Persisting Formats
+Running post_install script...done.
+'7zip' (26.01) was installed successfully!
+Notes
+-----
+To register the context menu entry, please execute the following command:
+reg import "C:\Users\Thiago França\scoop\apps\7zip\current\install-context.reg"
+
+If an error occurs while attempting to delete files during uninstallation, run the
+following command and then retry:
+Stop-Process -Name 'explorer'
+Installing 'supabase' (2.101.0) [64bit] from 'main' bucket
+supabase_windows_amd64.tar.gz (69,7 MB) [=====================================] 100%
+Checking hash of supabase_windows_amd64.tar.gz ... ok.
+Extracting supabase_windows_amd64.tar.gz ... done.
+Linking ~\scoop\apps\supabase\current => ~\scoop\apps\supabase\2.101.0
+Creating shim for 'supabase'.
+'supabase' (2.101.0) was installed successfully!
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> # Verifica
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase --version
+│
+◇  Telemetry ────────────────────────────────────────────────────────────────────────╮
+│                                                                                    │
+│  Supabase collects anonymous usage data to improve the CLI.                        │
+│  You can opt out at any time:                                                      │
+│                                                                                    │
+│    supabase telemetry disable                                                      │
+│                                                                                    │
+│  Learn more:                                                                       │
+│  https://supabase.com/docs/guides/local-development/cli/getting-started#telemetry  │
+│                                                                                    │
+├────────────────────────────────────────────────────────────────────────────────────╯
+2.101.0
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase login
+Hello from Supabase! Press Enter to open browser and login automatically.
+
+Here is your login link in case browser did not open https://supabase.com/dashboard/cli/login?session_id=f1c530c1-7da0-424b-94d4-3a5bc4c7f8f4&token_name=cli_DESKTOP-4P9ODRN\Thiago França@DESKTOP-4P9ODRN_1779679689&public_key=044eaa8d971905b54c37fbeb3ec5f2774d3fd2ebfabf822b2fa558ce4b380475df1324f05bf5d92d5b667656421de76dde995baf9c47a67998e187a6dd33308143
+
+Enter your verification code: b84c32d5
+Token cli_DESKTOP-4P9ODRN\Thiago França@DESKTOP-4P9ODRN_1779679689 created successfully.
+
+You are now logged in. Happy coding!
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase link --project-ref dsrulpipsksvtskqwevc
+Finished supabase link.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy send-email --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (send-email): supabase/functions/send-email/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: send-email
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> $secret = -join ((1..32) | ForEach-Object { '{0:x2}' -f (Get-Random -Max 256) })
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Write-Host "EDGE_SHARED_SECRET = $secret"
+EDGE_SHARED_SECRET = 4816781de98e93f3d7649e95d464f21005748bd2d90f8c3c4703e2936b44d337
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxx
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set FROM_EMAIL="CINEFLOW <onboarding@resend.dev>"
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set EDGE_SHARED_SECRET=$secretsupabase secrets set RESEND_API_KEY=re_MDeeHVFY_uQSRKZNGMjAR95ixLc8SJpCq
+Invalid secret pair: secrets. Must be NAME=VALUE.
+Try rerunning the command with --debug to troubleshoot the error.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set FROM_EMAIL="CINEFLOW <onboarding@resend.dev>"
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set EDGE_SHARED_SECRET=$secret
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set RESEND_API_KEY=re_MDeeHVFY_uQSRKZNGMjAR95ixLc8SJpCq
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set FROM_EMAIL="CINEFLOW <onboarding@resend.dev>"
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set EDGE_SHARED_SECRET=$secret
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets list
+
+
+   NAME                      | DIGEST
+  ---------------------------|------------------------------------------------------------------
+   EDGE_SHARED_SECRET        | 4de6f920ce55aba8032500d8e2e0f5e107255283ca76d847b4a7d17819e2cdf4
+   FROM_EMAIL                | 3a3b39276547741e10edfe962ed9ef44ebb37ab4d346e09e7162fca10b39a813
+   RESEND_API_KEY            | dc562b98a1a38ad1947f0db91e34d345e6d790bd50b22e34a040631cd02e1380
+   SUPABASE_ANON_KEY         | eda80c80cc6edd31fbcc63eea0de6113e66485181c3945612b620f5ff5a2c5da
+   SUPABASE_DB_URL           | 45968f1334e7a449967e6af6e165db10f26d0f6a3410f40da07c9d5dc92ae9db
+   SUPABASE_JWKS             | 223e886776fef491b0e20f3a705bf2068837a806963cef53803d97fcd413c5c3
+   SUPABASE_PUBLISHABLE_KEYS | f7185c5ffc4c2a7f663d46b09180f0d5d623b3d35dc90a38a109d3221152b737
+   SUPABASE_SECRET_KEYS      | c5e2b961b79cade209fb3bd09219921159551de53af4e911ef334b9f911e167d
+   SUPABASE_SERVICE_ROLE_KEY | 39656ddee5fd5a5a6e98eabb99d2d6d235e6fcf898a714d0f6f8c568f0d8be5b
+   SUPABASE_URL              | 2a4eeebbff2e6656ce4b676c49a98456a75f5e196226ef0148198239af5f028c
+
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Write-Host $secret
+4816781de98e93f3d7649e95d464f21005748bd2d90f8c3c4703e2936b44d337
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> vercel --prod
+
+  Inspect     https://vercel.com/cineflow-s-projects/cineflow-mvp/YuApaPN3PD1aT2ysZ45yN5q4NZa9
+▲ Production  https://cineflow-qazl5wkpy-cineflow-s-projects.vercel.app
+▲ Aliased     https://cineflow-mvp.vercel.app
+
+✓ Ready in 30s
+> Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0018_d6_ocr_real.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set MISTRAL_API_KEY=COLE_SUA_KEY
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase functions deploy ocr-extract --no-verify-jwt
+WARNING: Docker is not running
+Uploading asset (ocr-extract): supabase/functions/ocr-extract/index.ts
+Deployed Functions on project dsrulpipsksvtskqwevc: ocr-extract
+You can inspect your deployment in the Dashboard: https://supabase.com/dashboard/project/dsrulpipsksvtskqwevc/functions
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> vercel --prod
+  Inspect     https://vercel.com/cineflow-s-projects/cineflow-mvp/HBPjEsL2fGq6qDPGD3uFfpXGp7z5
+▲ Production  https://cineflow-cy349hwnd-cineflow-s-projects.vercel.app
+▲ Aliased     https://cineflow-mvp.vercel.app
+
+✓ Ready in 29s
+> Tip: Run `npx plugins add vercel/vercel-plugin` to enhance your agent experience
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0019_fix_gen_random_bytes.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Get-Content .\supabase\migrations\0018_d6_ocr_real.sql | Set-Clipboard
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> Write-Host "✓ Migration 0018 copiada (77 linhas)"
+✓ Migration 0018 copiada (77 linhas)
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set MISTRAL_API_KEY=xxx_sua_key_aqui
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> cd "C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp"
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets set MISTRAL_API_KEY=JFihuPfRwAslF4GXHlt4qyEvHmlrDKQw
+Finished supabase secrets set.
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp> supabase secrets list
+
+
+   NAME                      | DIGEST
+  ---------------------------|------------------------------------------------------------------
+   EDGE_SHARED_SECRET        | 4de6f920ce55aba8032500d8e2e0f5e107255283ca76d847b4a7d17819e2cdf4
+   FROM_EMAIL                | 3a3b39276547741e10edfe962ed9ef44ebb37ab4d346e09e7162fca10b39a813
+   MISTRAL_API_KEY           | 7d9765cb894c9ed7f34e44d94affe59917ba6f51bce6705c80b27f8703f91326
+   RESEND_API_KEY            | dc562b98a1a38ad1947f0db91e34d345e6d790bd50b22e34a040631cd02e1380
+   SUPABASE_ANON_KEY         | eda80c80cc6edd31fbcc63eea0de6113e66485181c3945612b620f5ff5a2c5da
+   SUPABASE_DB_URL           | 45968f1334e7a449967e6af6e165db10f26d0f6a3410f40da07c9d5dc92ae9db
+   SUPABASE_JWKS             | 223e886776fef491b0e20f3a705bf2068837a806963cef53803d97fcd413c5c3
+   SUPABASE_PUBLISHABLE_KEYS | f7185c5ffc4c2a7f663d46b09180f0d5d623b3d35dc90a38a109d3221152b737
+   SUPABASE_SECRET_KEYS      | c5e2b961b79cade209fb3bd09219921159551de53af4e911ef334b9f911e167d
+   SUPABASE_SERVICE_ROLE_KEY | 39656ddee5fd5a5a6e98eabb99d2d6d235e6fcf898a714d0f6f8c568f0d8be5b
+   SUPABASE_URL              | 2a4eeebbff2e6656ce4b676c49a98456a75f5e196226ef0148198239af5f028c
+
+PS C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\cineflow-mvp>

@@ -1,0 +1,442 @@
+import { useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loading } from "@/components/ui/loading";
+import { Empty } from "@/components/ui/empty";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  ChevronLeft, FileText, Sparkles, Upload, RefreshCw,
+  MapPin, Users, Shirt, Drama, Sparkle, Music, Camera, AlertCircle,
+} from "lucide-react";
+import { extrairTextoDoArquivo, paginasEstimadas } from "@/lib/parseRoteiro";
+import { toast } from "sonner";
+
+type Roteiro = {
+  id: string;
+  projeto_id: string;
+  texto: string;
+  arquivo_nome: string | null;
+  arquivo_tipo: string | null;
+  paginas_estimadas: number | null;
+  status: "cru" | "analisando" | "decupado" | "erro";
+  mensagem_erro: string | null;
+  modelo_ia: string | null;
+  decupado_em: string | null;
+  criado_em: string;
+};
+
+type Cena = {
+  id: string;
+  ordem: number;
+  numero_cena: string | null;
+  cabecalho: string | null;
+  ambiente: string | null;
+  local: string | null;
+  horario: string | null;
+  sinopse: string | null;
+  personagens: string[];
+  arte: string[];
+  figurino: Array<{ personagem?: string; item?: string } | string>;
+  efeitos: string[];
+  som: string[];
+  locacao_sugerida: string | null;
+  duracao_estimada_min: number | null;
+};
+
+type Plano = {
+  id: string;
+  cena_id: string;
+  plano_numero: number;
+  tipo_plano: string | null;
+  movimento: string | null;
+  lente: string | null;
+  equipamento: string | null;
+  descricao: string | null;
+  duracao_estimada_seg: number | null;
+};
+
+export default function Roteiro() {
+  const { id: projetoId } = useParams<{ id: string }>();
+  const qc = useQueryClient();
+  const [texto, setTexto] = useState("");
+  const [arquivoNome, setArquivoNome] = useState<string>("");
+  const [arquivoTipo, setArquivoTipo] = useState<string>("");
+  const [parsingArquivo, setParsingArquivo] = useState(false);
+
+  const { data: roteiro, isLoading } = useQuery({
+    queryKey: ["roteiro", projetoId],
+    enabled: !!projetoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("roteiros")
+        .select("*")
+        .eq("projeto_id", projetoId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data as Roteiro | null;
+    },
+    refetchInterval: (q) => (q.state.data?.status === "analisando" ? 3000 : false),
+  });
+
+  const { data: cenas } = useQuery({
+    queryKey: ["roteiro-cenas", roteiro?.id],
+    enabled: !!roteiro?.id && roteiro.status === "decupado",
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("roteiro_cenas")
+        .select("*")
+        .eq("roteiro_id", roteiro!.id)
+        .order("ordem");
+      if (error) throw error;
+      return (data ?? []) as Cena[];
+    },
+  });
+
+  const { data: planos } = useQuery({
+    queryKey: ["roteiro-planos", roteiro?.id],
+    enabled: !!roteiro?.id && roteiro.status === "decupado" && (cenas?.length ?? 0) > 0,
+    queryFn: async () => {
+      const cenaIds = (cenas ?? []).map((c) => c.id);
+      if (!cenaIds.length) return [] as Plano[];
+      const { data, error } = await supabase
+        .from("roteiro_planos_sugeridos")
+        .select("*")
+        .in("cena_id", cenaIds)
+        .order("plano_numero");
+      if (error) throw error;
+      return (data ?? []) as Plano[];
+    },
+  });
+
+  const salvar = useMutation({
+    mutationFn: async (input: { texto: string; nome?: string; tipo?: string }) => {
+      const payload: any = {
+        projeto_id: projetoId!,
+        texto: input.texto,
+        arquivo_nome: input.nome ?? null,
+        arquivo_tipo: input.tipo ?? null,
+        paginas_estimadas: paginasEstimadas(input.texto),
+        status: "cru",
+        mensagem_erro: null,
+      };
+      if (roteiro?.id) {
+        const { data, error } = await supabase
+          .from("roteiros").update(payload).eq("id", roteiro.id).select("*").single();
+        if (error) throw error;
+        return data as Roteiro;
+      }
+      const { data, error } = await supabase
+        .from("roteiros").insert(payload).select("*").single();
+      if (error) throw error;
+      return data as Roteiro;
+    },
+    onSuccess: () => {
+      toast.success("Roteiro salvo");
+      qc.invalidateQueries({ queryKey: ["roteiro", projetoId] });
+      setTexto("");
+      setArquivoNome("");
+      setArquivoTipo("");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const decupar = useMutation({
+    mutationFn: async () => {
+      if (!roteiro?.id) throw new Error("Salve o roteiro antes");
+      const { data, error } = await supabase.functions.invoke("analisar-roteiro", {
+        body: { roteiro_id: roteiro.id },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).message ?? (data as any).error);
+      return data;
+    },
+    onSuccess: (res: any) => {
+      toast.success(`Decupagem concluída: ${res?.cenas ?? 0} cenas, ${res?.planos ?? 0} planos`);
+      qc.invalidateQueries({ queryKey: ["roteiro", projetoId] });
+      qc.invalidateQueries({ queryKey: ["roteiro-cenas"] });
+      qc.invalidateQueries({ queryKey: ["roteiro-planos"] });
+    },
+    onError: (e: any) => toast.error("Falha na decupagem: " + e.message),
+  });
+
+  async function carregarArquivo(file: File) {
+    setParsingArquivo(true);
+    try {
+      const { texto: t, formato } = await extrairTextoDoArquivo(file);
+      setTexto(t);
+      setArquivoNome(file.name);
+      setArquivoTipo(formato);
+      toast.success(`${file.name} processado (${paginasEstimadas(t)} pág.)`);
+    } catch (e: any) {
+      toast.error(e.message ?? String(e));
+    } finally {
+      setParsingArquivo(false);
+    }
+  }
+
+  if (isLoading) return <Loading />;
+
+  return (
+    <div className="space-y-6">
+      <Link to={`/projetos/${projetoId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <ChevronLeft className="h-4 w-4" /> Projeto
+      </Link>
+
+      <div>
+        <h1 className="text-2xl font-bold">Roteiro &amp; Decupagem</h1>
+        <p className="text-sm text-muted-foreground">
+          Suba o roteiro do projeto e gere a análise técnica completa (cenas, personagens, arte, figurino, efeitos e planos sugeridos).
+        </p>
+      </div>
+
+      {/* Bloco: roteiro atual */}
+      {roteiro ? (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between gap-2 text-base">
+              <span className="flex items-center gap-2">
+                <FileText className="h-4 w-4" /> Roteiro atual
+                {roteiro.status === "decupado" && <Badge variant="secondary">decupado</Badge>}
+                {roteiro.status === "analisando" && <Badge>analisando...</Badge>}
+                {roteiro.status === "cru" && <Badge variant="outline">não analisado</Badge>}
+                {roteiro.status === "erro" && <Badge variant="destructive">erro</Badge>}
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  onClick={() => decupar.mutate()}
+                  disabled={decupar.isPending || roteiro.status === "analisando"}
+                >
+                  {roteiro.status === "decupado" ? (
+                    <><RefreshCw className="h-4 w-4" /> Re-decupar</>
+                  ) : (
+                    <><Sparkles className="h-4 w-4" /> Decupar com IA</>
+                  )}
+                </Button>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p>
+              <span className="text-muted-foreground">Arquivo:</span>{" "}
+              {roteiro.arquivo_nome ? <strong>{roteiro.arquivo_nome}</strong> : <em>colado direto</em>}
+              {roteiro.arquivo_tipo && <Badge variant="outline" className="ml-2">{roteiro.arquivo_tipo}</Badge>}
+            </p>
+            <p>
+              <span className="text-muted-foreground">Tamanho:</span>{" "}
+              <strong>{(roteiro.texto?.length ?? 0).toLocaleString("pt-BR")} caracteres</strong>{" · "}
+              <strong>~{roteiro.paginas_estimadas ?? 0} páginas</strong>
+            </p>
+            {roteiro.mensagem_erro && (
+              <p className="flex items-start gap-1 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+                <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                {roteiro.mensagem_erro}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      ) : (
+        <Empty
+          icon={<FileText className="h-5 w-5" />}
+          title="Nenhum roteiro ainda"
+          description="Faça upload (PDF, DOCX, FDX) ou cole o roteiro abaixo. Depois clique em Decupar com IA pra análise técnica completa."
+        />
+      )}
+
+      {/* Bloco: upload/colar novo */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{roteiro ? "Substituir roteiro" : "Inserir roteiro"}</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Tabs defaultValue="arquivo">
+            <TabsList>
+              <TabsTrigger value="arquivo">Arquivo</TabsTrigger>
+              <TabsTrigger value="colar">Colar texto</TabsTrigger>
+            </TabsList>
+            <TabsContent value="arquivo" className="space-y-2 pt-2">
+              <Label htmlFor="arq" className="text-xs">
+                Aceita .pdf, .docx, .fdx, .txt — .doc precisa ser exportado como .docx antes
+              </Label>
+              <Input
+                id="arq"
+                type="file"
+                accept=".pdf,.docx,.fdx,.txt,.md"
+                disabled={parsingArquivo || salvar.isPending}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) carregarArquivo(f);
+                }}
+              />
+              {parsingArquivo && (
+                <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <Upload className="h-3.5 w-3.5 animate-pulse" /> Processando arquivo...
+                </p>
+              )}
+            </TabsContent>
+            <TabsContent value="colar" className="space-y-2 pt-2">
+              <Label htmlFor="colar" className="text-xs">Cole o texto integral do roteiro</Label>
+              <Textarea
+                id="colar"
+                rows={8}
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                placeholder="CENA 1&#10;INT. SALA DE ESTAR - DIA&#10;&#10;Maria entra e..."
+                className="font-mono text-xs"
+              />
+            </TabsContent>
+          </Tabs>
+
+          {texto && (
+            <div className="rounded-md border bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                Preview: {texto.length.toLocaleString("pt-BR")} caracteres
+                {arquivoNome && <> · de <strong>{arquivoNome}</strong> ({arquivoTipo})</>}
+              </p>
+              <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] text-muted-foreground">
+                {texto.slice(0, 600)}{texto.length > 600 ? "..." : ""}
+              </pre>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => { setTexto(""); setArquivoNome(""); setArquivoTipo(""); }} disabled={!texto}>
+              Limpar
+            </Button>
+            <Button
+              onClick={() => salvar.mutate({ texto, nome: arquivoNome || undefined, tipo: arquivoTipo || undefined })}
+              disabled={!texto || salvar.isPending}
+            >
+              {salvar.isPending ? "Salvando..." : (roteiro ? "Substituir roteiro" : "Salvar roteiro")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Bloco: cenas decupadas */}
+      {roteiro?.status === "decupado" && cenas && cenas.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-lg font-semibold">{cenas.length} cenas analisadas</h2>
+            <p className="text-xs text-muted-foreground">
+              {roteiro.decupado_em && <>Decupado em {new Date(roteiro.decupado_em).toLocaleString("pt-BR")} · </>}
+              modelo: {roteiro.modelo_ia ?? "—"}
+            </p>
+          </div>
+          <div className="space-y-3">
+            {cenas.map((c) => {
+              const planosCena = (planos ?? []).filter((p) => p.cena_id === c.id);
+              return <CenaCard key={c.id} cena={c} planos={planosCena} />;
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CenaCard({ cena, planos }: { cena: Cena; planos: Plano[] }) {
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex flex-wrap items-center gap-2 text-base">
+          <Badge>{cena.numero_cena ?? cena.ordem}</Badge>
+          <span className="font-semibold">{cena.cabecalho ?? "Sem cabeçalho"}</span>
+          {cena.ambiente && <Badge variant="outline">{cena.ambiente}</Badge>}
+          {cena.horario && <Badge variant="outline">{cena.horario}</Badge>}
+          {cena.duracao_estimada_min && (
+            <Badge variant="secondary">~{cena.duracao_estimada_min} min</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {cena.sinopse && <p className="text-sm">{cena.sinopse}</p>}
+        {cena.locacao_sugerida && (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" /> Locação sugerida: <strong className="text-foreground">{cena.locacao_sugerida}</strong>
+          </p>
+        )}
+
+        <Tabs defaultValue="personagens">
+          <TabsList className="h-auto flex-wrap">
+            <TabsTrigger value="personagens"><Users className="h-3.5 w-3.5" /> Personagens ({cena.personagens.length})</TabsTrigger>
+            <TabsTrigger value="arte"><Drama className="h-3.5 w-3.5" /> Arte ({cena.arte.length})</TabsTrigger>
+            <TabsTrigger value="figurino"><Shirt className="h-3.5 w-3.5" /> Figurino ({cena.figurino.length})</TabsTrigger>
+            <TabsTrigger value="efeitos"><Sparkle className="h-3.5 w-3.5" /> Efeitos ({cena.efeitos.length})</TabsTrigger>
+            <TabsTrigger value="som"><Music className="h-3.5 w-3.5" /> Som ({cena.som.length})</TabsTrigger>
+            <TabsTrigger value="planos"><Camera className="h-3.5 w-3.5" /> Planos ({planos.length})</TabsTrigger>
+          </TabsList>
+          <TabsContent value="personagens" className="pt-2">
+            {cena.personagens.length ? (
+              <div className="flex flex-wrap gap-1.5">
+                {cena.personagens.map((p, i) => <Badge key={i} variant="outline">{p}</Badge>)}
+              </div>
+            ) : <p className="text-xs text-muted-foreground">Nenhum personagem identificado</p>}
+          </TabsContent>
+          <TabsContent value="arte" className="pt-2">
+            {cena.arte.length ? (
+              <ul className="space-y-0.5 text-sm">
+                {cena.arte.map((a, i) => <li key={i}>· {a}</li>)}
+              </ul>
+            ) : <p className="text-xs text-muted-foreground">Nenhum objeto cênico identificado</p>}
+          </TabsContent>
+          <TabsContent value="figurino" className="pt-2">
+            {cena.figurino.length ? (
+              <ul className="space-y-0.5 text-sm">
+                {cena.figurino.map((f, i) => {
+                  const obj = typeof f === "string" ? { item: f } : f;
+                  return (
+                    <li key={i}>
+                      · {obj.personagem ? <><strong>{obj.personagem}:</strong> </> : null}
+                      {obj.item ?? "—"}
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : <p className="text-xs text-muted-foreground">Nenhuma sugestão de figurino</p>}
+          </TabsContent>
+          <TabsContent value="efeitos" className="pt-2">
+            {cena.efeitos.length ? (
+              <ul className="space-y-0.5 text-sm">
+                {cena.efeitos.map((e, i) => <li key={i}>· {e}</li>)}
+              </ul>
+            ) : <p className="text-xs text-muted-foreground">Nenhum efeito especial identificado</p>}
+          </TabsContent>
+          <TabsContent value="som" className="pt-2">
+            {cena.som.length ? (
+              <ul className="space-y-0.5 text-sm">
+                {cena.som.map((s, i) => <li key={i}>· {s}</li>)}
+              </ul>
+            ) : <p className="text-xs text-muted-foreground">Nenhuma sugestão de sonoplastia</p>}
+          </TabsContent>
+          <TabsContent value="planos" className="pt-2">
+            {planos.length ? (
+              <div className="space-y-2">
+                {planos.map((p) => (
+                  <div key={p.id} className="rounded-md border bg-muted/30 p-2 text-sm">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge>P{p.plano_numero}</Badge>
+                      {p.tipo_plano && <Badge variant="outline">{p.tipo_plano}</Badge>}
+                      {p.movimento && <Badge variant="outline">{p.movimento}</Badge>}
+                      {p.lente && <Badge variant="outline">{p.lente}</Badge>}
+                      {p.equipamento && <Badge variant="outline">{p.equipamento}</Badge>}
+                      {p.duracao_estimada_seg && <Badge variant="secondary">{p.duracao_estimada_seg}s</Badge>}
+                    </div>
+                    {p.descricao && <p className="mt-1 text-xs text-muted-foreground">{p.descricao}</p>}
+                  </div>
+                ))}
+              </div>
+            ) : <p className="text-xs text-muted-foreground">Nenhum plano sugerido</p>}
+          </TabsContent>
+        </Tabs>
+      </CardContent>
+    </Card>
+  );
+}

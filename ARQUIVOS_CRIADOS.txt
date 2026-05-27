@@ -1,0 +1,149 @@
+================================================================================
+                    GLAUBER — DOCUMENTAÇÃO CONSOLIDADA
+                  Data: 26 de maio de 2026 | Versão: 1.0
+================================================================================
+
+✅ ARQUIVOS CRIADOS:
+
+1. 📄 README_GLAUBER.md
+   └─ Índice completo de documentação
+   └─ Matriz de decisão rápida
+   └─ Fluxo de leitura por perfil (PM, Dev, Tech Lead, Designer)
+   └─ Checklist de próximas ações
+   └─ Dúvidas frequentes
+
+2. 📊 GLAUBER_Roadmap_Consolidado_V1.docx (20+ páginas)
+   └─ Consolidação de 107 itens de melhoria
+   └─ 4 personas e seus vereditos
+   └─ 13 itens transversais
+   └─ 5 fundações estruturais (F1-F5)
+   └─ 7 sprints detalhados (28 semanas)
+   └─ Estratégia de rebranding CINEFLOW → GLAUBER
+   └─ Princípios de limpeza, eficiência, intuitividade
+   └─ Matriz de riscos
+
+3. 📋 GLAUBER_Sumario_Executivo.md (cheat sheet rápido)
+   └─ Visão em 1 frase
+   └─ Números chave (107 itens, 13 transversais, 28 semanas)
+   └─ 5 fundações resumidas
+   └─ 7 sprints em 1 linha cada
+   └─ Marcos públicos
+   └─ Rebranding timeline
+   └─ FAQ executiva
+   └─ Checklist de início
+
+4. 🛠️ GLAUBER_Sprint1_Guia_Tecnico.md (hands-on para devs)
+   └─ O que será entregue (10 itens)
+   └─ 10+ tasks com estimativas
+   └─ Migrations SQL com exemplos
+   └─ Componentes React com interfaces
+   └─ Definition of Done
+   └─ Success criteria
+   └─ Calendário por semana
+   └─ Riscos Sprint 1
+
+5. 📖 GLAUBER_CONTEXTO.md (referência viva)
+   └─ Missão + diferenciais
+   └─ 4 personas chave
+   └─ Stack técnico completo
+   └─ Decisões resolvidas (checklist)
+   └─ Princípios de design
+   └─ Riscos conhecidos
+   └─ Cultura do projeto
+   └─ Métricas de sucesso
+   └─ Rebranding strategy
+
+================================================================================
+                            🚀 PRÓXIMOS PASSOS
+================================================================================
+
+HOJE/AMANHÃ (24 horas):
+  [ ] Tech Lead lê: GLAUBER_CONTEXTO.md + GLAUBER_Sprint1_Guia_Tecnico.md
+  [ ] PM lê: GLAUBER_Sumario_Executivo.md + GLAUBER_CONTEXTO.md
+  [ ] Designer lê: GLAUBER_CONTEXTO.md (seção Princípios)
+
+DENTRO DE 2 DIAS:
+  [ ] Renomear base CINEFLOW → GLAUBER (código, BD, docs)
+  [ ] Criar branch 'sprint-1'
+  [ ] Quebrar Sprint 1 em tarefas Jira/Linear
+
+DENTRO DE 5 DIAS:
+  [ ] Kick-off com DP (Tereza) + Produtor (Chico)
+  [ ] Validar prioridades
+  [ ] Iniciar Task 1.1 (Supabase Storage setup)
+
+================================================================================
+                         📊 COMO USAR ESTES ARQUIVOS
+================================================================================
+
+Se você tem 5 minutos:
+  → Leia: GLAUBER_Sumario_Executivo.md
+
+Se você tem 15 minutos:
+  → Leia: README_GLAUBER.md + GLAUBER_Sumario_Executivo.md
+
+Se você é Desenvolvedor:
+  → Leia: GLAUBER_Sprint1_Guia_Tecnico.md
+  → Use como template para quebrar tasks em Jira/Linear
+
+Se você é Tech Lead / Arquiteto:
+  → Leia: GLAUBER_CONTEXTO.md + GLAUBER_Roadmap_Consolidado_V1.docx
+
+Se você é PM / Stakeholder:
+  → Leia: GLAUBER_Sumario_Executivo.md + GLAUBER_CONTEXTO.md
+
+================================================================================
+                              📚 ARQUIVOS ORIGINAIS
+================================================================================
+
+Estes documentos foram fusionados para criar o roadmap acima:
+
+1. cineflow-mvp/docs/Auditoria_Usabilidade_4Personas.md (750 linhas)
+   └─ Auditoria profunda com 4 personas
+   └─ 107 itens de melhoria catalogados
+   └─ Comparativo com concorrentes
+
+2. Relatório Master de Avaliação Técnica e Estratégica - Cineflow MVP.pdf
+   └─ Análise técnica de engenharia
+   └─ 5 pilares de execução
+   └─ Recomendações de implementação
+
+================================================================================
+                              🎯 RESUMO EXECUTIVO
+================================================================================
+
+MISSÃO:
+  Ser a ferramenta definitiva para produção audiovisual brasileira,
+  fechando roteiro → cronograma → OD → execução → prestação em 1 plataforma.
+
+DIFERENCIAIS:
+  ✅ Compreensão de edital brasileiro (Funcultura/SIC)
+  ✅ IA de decupagem inédita no mercado
+  ✅ Chat de produção integrado (conversa criativa)
+  ✅ Não necessita 3+ ferramentas (Movie Magic + Conta Simples + Wrapbook...)
+
+ROADMAP:
+  7 sprints = 28 semanas de desenvolvimento focado
+  Sprint 1: Fundação Fiscal & Auth (3-4 semanas)
+  Sprint 2-7: Conversa Criativa, Decupagem Viva, Stripboard, Frame.io, Folha, Lançamento
+
+REBRANDING:
+  CINEFLOW → GLAUBER (novo nome, visão criativa)
+  Mudança na base (agora) + UI (Sprint 2+) + Público (Sprint 3+)
+
+PERSONAS SATISFEITAS:
+  Chico (Produtor): Upload NF + costura roteiro/OD
+  Mariana (1º AD): Stripboard + DOOD + OD
+  Tereza (DP): Pacote prestação Funcultura 1-clique
+  Caio (Diretor): Player timecode + tarefas + lookbook
+
+================================================================================
+
+📍 LOCALIZAÇÃO DOS ARQUIVOS:
+   C:\Users\Thiago França\Documents\Claude\Projects\Cineflow\
+
+🎉 PRONTO PARA COMEÇAR SPRINT 1!
+
+Mercado está esperando. Vamos entregar.
+
+================================================================================

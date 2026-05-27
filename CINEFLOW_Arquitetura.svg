@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 560" font-family="Inter, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FAFAFA"/>
+      <stop offset="100%" stop-color="#F0F4F8"/>
+    </linearGradient>
+    <linearGradient id="primaryGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1F3864"/>
+      <stop offset="100%" stop-color="#2E75B6"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4A017"/>
+      <stop offset="100%" stop-color="#E8B842"/>
+    </linearGradient>
+    <linearGradient id="supabaseGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3ECF8E"/>
+      <stop offset="100%" stop-color="#2DAF74"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L9,3 z" fill="#555"/>
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+      <feOffset dx="0" dy="2" result="offsetblur"/>
+      <feComponentTransfer><feFuncA type="linear" slope="0.15"/></feComponentTransfer>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="560" fill="url(#bgGrad)"/>
+
+  <!-- Title -->
+  <text x="450" y="38" font-size="22" font-weight="700" fill="#1F3864" text-anchor="middle">CINEFLOW — Arquitetura</text>
+  <text x="450" y="60" font-size="13" fill="#6B7280" text-anchor="middle">Stack atual em produção (Maio/2026)</text>
+
+  <!-- USER LAYER -->
+  <g filter="url(#shadow)">
+    <rect x="40" y="100" width="180" height="120" rx="14" fill="white" stroke="#E5E7EB"/>
+  </g>
+  <circle cx="130" cy="140" r="18" fill="#1F3864"/>
+  <circle cx="130" cy="135" r="6" fill="white"/>
+  <path d="M118,153 Q130,145 142,153 L142,158 Q130,163 118,158 Z" fill="white"/>
+  <text x="130" y="185" font-size="13" font-weight="700" fill="#111" text-anchor="middle">Pessoa do Set</text>
+  <text x="130" y="202" font-size="11" fill="#6B7280" text-anchor="middle">Desktop ou mobile</text>
+
+  <!-- Arrow user -> browser -->
+  <line x1="220" y1="160" x2="300" y2="160" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="260" y="152" font-size="10" fill="#6B7280" text-anchor="middle">HTTPS</text>
+
+  <!-- BROWSER -->
+  <g filter="url(#shadow)">
+    <rect x="300" y="100" width="220" height="120" rx="14" fill="white" stroke="#E5E7EB"/>
+  </g>
+  <rect x="315" y="115" width="190" height="20" rx="4" fill="#F2F2F2"/>
+  <circle cx="325" cy="125" r="3" fill="#DC2626"/>
+  <circle cx="335" cy="125" r="3" fill="#EAB308"/>
+  <circle cx="345" cy="125" r="3" fill="#16A34A"/>
+  <text x="495" y="129" font-size="9" fill="#6B7280" text-anchor="end">cineflow-mvp.vercel.app</text>
+  <rect x="320" y="145" width="180" height="60" rx="6" fill="url(#primaryGrad)"/>
+  <text x="410" y="172" font-size="13" font-weight="700" fill="white" text-anchor="middle">React 18 + Vite + TS</text>
+  <text x="410" y="190" font-size="10" fill="#D4E5F5" text-anchor="middle">Tailwind · shadcn · TanStack</text>
+
+  <!-- Arrow browser -> vercel -->
+  <line x1="520" y1="160" x2="610" y2="160" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="565" y="152" font-size="10" fill="#6B7280" text-anchor="middle">CDN edge</text>
+
+  <!-- VERCEL -->
+  <g filter="url(#shadow)">
+    <rect x="610" y="100" width="240" height="120" rx="14" fill="white" stroke="#E5E7EB"/>
+  </g>
+  <polygon points="730,125 760,170 700,170" fill="black"/>
+  <text x="730" y="195" font-size="13" font-weight="700" fill="#111" text-anchor="middle">Vercel</text>
+  <text x="730" y="210" font-size="10" fill="#6B7280" text-anchor="middle">Estáticos · SPA rewrite · SSL</text>
+
+  <!-- Vertical arrow center -->
+  <line x1="410" y1="220" x2="410" y2="285" stroke="#555" stroke-width="2" marker-end="url(#arrow)"/>
+  <text x="425" y="255" font-size="10" fill="#6B7280">supabase-js (REST + WebSocket)</text>
+
+  <!-- SUPABASE BIG CONTAINER -->
+  <g filter="url(#shadow)">
+    <rect x="100" y="290" width="700" height="230" rx="16" fill="white" stroke="#E5E7EB"/>
+  </g>
+  <rect x="100" y="290" width="700" height="40" rx="16" fill="url(#supabaseGrad)"/>
+  <rect x="100" y="320" width="700" height="10" fill="url(#supabaseGrad)"/>
+  <text x="450" y="316" font-size="14" font-weight="700" fill="white" text-anchor="middle">Supabase — projeto cineflow-prod (sa-east-1)</text>
+
+  <!-- AUTH module -->
+  <rect x="125" y="350" width="200" height="150" rx="10" fill="#F0F9F4" stroke="#3ECF8E" stroke-width="1.5"/>
+  <text x="225" y="375" font-size="12" font-weight="700" fill="#0F5132" text-anchor="middle">Auth</text>
+  <text x="225" y="395" font-size="10" fill="#374151" text-anchor="middle">Signup / Login (email)</text>
+  <text x="225" y="412" font-size="10" fill="#374151" text-anchor="middle">JWT por usuário</text>
+  <line x1="145" y1="425" x2="305" y2="425" stroke="#3ECF8E" stroke-dasharray="3,3"/>
+  <text x="225" y="445" font-size="10" font-weight="600" fill="#0F5132" text-anchor="middle">Trigger on signup</text>
+  <text x="225" y="460" font-size="9" fill="#374151" text-anchor="middle">→ cria org</text>
+  <text x="225" y="473" font-size="9" fill="#374151" text-anchor="middle">→ cria membership 'owner'</text>
+
+  <!-- DATABASE module -->
+  <rect x="345" y="350" width="220" height="150" rx="10" fill="#FFF7E6" stroke="#D4A017" stroke-width="1.5"/>
+  <text x="455" y="375" font-size="12" font-weight="700" fill="#7A5500" text-anchor="middle">Postgres 15</text>
+  <text x="455" y="394" font-size="10" fill="#374151" text-anchor="middle">15 tabelas (orgs, projetos,</text>
+  <text x="455" y="408" font-size="10" fill="#374151" text-anchor="middle">pessoas, dias, despesas...)</text>
+  <line x1="365" y1="420" x2="545" y2="420" stroke="#D4A017" stroke-dasharray="3,3"/>
+  <text x="455" y="440" font-size="10" font-weight="600" fill="#7A5500" text-anchor="middle">RLS por org_id</text>
+  <text x="455" y="455" font-size="9" fill="#374151" text-anchor="middle">cada pessoa só vê os dados</text>
+  <text x="455" y="468" font-size="9" fill="#374151" text-anchor="middle">da(s) produtora(s) onde é membro</text>
+  <text x="455" y="488" font-size="9" font-style="italic" fill="#6B7280" text-anchor="middle">+ RPC validar_despesa() vs rubricas</text>
+
+  <!-- STORAGE module -->
+  <rect x="585" y="350" width="195" height="150" rx="10" fill="#FEF2F2" stroke="#DC2626" stroke-width="1.5"/>
+  <text x="682" y="375" font-size="12" font-weight="700" fill="#7F1D1D" text-anchor="middle">Storage (S3)</text>
+  <text x="682" y="395" font-size="10" fill="#374151" text-anchor="middle">Comprovantes de NF</text>
+  <text x="682" y="412" font-size="10" fill="#374151" text-anchor="middle">Fotos de locação</text>
+  <text x="682" y="429" font-size="10" fill="#374151" text-anchor="middle">PDFs de roteiro</text>
+  <line x1="605" y1="442" x2="760" y2="442" stroke="#DC2626" stroke-dasharray="3,3"/>
+  <text x="682" y="462" font-size="10" font-weight="600" fill="#7F1D1D" text-anchor="middle">Links assinados</text>
+  <text x="682" y="476" font-size="9" fill="#374151" text-anchor="middle">expiração curta, sem acesso público</text>
+
+  <!-- LEGEND -->
+  <text x="450" y="544" font-size="11" fill="#6B7280" text-anchor="middle">
+    Stack hospedada nas regiões SA (Vercel global / Supabase São Paulo). Custos atuais: R$ 0/mês (free tiers).
+  </text>
+</svg>
