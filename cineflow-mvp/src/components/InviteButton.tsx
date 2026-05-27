@@ -71,7 +71,7 @@ export function InviteButton({ projetoPessoaId, pessoaEmail, pessoaNome }: Props
                 asChild
               >
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent("Você foi convidado(a) para o projeto no CINEFLOW: " + link)}`}
+                  href={`https://wa.me/?text=${encodeURIComponent("Você foi convidado(a) para o projeto no Glauber: " + link)}`}
                   target="_blank"
                   rel="noreferrer"
                 >

@@ -33,7 +33,7 @@ export function EquipePrincipalImport({ rows, onChange }: Props) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "cineflow-equipe-template.csv";
+    a.download = "glauber-equipe-template.csv";
     a.click();
     URL.revokeObjectURL(url);
   }

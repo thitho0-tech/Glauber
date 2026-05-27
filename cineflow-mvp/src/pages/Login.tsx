@@ -31,7 +31,7 @@ export default function Login() {
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
             <Clapperboard className="h-6 w-6" />
           </div>
-          <CardTitle className="mt-3 text-2xl">Entrar no CINEFLOW</CardTitle>
+          <CardTitle className="mt-3 text-2xl">Entrar no Glauber</CardTitle>
           <CardDescription>Gestão de produções audiovisuais</CardDescription>
         </CardHeader>
         <CardContent>

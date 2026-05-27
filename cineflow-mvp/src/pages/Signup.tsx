@@ -37,7 +37,7 @@ export default function Signup() {
           <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
             <Clapperboard className="h-6 w-6" />
           </div>
-          <CardTitle className="mt-3 text-2xl">Criar conta no CINEFLOW</CardTitle>
+          <CardTitle className="mt-3 text-2xl">Criar conta no Glauber</CardTitle>
           <CardDescription>Sua produtora em 30 segundos</CardDescription>
         </CardHeader>
         <CardContent>

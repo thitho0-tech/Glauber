@@ -79,7 +79,7 @@ function SidebarHeader() {
         <Clapperboard className="h-5 w-5" />
       </div>
       <div>
-        <p className="text-base font-bold tracking-tight">CINEFLOW</p>
+        <p className="text-base font-bold tracking-tight">Glauber</p>
         <p className="text-[10px] uppercase tracking-widest text-muted-foreground">MVP</p>
       </div>
     </div>
@@ -139,7 +139,7 @@ export function Sidebar() {
             <div className="grid h-9 w-9 place-items-center rounded-lg bg-primary text-primary-foreground">
               <Clapperboard className="h-5 w-5" />
             </div>
-            <p className="text-base font-bold tracking-tight">CINEFLOW</p>
+            <p className="text-base font-bold tracking-tight">Glauber</p>
           </div>
           <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fechar menu">
             <X className="h-5 w-5" />
