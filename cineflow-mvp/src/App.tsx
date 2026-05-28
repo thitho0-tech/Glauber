@@ -27,6 +27,8 @@ import FigurinoArte from "@/pages/FigurinoArte";
 import Cast from "@/pages/Cast";
 import Roteiro from "@/pages/Roteiro";
 import Onboarding from "@/pages/Onboarding";
+import ProjectDashboard from "@/pages/ProjectDashboard";
+import Fornecedores from "@/pages/Fornecedores";
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -54,6 +56,7 @@ export default function App() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/projetos" element={<Projects />} />
             <Route path="/projetos/:id" element={<ProjectDetail />} />
+            <Route path="/projetos/:id/dashboard" element={<ProjectDashboard />} />
             <Route path="/projetos/:id/cronograma" element={<Schedule />} />
             <Route path="/projetos/:id/cronograma/:diaId" element={<PlanejamentoDetalhe />} />
             <Route path="/projetos/:id/ordens-do-dia" element={<CallSheets />} />
@@ -68,6 +71,7 @@ export default function App() {
             <Route path="/projetos/:id/figurino-arte" element={<FigurinoArte />} />
             <Route path="/projetos/:id/elenco" element={<Cast />} />
             <Route path="/projetos/:id/roteiro" element={<Roteiro />} />
+            <Route path="/projetos/:id/fornecedores" element={<Fornecedores />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/configuracoes" element={<Settings />} />
             <Route path="*" element={<Navigate to="/" replace />} />

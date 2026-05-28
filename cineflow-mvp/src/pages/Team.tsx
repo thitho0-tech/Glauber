@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users, ChevronLeft, Trash2, UserPlus, Mail, Copy } from "lucide-react";
+import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { formatBRL } from "@/lib/utils";
@@ -22,24 +22,42 @@ import { InviteButton } from "@/components/InviteButton";
 
 const DEPT_LABEL: Record<string, string> = {
   desenvolvimento: "Desenvolvimento",
-  direcao: "Direção",
-  producao: "Produção",
+  direcao: "Direcao",
+  producao: "Producao",
   fotografia: "Fotografia",
   arte: "Arte",
   som: "Som",
   elenco: "Elenco",
-  logistica: "Logística",
-  pos_producao: "Pós-produção",
+  logistica: "Logistica",
+  pos_producao: "Pos-producao",
   figurino: "Figurino",
   maquiagem: "Maquiagem",
-  pos: "Pós-produção",
+  pos: "Pos-producao",
   outros: "Outros",
+};
+
+const REGIME_LABEL: Record<string, string> = {
+  rpa: "RPA",
+  clt: "CLT",
+  mei: "MEI",
+  pj: "PJ",
+  diarista: "Diarista",
+  voluntario: "Voluntario",
+};
+
+const REGIME_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  rpa: "default",
+  clt: "secondary",
+  mei: "outline",
+  pj: "outline",
+  diarista: "secondary",
+  voluntario: "outline",
 };
 
 function FuncaoAvSelect({ funcoes }: { funcoes: any[] }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="funcao_av_id">Função (organograma)</Label>
+      <Label htmlFor="funcao_av_id">Funcao (organograma)</Label>
       <Select name="funcao_av_id">
         <SelectTrigger id="funcao_av_id"><SelectValue placeholder="Opcional" /></SelectTrigger>
         <SelectContent>
@@ -58,18 +76,20 @@ export default function Team() {
   const { id: projetoId } = useParams();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"catalogo" | "nova">("catalogo");
+  const [openRegime, setOpenRegime] = useState<string | null>(null);
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
   const qc = useQueryClient();
 
+  // C5 — user_id incluido para badge de acesso
   const { data: vinculos, isLoading } = useQuery({
     queryKey: ["projeto-pessoas", projetoId],
     enabled: !!projetoId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projeto_pessoas")
-        .select("*, pessoa:pessoas(id, nome, email, telefone, departamento, funcao), funcao_av:funcoes_av(id, nome, departamento, nivel)")
+        .select("*, pessoa:pessoas(id, nome, email, telefone, departamento, funcao, user_id), funcao_av:funcoes_av(id, nome, departamento, nivel)")
         .eq("projeto_id", projetoId!)
         .order("criado_em");
       if (error) throw error;
@@ -91,6 +111,23 @@ export default function Team() {
     queryFn: async () => {
       const { data, error } = await supabase.from("funcoes_av").select("*").order("departamento").order("nivel");
       if (error) throw error;
+      return data;
+    },
+  });
+
+  // Sprint 1B — regimes de contratacao
+  const { data: regimes } = useQuery({
+    queryKey: ["regimes-contratacao", projetoId],
+    enabled: !!projetoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("regimes_contratacao")
+        .select("*")
+        .eq("projeto_id", projetoId!);
+      if (error) {
+        if (error.code === "42P01") return [];
+        throw error;
+      }
       return data;
     },
   });
@@ -165,6 +202,49 @@ export default function Team() {
     },
   });
 
+  // C6 — calcula liquido RPA via RPC ao salvar regime
+  const salvarRegime = useMutation({
+    mutationFn: async (form: FormData) => {
+      const pessoaId = String(form.get("_pessoa_id"));
+      const bruto = Number(form.get("valor_bruto") ?? 0);
+      const tipo = String(form.get("tipo"));
+      const inss_pct = Number(form.get("inss_pct") ?? 20) / 100;
+
+      let valorLiquido = bruto;
+      if (tipo === "rpa") {
+        const { data: liq } = await supabase.rpc("fn_calcular_liquido_rpa", {
+          p_bruto: bruto,
+          p_inss_pct: inss_pct,
+        });
+        if (liq !== null && liq !== undefined) valorLiquido = Number(liq);
+      }
+
+      const payload: any = {
+        pessoa_id: pessoaId,
+        projeto_id: projetoId,
+        tipo,
+        valor_bruto: bruto,
+        valor_liquido: valorLiquido,
+        dias_contrato: Number(form.get("dias_contrato") ?? 1),
+        dados_rpa: tipo === "rpa" ? { inss_pct, observacao: form.get("observacao") ?? "" } : {},
+      };
+      const existente = (regimes ?? []).find((r: any) => r.pessoa_id === pessoaId);
+      if (existente) {
+        const { error } = await supabase.from("regimes_contratacao").update(payload).eq("id", existente.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("regimes_contratacao").insert(payload);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Regime salvo");
+      qc.invalidateQueries({ queryKey: ["regimes-contratacao", projetoId] });
+      setOpenRegime(null);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   if (isLoading) return <Loading />;
 
   return (
@@ -218,7 +298,7 @@ export default function Team() {
                   <div className="grid grid-cols-2 gap-3">
                     <FuncaoAvSelect funcoes={funcoesAv ?? []} />
                     <div className="space-y-1.5">
-                      <Label htmlFor="valor_contratacao_c">Valor de contratação (R$)</Label>
+                      <Label htmlFor="valor_contratacao_c">Valor de contratacao (R$)</Label>
                       <Input id="valor_contratacao_c" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
                     </div>
                   </div>
@@ -283,7 +363,7 @@ export default function Team() {
                   <div className="grid grid-cols-2 gap-3">
                     <FuncaoAvSelect funcoes={funcoesAv ?? []} />
                     <div className="space-y-1.5">
-                      <Label htmlFor="valor_contratacao_n">Valor de contratação (R$)</Label>
+                      <Label htmlFor="valor_contratacao_n">Valor de contratacao (R$)</Label>
                       <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
                     </div>
                   </div>
@@ -304,7 +384,7 @@ export default function Team() {
         <Empty
           icon={<Users className="h-5 w-5" />}
           title="Sem pessoas neste projeto"
-          description="Adicione pessoas do catalogo da produtora ou crie novas. Elas ficam disponiveis para escala em planejamentos."
+          description="Adicione pessoas do catalogo da produtora ou crie novas."
           action={
             <Button onClick={() => setOpen(true)}>
               <UserPlus className="h-4 w-4" /> Adicionar ao projeto
@@ -320,6 +400,8 @@ export default function Team() {
                   <TableHead>Nome</TableHead>
                   <TableHead>Funcao no projeto</TableHead>
                   <TableHead>Departamento</TableHead>
+                  <TableHead>Regime</TableHead>
+                  <TableHead>Acesso</TableHead>
                   <TableHead>Telefone</TableHead>
                   <TableHead className="text-right">Contratacao</TableHead>
                   <TableHead></TableHead>
@@ -328,6 +410,7 @@ export default function Team() {
               <TableBody>
                 {vinculos.map((v: any) => {
                   const dept = v.funcao_av?.departamento ?? v.pessoa?.departamento;
+                  const regime = (regimes ?? []).find((r: any) => r.pessoa_id === v.pessoa?.id);
                   return (
                     <TableRow key={v.id}>
                       <TableCell className="font-medium">{v.pessoa?.nome ?? "--"}</TableCell>
@@ -335,10 +418,47 @@ export default function Team() {
                       <TableCell>
                         {dept ? <Badge variant="outline">{DEPT_LABEL[dept] ?? dept}</Badge> : "--"}
                       </TableCell>
+                      <TableCell>
+                        {regime ? (
+                          <div className="flex flex-col gap-0.5">
+                            <Badge variant={REGIME_VARIANT[regime.tipo] ?? "outline"}>
+                              {REGIME_LABEL[regime.tipo] ?? regime.tipo}
+                            </Badge>
+                            {regime.tipo === "rpa" && regime.valor_liquido > 0 && (
+                              <span className="text-xs text-muted-foreground">{formatBRL(regime.valor_liquido)} liq.</span>
+                            )}
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 text-xs text-muted-foreground"
+                            onClick={() => setOpenRegime(v.pessoa?.id)}
+                          >
+                            + Regime
+                          </Button>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {v.pessoa?.user_id
+                          ? <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0">Ativo</Badge>
+                          : <Badge variant="outline" className="text-muted-foreground">Sem acesso</Badge>}
+                      </TableCell>
                       <TableCell>{v.pessoa?.telefone ?? "--"}</TableCell>
                       <TableCell className="text-right">{formatBRL(v.valor_contratacao)}</TableCell>
                       <TableCell>
                         <div className="flex justify-end gap-1">
+                          {regime && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => setOpenRegime(v.pessoa?.id)}
+                              title="Editar regime"
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <InviteButton
                             projetoPessoaId={v.id}
                             pessoaEmail={v.pessoa?.email}
@@ -350,7 +470,7 @@ export default function Team() {
                             onClick={() => desvincular.mutate(v.id)}
                             title="Remover do projeto (mantem no catalogo)"
                           >
-                                                 <Trash2 className="h-4 w-4 text-destructive" />
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
                       </TableCell>
@@ -362,6 +482,70 @@ export default function Team() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog: Regime de contratacao */}
+      <Dialog open={!!openRegime} onOpenChange={(v) => { if (!v) setOpenRegime(null); }}>
+        <DialogContent>
+          {openRegime && (() => {
+            const pessoaRegime = (regimes ?? []).find((r: any) => r.pessoa_id === openRegime);
+            const pessoa = vinculos?.find((v: any) => v.pessoa?.id === openRegime)?.pessoa;
+            return (
+              <form
+                onSubmit={(e) => { e.preventDefault(); salvarRegime.mutate(new FormData(e.currentTarget)); }}
+                className="space-y-4"
+              >
+                <DialogHeader>
+                  <DialogTitle>Regime de contratacao — {pessoa?.nome}</DialogTitle>
+                </DialogHeader>
+                <input type="hidden" name="_pessoa_id" value={openRegime} />
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label>Tipo de contrato</Label>
+                    <Select name="tipo" defaultValue={pessoaRegime?.tipo ?? "rpa"}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rpa">RPA — Recibo de Pagamento Autonomo</SelectItem>
+                        <SelectItem value="clt">CLT — Contrato com carteira</SelectItem>
+                        <SelectItem value="mei">MEI</SelectItem>
+                        <SelectItem value="pj">PJ — Pessoa Juridica</SelectItem>
+                        <SelectItem value="diarista">Diarista</SelectItem>
+                        <SelectItem value="voluntario">Voluntario</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="r_bruto">Valor bruto (R$)</Label>
+                      <Input id="r_bruto" name="valor_bruto" type="number" step="0.01" defaultValue={pessoaRegime?.valor_bruto ?? 0} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="r_dias">Dias de contrato</Label>
+                      <Input id="r_dias" name="dias_contrato" type="number" min="1" defaultValue={pessoaRegime?.dias_contrato ?? 1} />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="r_inss">INSS % (RPA, padrao 20)</Label>
+                    <Input id="r_inss" name="inss_pct" type="number" step="0.1" min="0" max="100"
+                      defaultValue={pessoaRegime?.dados_rpa?.inss_pct != null
+                        ? Number(pessoaRegime.dados_rpa.inss_pct) * 100
+                        : 20} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="r_obs">Observacao</Label>
+                    <Input id="r_obs" name="observacao" defaultValue={pessoaRegime?.dados_rpa?.observacao ?? ""} />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setOpenRegime(null)}>Cancelar</Button>
+                  <Button type="submit" disabled={salvarRegime.isPending}>
+                    {salvarRegime.isPending ? "Salvando..." : "Salvar regime"}
+                  </Button>
+                </DialogFooter>
+              </form>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -15,15 +15,16 @@ export default function Signup() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [loading, setLoading] = useState(false);
+  const [senhaErro, setSenhaErro] = useState<string | null>(null);
 
   async function cadastrar(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     if (senha.length < 8) {
-      setLoading(false);
-      toast.error("Senha precisa ter pelo menos 8 caracteres");
+      setSenhaErro("A senha deve ter pelo menos 8 caracteres.");
       return;
     }
+    setSenhaErro(null);
+    setLoading(true);
     const { error } = await supabase.auth.signUp({
       email,
       password: senha,
@@ -61,7 +62,22 @@ export default function Signup() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="senha">Senha (mínimo 8 caracteres)</Label>
-              <Input id="senha" type="password" minLength={8} value={senha} onChange={(e) => setSenha(e.target.value)} required />
+              <Input
+                id="senha"
+                type="password"
+                minLength={8}
+                value={senha}
+                onChange={(e) => { setSenha(e.target.value); setSenhaErro(null); }}
+                required
+              />
+              {senhaErro && (
+                <p className="text-xs text-destructive">{senhaErro}</p>
+              )}
+              {senha.length > 0 && senha.length < 8 && !senhaErro && (
+                <p className="text-xs text-muted-foreground">
+                  {8 - senha.length} caractere{8 - senha.length !== 1 ? "s" : ""} restante{8 - senha.length !== 1 ? "s" : ""}
+                </p>
+              )}
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}

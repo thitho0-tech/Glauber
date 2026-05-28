@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -13,15 +13,30 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wallet, ChevronLeft, CheckCircle2, AlertCircle, XCircle, AlertTriangle } from "lucide-react";
+import { Plus, Wallet, ChevronLeft, CheckCircle2, AlertCircle, XCircle, AlertTriangle, FileText, Search, X } from "lucide-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+import { useOrgs } from "@/hooks/useOrg";
+import { useAuth } from "@/hooks/useAuth";
+import { FornecedorSelect } from "@/components/finance/FornecedorSelect";
+import { UploadComprovante } from "@/components/finance/UploadComprovante";
 
 export default function Finance() {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
+  const { data: orgs } = useOrgs(user?.id);
+  const orgId = orgs?.[0]?.org.id;
   const qc = useQueryClient();
   const [openLinha, setOpenLinha] = useState(false);
   const [openDespesa, setOpenDespesa] = useState(false);
+  const [novaDespesaId, setNovaDespesaId] = useState<string | null>(null);
+  const [fornecedorId, setFornecedorId] = useState<string | undefined>();
+  const [expandUpload, setExpandUpload] = useState<string | null>(null);
+
+  // C2 — filtros locais
+  const [busca, setBusca] = useState("");
+  const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [filtroRubrica, setFiltroRubrica] = useState("todas");
 
   const { data: projeto } = useQuery({
     queryKey: ["projeto-fin", id],
@@ -75,7 +90,7 @@ export default function Finance() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("despesas")
-        .select("*, validacao:validacoes_edital(status, mensagem), linha:linhas_orcamento(rubrica_codigo, descricao)")
+        .select("*, validacao:validacoes_edital(status, mensagem), linha:linhas_orcamento(rubrica_codigo, descricao), fornecedor:fornecedores(nome, cnpj, cpf)")
         .eq("projeto_id", id!)
         .order("data", { ascending: false });
       if (error) throw error;
@@ -85,7 +100,7 @@ export default function Finance() {
 
   const criarLinha = useMutation({
     mutationFn: async (form: FormData) => {
-      if (!orcamento?.id) throw new Error("Sem orçamento");
+      if (!orcamento?.id) throw new Error("Sem orcamento");
       const payload: any = {
         orcamento_id: orcamento.id,
         rubrica_codigo: form.get("rubrica_codigo"),
@@ -99,6 +114,7 @@ export default function Finance() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  // C1.1 — chamar validar_despesa() apos criar despesa
   const criarDespesa = useMutation({
     mutationFn: async (form: FormData) => {
       const payload: any = {
@@ -112,13 +128,53 @@ export default function Finance() {
         departamento: form.get("departamento") || null,
         cnpj_emitente: form.get("cnpj_emitente") || null,
         numero_nf: form.get("numero_nf") || null,
+        fornecedor_id: fornecedorId || null,
       };
-      const { error } = await supabase.from("despesas").insert(payload);
+      const { data, error } = await supabase.from("despesas").insert(payload).select().single();
       if (error) throw error;
+      // Validar imediatamente contra o edital
+      await supabase.rpc("validar_despesa", { p_despesa_id: data.id });
+      return data;
     },
-    onSuccess: () => { toast.success("Despesa registrada"); qc.invalidateQueries({ queryKey: ["despesas", id] }); setOpenDespesa(false); },
+    onSuccess: (nova) => {
+      toast.success("Despesa registrada");
+      qc.invalidateQueries({ queryKey: ["despesas", id] });
+      setNovaDespesaId(nova.id);
+    },
     onError: (e: any) => toast.error(e.message),
   });
+
+  function fecharDespesa() {
+    setOpenDespesa(false);
+    setNovaDespesaId(null);
+    setFornecedorId(undefined);
+  }
+
+  async function openSignedUrl(path: string) {
+    const { data, error } = await supabase.storage.from("comprovantes").createSignedUrl(path, 3600);
+    if (error) { toast.error("Erro ao gerar link"); return; }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
+  // C2 — filtros locais (memo para nao recalcular a cada render)
+  const despesasFiltradas = useMemo(() => {
+    if (!despesas) return [];
+    return despesas.filter((d: any) => {
+      const matchBusca = !busca || d.descricao?.toLowerCase().includes(busca.toLowerCase());
+      const matchStatus = filtroStatus === "todos" || d.status === filtroStatus;
+      const matchRubrica = filtroRubrica === "todas" || d.linha?.rubrica_codigo === filtroRubrica;
+      return matchBusca && matchStatus && matchRubrica;
+    });
+  }, [despesas, busca, filtroStatus, filtroRubrica]);
+
+  const totalFiltrado = despesasFiltradas.reduce((s: number, d: any) => s + Number(d.valor), 0);
+
+  const rubricasUnicas = useMemo(() => {
+    const codigos = new Set((despesas ?? []).map((d: any) => d.linha?.rubrica_codigo).filter(Boolean));
+    return Array.from(codigos) as string[];
+  }, [despesas]);
+
+  const temFiltro = busca || filtroStatus !== "todos" || filtroRubrica !== "todas";
 
   if (l3) return <Loading />;
 
@@ -139,9 +195,9 @@ export default function Finance() {
           <CardContent className="flex items-start gap-3 p-4">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div className="text-sm">
-              <p className="font-semibold text-amber-900 dark:text-amber-200">Orçamento ultrapassa o teto do edital</p>
+              <p className="font-semibold text-amber-900 dark:text-amber-200">Orcamento ultrapassa o teto do edital</p>
               <p className="text-amber-800 dark:text-amber-300">
-                Orçamento atual: <strong>{formatBRL(tetoCheck.atual)}</strong> · Teto do edital{projeto?.edital?.nome ? ` (${projeto.edital.nome})` : ""}: <strong>{formatBRL(tetoCheck.teto)}</strong>
+                Orcamento atual: <strong>{formatBRL(tetoCheck.atual)}</strong> · Teto do edital{projeto?.edital?.nome ? ` (${projeto.edital.nome})` : ""}: <strong>{formatBRL(tetoCheck.teto)}</strong>
               </p>
               {projeto?.edital?.teto_observacao && (
                 <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">{projeto.edital.teto_observacao}</p>
@@ -152,15 +208,15 @@ export default function Finance() {
       )}
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Orçamento total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatBRL(projeto?.orcamento_total ?? 0)}</p></CardContent></Card>
-        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Já gasto</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatBRL(totalRealizado)}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Orcamento total</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatBRL(projeto?.orcamento_total ?? 0)}</p></CardContent></Card>
+        <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Ja gasto</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatBRL(totalRealizado)}</p></CardContent></Card>
         <Card><CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Saldo</CardTitle></CardHeader><CardContent><p className="text-2xl font-bold">{formatBRL(Number(projeto?.orcamento_total ?? 0) - totalRealizado)}</p></CardContent></Card>
       </div>
 
       <Tabs defaultValue="orcamento">
         <TabsList>
-          <TabsTrigger value="orcamento">Rubricas do orçamento</TabsTrigger>
-          <TabsTrigger value="despesas">Lançamentos</TabsTrigger>
+          <TabsTrigger value="orcamento">Rubricas do orcamento</TabsTrigger>
+          <TabsTrigger value="despesas">Lancamentos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="orcamento">
@@ -171,16 +227,16 @@ export default function Finance() {
                 <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova rubrica</Button></DialogTrigger>
                 <DialogContent>
                   <form onSubmit={(e) => { e.preventDefault(); criarLinha.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
-                    <DialogHeader><DialogTitle>Nova rubrica do orçamento</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Nova rubrica do orcamento</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <Label htmlFor="rubrica_codigo">Código da rubrica</Label>
+                        <Label htmlFor="rubrica_codigo">Codigo da rubrica</Label>
                         {rubricasEdital.length > 0 ? (
                           <Select name="rubrica_codigo">
                             <SelectTrigger><SelectValue placeholder="Selecione a rubrica do edital" /></SelectTrigger>
                             <SelectContent>
                               {rubricasEdital.map((r: any) => (
-                                <SelectItem key={r.id} value={r.codigo}>{r.codigo} · {r.nome} (máx {((r.perc_max ?? 0) * 100).toFixed(0)}%)</SelectItem>
+                                <SelectItem key={r.id} value={r.codigo}>{r.codigo} · {r.nome} (max {((r.perc_max ?? 0) * 100).toFixed(0)}%)</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>
@@ -188,7 +244,7 @@ export default function Finance() {
                           <Input name="rubrica_codigo" placeholder="Ex.: EQUIPE, ELENCO, EQUIP" />
                         )}
                       </div>
-                      <div className="space-y-1.5"><Label htmlFor="descricao">Descrição</Label><Input id="descricao" name="descricao" required /></div>
+                      <div className="space-y-1.5"><Label htmlFor="descricao">Descricao</Label><Input id="descricao" name="descricao" required /></div>
                       <div className="space-y-1.5"><Label htmlFor="valor_previsto">Valor previsto (R$)</Label><Input id="valor_previsto" name="valor_previsto" type="number" step="0.01" required /></div>
                     </div>
                     <DialogFooter>
@@ -201,13 +257,13 @@ export default function Finance() {
             </CardHeader>
             <CardContent className="p-0">
               {!linhas?.length ? (
-                <div className="p-6"><Empty icon={<Wallet className="h-5 w-5" />} title="Sem rubricas" description="Defina as rubricas do orçamento conforme o edital escolhido." /></div>
+                <div className="p-6"><Empty icon={<Wallet className="h-5 w-5" />} title="Sem rubricas" description="Defina as rubricas do orcamento conforme o edital escolhido." /></div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Código</TableHead>
-                      <TableHead>Descrição</TableHead>
+                      <TableHead>Codigo</TableHead>
+                      <TableHead>Descricao</TableHead>
                       <TableHead className="text-right">Previsto</TableHead>
                       <TableHead className="text-right">Realizado</TableHead>
                     </TableRow>
@@ -234,91 +290,212 @@ export default function Finance() {
         <TabsContent value="despesas">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Despesas lançadas</CardTitle>
-              <Dialog open={openDespesa} onOpenChange={setOpenDespesa}>
+              <CardTitle>Despesas lancadas</CardTitle>
+              <Dialog open={openDespesa} onOpenChange={(v) => { if (!v) fecharDespesa(); else setOpenDespesa(true); }}>
                 <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova despesa</Button></DialogTrigger>
-                <DialogContent>
-                  <form onSubmit={(e) => { e.preventDefault(); criarDespesa.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
-                    <DialogHeader><DialogTitle>Nova despesa</DialogTitle></DialogHeader>
-                    <div className="space-y-3">
-                      <div className="space-y-1.5"><Label htmlFor="descricao">Descrição</Label><Input id="descricao" name="descricao" required /></div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5"><Label htmlFor="valor">Valor (R$)</Label><Input id="valor" name="valor" type="number" step="0.01" required /></div>
-                        <div className="space-y-1.5"><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="linha_orcamento_id">Rubrica</Label>
-                        <Select name="linha_orcamento_id">
-                          <SelectTrigger><SelectValue placeholder="Sem rubrica" /></SelectTrigger>
-                          <SelectContent>
-                            {(linhas ?? []).map((l: any) => (
-                              <SelectItem key={l.id} value={l.id}>{l.rubrica_codigo} · {l.descricao}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5"><Label htmlFor="cnpj_emitente">CNPJ emitente</Label><Input id="cnpj_emitente" name="cnpj_emitente" placeholder="00.000.000/0000-00" /></div>
-                        <div className="space-y-1.5"><Label htmlFor="numero_nf">Nº da NF</Label><Input id="numero_nf" name="numero_nf" /></div>
-                      </div>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="data_emissao_nf">Data de emissão da NF</Label>
-                          <Input id="data_emissao_nf" name="data_emissao_nf" type="date" />
+                <DialogContent className="max-w-lg">
+                  {!novaDespesaId ? (
+                    <form onSubmit={(e) => { e.preventDefault(); criarDespesa.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+                      <DialogHeader><DialogTitle>Nova despesa</DialogTitle></DialogHeader>
+                      <div className="space-y-3">
+                        <div className="space-y-1.5"><Label htmlFor="descricao">Descricao</Label><Input id="descricao" name="descricao" required /></div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5"><Label htmlFor="valor">Valor (R$)</Label><Input id="valor" name="valor" type="number" step="0.01" required /></div>
+                          <div className="space-y-1.5"><Label htmlFor="data">Data</Label><Input id="data" name="data" type="date" required defaultValue={new Date().toISOString().slice(0, 10)} /></div>
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="forma_pagamento">Forma de pagamento</Label>
-                          <Select name="forma_pagamento" defaultValue="transferencia">
-                            <SelectTrigger id="forma_pagamento"><SelectValue /></SelectTrigger>
+                          <Label htmlFor="linha_orcamento_id">Rubrica</Label>
+                          <Select name="linha_orcamento_id">
+                            <SelectTrigger><SelectValue placeholder="Sem rubrica" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="pix">PIX</SelectItem>
-                              <SelectItem value="transferencia">Transferência</SelectItem>
-                              <SelectItem value="dinheiro">Dinheiro</SelectItem>
-                              <SelectItem value="cartao_debito">Cartão de débito</SelectItem>
-                              <SelectItem value="cartao_credito">Cartão de crédito</SelectItem>
-                              <SelectItem value="outro">Outro</SelectItem>
+                              {(linhas ?? []).map((l: any) => (
+                                <SelectItem key={l.id} value={l.id}>{l.rubrica_codigo} · {l.descricao}</SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                         </div>
+                        {orgId && (
+                          <FornecedorSelect orgId={orgId} value={fornecedorId} onChange={setFornecedorId} />
+                        )}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5"><Label htmlFor="cnpj_emitente">CNPJ emitente</Label><Input id="cnpj_emitente" name="cnpj_emitente" placeholder="00.000.000/0000-00" /></div>
+                          <div className="space-y-1.5"><Label htmlFor="numero_nf">No da NF</Label><Input id="numero_nf" name="numero_nf" /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="data_emissao_nf">Data de emissao da NF</Label>
+                            <Input id="data_emissao_nf" name="data_emissao_nf" type="date" />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="forma_pagamento">Forma de pagamento</Label>
+                            <Select name="forma_pagamento" defaultValue="transferencia">
+                              <SelectTrigger id="forma_pagamento"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="pix">PIX</SelectItem>
+                                <SelectItem value="transferencia">Transferencia</SelectItem>
+                                <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                                <SelectItem value="cartao_debito">Cartao de debito</SelectItem>
+                                <SelectItem value="cartao_credito">Cartao de credito</SelectItem>
+                                <SelectItem value="outro">Outro</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
                       </div>
+                      <DialogFooter>
+                        <Button type="button" variant="outline" onClick={fecharDespesa}>Cancelar</Button>
+                        <Button type="submit" disabled={criarDespesa.isPending}>{criarDespesa.isPending ? "Lancando..." : "Lancar"}</Button>
+                      </DialogFooter>
+                    </form>
+                  ) : (
+                    <div className="space-y-4">
+                      <DialogHeader>
+                        <DialogTitle>Despesa registrada</DialogTitle>
+                      </DialogHeader>
+                      <p className="text-sm text-muted-foreground">
+                        Deseja anexar o comprovante ou NF agora? (pode pular e fazer depois)
+                      </p>
+                      {orgId && (
+                        <UploadComprovante
+                          despesaId={novaDespesaId}
+                          projectId={id!}
+                          orgId={orgId}
+                          onUploaded={() => qc.invalidateQueries({ queryKey: ["despesas", id] })}
+                        />
+                      )}
+                      <DialogFooter>
+                        <Button onClick={fecharDespesa}>Concluir</Button>
+                      </DialogFooter>
                     </div>
-                    <DialogFooter>
-                      <Button type="button" variant="outline" onClick={() => setOpenDespesa(false)}>Cancelar</Button>
-                      <Button type="submit" disabled={criarDespesa.isPending}>{criarDespesa.isPending ? "Lançando..." : "Lançar"}</Button>
-                    </DialogFooter>
-                  </form>
+                  )}
                 </DialogContent>
               </Dialog>
             </CardHeader>
+
+            {/* C2 — Barra de filtros */}
+            {(despesas?.length ?? 0) > 0 && (
+              <div className="border-b px-4 pb-3 pt-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="relative flex-1 min-w-[160px]">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Buscar despesa..."
+                      className="pl-8 h-8 text-sm"
+                      value={busca}
+                      onChange={(e) => setBusca(e.target.value)}
+                    />
+                  </div>
+                  <Select value={filtroStatus} onValueChange={setFiltroStatus}>
+                    <SelectTrigger className="h-8 w-[130px] text-sm">
+                      <SelectValue placeholder="Status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos status</SelectItem>
+                      <SelectItem value="pendente">Pendente</SelectItem>
+                      <SelectItem value="aprovado">Aprovado</SelectItem>
+                      <SelectItem value="reprovado">Reprovado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {rubricasUnicas.length > 0 && (
+                    <Select value={filtroRubrica} onValueChange={setFiltroRubrica}>
+                      <SelectTrigger className="h-8 w-[140px] text-sm">
+                        <SelectValue placeholder="Rubrica" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todas">Todas rubricas</SelectItem>
+                        {rubricasUnicas.map((r) => (
+                          <SelectItem key={r} value={r}>{r}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {temFiltro && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 text-xs text-muted-foreground"
+                      onClick={() => { setBusca(""); setFiltroStatus("todos"); setFiltroRubrica("todas"); }}
+                    >
+                      <X className="h-3 w-3 mr-1" /> Limpar
+                    </Button>
+                  )}
+                  <span className="ml-auto text-xs text-muted-foreground">
+                    {despesasFiltradas.length}/{despesas?.length ?? 0} · {formatBRL(totalFiltrado)}
+                  </span>
+                </div>
+              </div>
+            )}
+
             <CardContent className="p-0">
               {!despesas?.length ? (
-                <div className="p-6"><Empty icon={<Wallet className="h-5 w-5" />} title="Sem despesas lançadas" /></div>
+                <div className="p-6"><Empty icon={<Wallet className="h-5 w-5" />} title="Sem despesas lancadas" /></div>
+              ) : !despesasFiltradas.length ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma despesa corresponde aos filtros aplicados.</div>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Data</TableHead>
-                      <TableHead>Descrição</TableHead>
+                      <TableHead>Descricao</TableHead>
+                      <TableHead>Fornecedor</TableHead>
                       <TableHead>Rubrica</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
-                      <TableHead>Validação</TableHead>
+                      <TableHead>NF</TableHead>
+                      <TableHead>Validacao</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {despesas.map((d: any) => {
+                    {despesasFiltradas.map((d: any) => {
                       const val = d.validacao?.[0];
                       const icon = val?.status === "ok" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                   : val?.status === "warn" ? <AlertCircle className="h-4 w-4 text-amber-500" />
                                   : val?.status === "fail" ? <XCircle className="h-4 w-4 text-destructive" />
                                   : null;
                       return (
-                        <TableRow key={d.id}>
-                          <TableCell>{formatDate(d.data)}</TableCell>
-                          <TableCell className="font-medium">{d.descricao}</TableCell>
-                          <TableCell>{d.linha?.rubrica_codigo ? <Badge variant="outline">{d.linha.rubrica_codigo}</Badge> : "—"}</TableCell>
-                          <TableCell className="text-right">{formatBRL(d.valor)}</TableCell>
-                          <TableCell><div className="flex items-center gap-2">{icon}<span className="text-xs text-muted-foreground">{val?.mensagem ?? "—"}</span></div></TableCell>
-                        </TableRow>
+                        <>
+                          <TableRow key={d.id} className={expandUpload === d.id ? "border-b-0" : ""}>
+                            <TableCell>{formatDate(d.data)}</TableCell>
+                            <TableCell className="font-medium">{d.descricao}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{d.fornecedor?.nome ?? "—"}</TableCell>
+                            <TableCell>{d.linha?.rubrica_codigo ? <Badge variant="outline">{d.linha.rubrica_codigo}</Badge> : "—"}</TableCell>
+                            <TableCell className="text-right">{formatBRL(d.valor)}</TableCell>
+                            <TableCell>
+                              {d.comprovante_path ? (
+                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openSignedUrl(d.comprovante_path)} title="Ver comprovante">
+                                  <FileText className="h-4 w-4 text-emerald-600" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 text-xs text-muted-foreground"
+                                  onClick={() => setExpandUpload(expandUpload === d.id ? null : d.id)}
+                                >
+                                  + Anexar
+                                </Button>
+                              )}
+                            </TableCell>
+                            <TableCell><div className="flex items-center gap-2">{icon}<span className="text-xs text-muted-foreground">{val?.mensagem ?? "—"}</span></div></TableCell>
+                          </TableRow>
+                          {expandUpload === d.id && orgId && (
+                            <TableRow key={d.id + "-upload"}>
+                              <TableCell colSpan={7} className="pb-3 pt-0">
+                                <div className="pl-2 max-w-sm">
+                                  <UploadComprovante
+                                    despesaId={d.id}
+                                    projectId={id!}
+                                    orgId={orgId}
+                                    currentPath={d.comprovante_path}
+                                    onUploaded={() => {
+                                      qc.invalidateQueries({ queryKey: ["despesas", id] });
+                                      setExpandUpload(null);
+                                    }}
+                                  />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       );
                     })}
                   </TableBody>

@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
 import { Empty } from "@/components/ui/empty";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, Calendar, Wallet, AlertTriangle, Plus } from "lucide-react";
+import { FolderKanban, Calendar, Wallet, AlertTriangle, Plus, XCircle, CheckCircle2 } from "lucide-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 
 export default function Dashboard() {
@@ -17,7 +17,7 @@ export default function Dashboard() {
         supabase.from("projetos").select("*").order("criado_em", { ascending: false }),
         supabase.from("dias_filmagem").select("*").gte("data", new Date().toISOString().slice(0, 10)).order("data").limit(10),
         supabase.from("despesas").select("*").eq("status", "pendente").order("data", { ascending: false }).limit(20),
-        supabase.from("validacoes_edital").select("*").eq("status", "fail").limit(10),
+        supabase.from("validacoes_edital").select("*, despesa:despesas(descricao, valor, projeto_id, projeto:projetos(id, nome))").eq("status", "fail").limit(20),
       ]);
       return {
         projetos: projetos.data ?? [],
@@ -37,7 +37,7 @@ export default function Dashboard() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Visão geral da sua produtora</p>
+          <p className="text-sm text-muted-foreground">Visao geral da sua produtora</p>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Dias nos próx. 10</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Dias nos prox. 10</CardTitle>
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -71,7 +71,7 @@ export default function Dashboard() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Alertas de prestação</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">Alertas de prestacao</CardTitle>
             <AlertTriangle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -89,8 +89,8 @@ export default function Dashboard() {
             {!data?.projetos.length ? (
               <Empty
                 icon={<FolderKanban className="h-5 w-5" />}
-                title="Você ainda não tem projetos"
-                description="Crie o primeiro projeto da sua produtora para começar a usar a plataforma."
+                title="Voce ainda nao tem projetos"
+                description="Crie o primeiro projeto da sua produtora para comecar a usar a plataforma."
                 action={
                   <Button asChild>
                     <Link to="/projetos">
@@ -117,14 +117,14 @@ export default function Dashboard() {
               </ul>
             )}
             {!!data?.projetos.length && (
-              <p className="mt-3 text-xs text-muted-foreground">Orçamento somado: <span className="font-semibold">{formatBRL(totalOrcado)}</span></p>
+              <p className="mt-3 text-xs text-muted-foreground">Orcamento somado: <span className="font-semibold">{formatBRL(totalOrcado)}</span></p>
             )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Próximos dias de filmagem</CardTitle>
+            <CardTitle>Proximos dias de filmagem</CardTitle>
           </CardHeader>
           <CardContent>
             {!data?.dias.length ? (
@@ -145,6 +145,53 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* C4 — Painel de alertas de prestacao */}
+      <Card className={data?.validacoes.length ? "border-destructive/40" : "border-emerald-200"}>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <div className="flex items-center gap-2">
+            {data?.validacoes.length
+              ? <XCircle className="h-4 w-4 text-destructive" />
+              : <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
+            <CardTitle className="text-base">Alertas de prestacao de contas</CardTitle>
+          </div>
+          {!!data?.validacoes.length && (
+            <Badge variant="destructive">{data.validacoes.length} falha{data.validacoes.length !== 1 ? "s" : ""}</Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {!data?.validacoes.length ? (
+            <p className="text-sm text-emerald-700 dark:text-emerald-400">
+              Nenhuma pendencia de prestacao encontrada em todos os projetos.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {data.validacoes.map((v: any) => {
+                const projetoId = v.despesa?.projeto_id;
+                const projetoNome = v.despesa?.projeto?.nome ?? "Projeto";
+                return (
+                  <li key={v.id} className="flex items-start justify-between gap-3 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-destructive truncate">{v.mensagem}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {v.despesa?.descricao ?? "—"} · {formatBRL(Number(v.despesa?.valor ?? 0))}
+                      </p>
+                    </div>
+                    {projetoId && (
+                      <Link
+                        to={`/projetos/${projetoId}/prestacao`}
+                        className="shrink-0 text-xs text-primary underline underline-offset-2 hover:no-underline"
+                      >
+                        {projetoNome}
+                      </Link>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

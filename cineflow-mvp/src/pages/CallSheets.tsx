@@ -11,14 +11,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, ChevronLeft, Plus, Calendar } from "lucide-react";
+import { FileText, ChevronLeft, Plus, Calendar, ExternalLink, Copy, Check } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
 const TIPO_LABEL: Record<string, string> = {
   filmagem: "Filmagem",
   ensaio: "Ensaio",
-  reuniao: "Reunião",
+  reuniao: "Reuniao",
   pesquisa: "Pesquisa",
   outro: "Outro",
 };
@@ -35,6 +35,9 @@ export default function CallSheets() {
   const { id: projetoId } = useParams<{ id: string }>();
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<string>("filmagem");
+  const [linkOdId, setLinkOdId] = useState<string | null>(null);
+  const [linkToken, setLinkToken] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState(false);
   const qc = useQueryClient();
 
   const { data: ods, isLoading } = useQuery({
@@ -43,7 +46,7 @@ export default function CallSheets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_do_dia")
-        .select("id, titulo, tipo, data, versao, publicada_em, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
+        .select("id, titulo, tipo, data, versao, publicada_em, token, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
         .eq("projeto_id", projetoId!)
         .order("data", { ascending: false, nullsFirst: false })
         .order("criado_em", { ascending: false });
@@ -69,11 +72,10 @@ export default function CallSheets() {
 
   const criar = useMutation({
     mutationFn: async (form: FormData) => {
-      if (!projetoId) throw new Error("Projeto inválido");
+      if (!projetoId) throw new Error("Projeto invalido");
       const dia_id = form.get("dia_id") ? String(form.get("dia_id")) : null;
       const dataOd = form.get("data") ? String(form.get("data")) : null;
 
-      // Se vinculou a um dia, herda a data do dia (a menos que usuário tenha forçado outra)
       let dataFinal = dataOd;
       if (dia_id && !dataFinal) {
         const dia = (diasFilmagem ?? []).find((d: any) => d.id === dia_id);
@@ -96,7 +98,6 @@ export default function CallSheets() {
       toast.success("Ordem do Dia criada");
       qc.invalidateQueries({ queryKey: ["ods", projetoId] });
       setOpen(false);
-      // Redireciona para o editor
       window.location.href = `/projetos/${projetoId}/ordens-do-dia/od/${od.id}`;
     },
     onError: (e: any) => toast.error(e.message),
@@ -113,7 +114,7 @@ export default function CallSheets() {
           </Link>
           <h1 className="text-2xl font-bold">Ordens do Dia</h1>
           <p className="text-sm text-muted-foreground">
-            Crie ODs de filmagem, ensaio, reunião ou pesquisa. Cada OD é independente e pode ou não estar vinculada a um dia do cronograma.
+            Crie ODs de filmagem, ensaio, reuniao ou pesquisa. Cada OD e independente e pode ou nao estar vinculada a um dia do cronograma.
           </p>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
@@ -135,7 +136,7 @@ export default function CallSheets() {
                       <SelectContent>
                         <SelectItem value="filmagem">Filmagem</SelectItem>
                         <SelectItem value="ensaio">Ensaio</SelectItem>
-                        <SelectItem value="reuniao">Reunião</SelectItem>
+                        <SelectItem value="reuniao">Reuniao</SelectItem>
                         <SelectItem value="pesquisa">Pesquisa</SelectItem>
                         <SelectItem value="outro">Outro</SelectItem>
                       </SelectContent>
@@ -147,8 +148,8 @@ export default function CallSheets() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="titulo">Título</Label>
-                  <Input id="titulo" name="titulo" required placeholder="Ex.: Dia 1 — Sequência casa do João" />
+                  <Label htmlFor="titulo">Titulo</Label>
+                  <Input id="titulo" name="titulo" required placeholder="Ex.: Dia 1 — Sequencia casa do Joao" />
                 </div>
                 {tipo === "filmagem" && (
                   <div className="space-y-1.5">
@@ -184,45 +185,104 @@ export default function CallSheets() {
       {!ods?.length ? (
         <Empty
           icon={<FileText className="h-5 w-5" />}
-          title="Nenhuma OD criada"
-          description="Crie uma OD a partir de um dia do cronograma ou avulsa (ensaio, reunião, pesquisa)."
-          action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nova OD</Button>}
+          title="Nenhuma Ordem do Dia ainda"
+          description="Crie a primeira OD deste projeto para comecar a organizar os dias."
         />
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {ods.map((od: any) => {
-            const data = od.data ?? od.dia?.data;
+            const dataOd = od.data ?? od.dia?.data;
             const tipoOd = od.tipo ?? "filmagem";
+            const publicLink = od.token ? `${window.location.origin}/od/${od.token}` : null;
             return (
-              <Link key={od.id} to={`/projetos/${projetoId}/ordens-do-dia/od/${od.id}`}>
-                <Card className="transition-shadow hover:shadow-md">
-                  <CardContent className="space-y-2 p-5">
-                    <div className="flex items-center justify-between">
-                      <p className="text-lg font-semibold">{od.titulo ?? "Sem título"}</p>
-                      <Badge variant={TIPO_VARIANT[tipoOd]}>{TIPO_LABEL[tipoOd] ?? tipoOd}</Badge>
-                    </div>
-                    {data && (
-                      <p className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <Calendar className="h-3.5 w-3.5" /> {formatDate(data)}
-                      </p>
-                    )}
-                    {od.dia?.locacao?.nome && (
-                      <p className="text-xs text-muted-foreground">Locação: {od.dia.locacao.nome}</p>
-                    )}
-                    <div className="border-t pt-3 text-xs">
-                      {od.publicada_em ? (
-                        <span className="text-emerald-600">Publicada v{od.versao} · {formatDateTime(od.publicada_em)}</span>
-                      ) : (
-                        <span className="text-amber-600">Rascunho v{od.versao}</span>
+              <div key={od.id} className="relative">
+                <Link to={`/projetos/${projetoId}/ordens-do-dia/od/${od.id}`}>
+                  <Card className="transition-shadow hover:shadow-md">
+                    <CardContent className="space-y-2 p-5">
+                      <div className="flex items-center justify-between">
+                        <p className="text-lg font-semibold">{od.titulo ?? "Sem titulo"}</p>
+                        <Badge variant={TIPO_VARIANT[tipoOd]}>{TIPO_LABEL[tipoOd] ?? tipoOd}</Badge>
+                      </div>
+                      {dataOd && (
+                        <p className="flex items-center gap-1 text-sm text-muted-foreground">
+                          <Calendar className="h-3.5 w-3.5" /> {formatDate(dataOd)}
+                        </p>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+                      {od.dia?.locacao?.nome && (
+                        <p className="text-xs text-muted-foreground">Locacao: {od.dia.locacao.nome}</p>
+                      )}
+                      <div className="flex items-center justify-between border-t pt-3">
+                        <span className="text-xs">
+                          {od.publicada_em ? (
+                            <span className="text-emerald-600">Publicada v{od.versao} · {formatDateTime(od.publicada_em)}</span>
+                          ) : (
+                            <span className="text-amber-600">Rascunho v{od.versao}</span>
+                          )}
+                        </span>
+                        {publicLink && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 gap-1 text-xs text-primary"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setLinkOdId(od.id);
+                              setLinkToken(publicLink);
+                              setCopiado(false);
+                            }}
+                          >
+                            <ExternalLink className="h-3 w-3" /> Link publico
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </div>
             );
           })}
         </div>
       )}
+
+      {/* C7 — Dialog link publico da OD */}
+      <Dialog open={!!linkOdId} onOpenChange={(v) => { if (!v) { setLinkOdId(null); setLinkToken(null); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ExternalLink className="h-4 w-4" /> Link publico da Ordem do Dia
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">
+              Compartilhe este link com toda a equipe. Nao e necessario fazer login para visualizar.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input value={linkToken ?? ""} readOnly className="text-xs font-mono" />
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => {
+                  if (linkToken) {
+                    navigator.clipboard.writeText(linkToken);
+                    setCopiado(true);
+                    setTimeout(() => setCopiado(false), 2000);
+                  }
+                }}
+                title="Copiar link"
+              >
+                {copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setLinkOdId(null); setLinkToken(null); }}>Fechar</Button>
+            <Button onClick={() => window.open(linkToken ?? "", "_blank", "noopener,noreferrer")}>
+              <ExternalLink className="h-4 w-4 mr-1" /> Abrir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
