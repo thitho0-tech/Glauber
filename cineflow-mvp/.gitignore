@@ -10,3 +10,6 @@ dist-ssr
 .idea
 
 .vercel
+
+vite.config.js.timestamp-*.mjs
+vite.config.ts.timestamp-*.mjs
