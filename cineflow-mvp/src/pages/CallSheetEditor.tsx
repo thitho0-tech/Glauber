@@ -228,8 +228,14 @@ export default function CallSheetEditor() {
         .update({ publicada_em: new Date().toISOString(), publicada_por: u.user?.id, versao: od.versao })
         .eq("id", od.id);
       if (error) throw error;
+      // D4 — notificacoes in-app para membros com notif_od_inapp = true
+      await supabase.rpc("notificar_od_publicada", {
+        p_od_id: od.id,
+        p_projeto_id: od.projeto_id,
+        p_titulo_od: od.titulo ?? "Sem titulo",
+      });
     },
-    onSuccess: () => { toast.success("Publicada!"); qc.invalidateQueries({ queryKey: ["od-edit", od?.id] }); },
+    onSuccess: () => { toast.success("Publicada! Membros notificados."); qc.invalidateQueries({ queryKey: ["od-edit", od?.id] }); },
     onError: (e: any) => toast.error(e.message),
   });
 

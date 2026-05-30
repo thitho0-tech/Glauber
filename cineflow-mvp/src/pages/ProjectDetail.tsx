@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronLeft, Calendar, FileText, Users, MapPin, Wallet, Receipt, Trash2, AlertTriangle, MessageSquare, FileSignature, Shirt, Drama, ScrollText, Gauge } from "lucide-react";
+import { ChevronLeft, Calendar, FileText, Users, MapPin, Wallet, Receipt, Trash2, AlertTriangle, MessageSquare, FileSignature, Shirt, Drama, ScrollText, Gauge, CalendarDays } from "lucide-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
@@ -101,6 +101,7 @@ export default function ProjectDetail() {
   const atalhos = [
     { to: `/projetos/${id}/dashboard`, label: "Command Center", icon: Gauge, descricao: "KPIs, eventos e alertas em tempo real" },
     { to: `/projetos/${id}/cronograma`, label: "Cronograma", icon: Calendar, descricao: "Datas, locacoes e status de cada dia" },
+    { to: `/projetos/${id}/agenda`, label: "Agenda", icon: CalendarDays, descricao: "Ensaios, reunioes, visitas e outros eventos" },
     { to: `/projetos/${id}/ordens-do-dia`, label: "Ordem do Dia", icon: FileText, descricao: "Editar, publicar e compartilhar" },
     { to: `/projetos/${id}/roteiro`, label: "Roteiro", icon: ScrollText, descricao: "Upload + decupagem automatica (IA)" },
     { to: `/projetos/${id}/equipe`, label: "Equipe tecnica", icon: Users, descricao: "Pessoas, funcoes e diarias" },

@@ -29,6 +29,8 @@ import Roteiro from "@/pages/Roteiro";
 import Onboarding from "@/pages/Onboarding";
 import ProjectDashboard from "@/pages/ProjectDashboard";
 import Fornecedores from "@/pages/Fornecedores";
+import Agenda from "@/pages/Agenda";
+import Lixeira from "@/pages/Lixeira";
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -72,8 +74,10 @@ export default function App() {
             <Route path="/projetos/:id/elenco" element={<Cast />} />
             <Route path="/projetos/:id/roteiro" element={<Roteiro />} />
             <Route path="/projetos/:id/fornecedores" element={<Fornecedores />} />
+            <Route path="/projetos/:id/agenda" element={<Agenda />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/configuracoes" element={<Settings />} />
+            <Route path="/lixeira" element={<Lixeira />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

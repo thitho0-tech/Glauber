@@ -85,10 +85,14 @@ export default function Locations() {
 
   const remover = useMutation({
     mutationFn: async (lid: string) => {
-      const { error } = await supabase.from("locacoes").delete().eq("id", lid);
+      const { error } = await supabase.rpc("soft_delete_item", { p_tabela: "locacoes", p_id: lid });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["locacoes"] }),
+    onSuccess: () => {
+      toast.success("Locação movida para a lixeira. Acesse Configurações → Lixeira para restaurar.");
+      qc.invalidateQueries({ queryKey: ["locacoes"] });
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   if (isLoading) return <Loading />;

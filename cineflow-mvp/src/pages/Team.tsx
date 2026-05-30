@@ -72,11 +72,26 @@ function FuncaoAvSelect({ funcoes }: { funcoes: any[] }) {
   );
 }
 
+const DEPARTAMENTOS_AV = [
+  { value: "desenvolvimento", label: "Desenvolvimento" },
+  { value: "direcao",         label: "Direção" },
+  { value: "producao",        label: "Produção" },
+  { value: "fotografia",      label: "Fotografia" },
+  { value: "arte",            label: "Arte" },
+  { value: "som",             label: "Som" },
+  { value: "elenco",          label: "Elenco" },
+  { value: "logistica",       label: "Logística" },
+  { value: "pos_producao",    label: "Pós-produção" },
+];
+
 export default function Team() {
   const { id: projetoId } = useParams();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"catalogo" | "nova">("catalogo");
   const [openRegime, setOpenRegime] = useState<string | null>(null);
+  // D5 — controle de função/depto no form "Nova pessoa"
+  const [funcaoNova, setFuncaoNova] = useState("");
+  const [deptNova, setDeptNova] = useState("");
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -193,11 +208,11 @@ export default function Team() {
 
   const desvincular = useMutation({
     mutationFn: async (vinculoId: string) => {
-      const { error } = await supabase.from("projeto_pessoas").delete().eq("id", vinculoId);
+      const { error } = await supabase.rpc("soft_delete_item", { p_tabela: "projeto_pessoas", p_id: vinculoId });
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Pessoa removida do projeto");
+      toast.success("Pessoa movida para a lixeira. Acesse Configurações → Lixeira para restaurar.");
       qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
     },
   });
@@ -317,7 +332,15 @@ export default function Team() {
 
               <TabsContent value="nova">
                 <form
-                  onSubmit={(e) => { e.preventDefault(); criarEVincular.mutate(new FormData(e.currentTarget)); }}
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    // D5 — departamento obrigatório se função informada
+                    if (funcaoNova.trim() && !deptNova) {
+                      toast.error("Departamento é obrigatório quando a função está preenchida.");
+                      return;
+                    }
+                    criarEVincular.mutate(new FormData(e.currentTarget));
+                  }}
                   className="space-y-4 pt-2"
                 >
                   <div className="space-y-1.5">
@@ -326,26 +349,41 @@ export default function Team() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label htmlFor="funcao">Funcao (livre)</Label>
-                      <Input id="funcao" name="funcao" placeholder="Ex.: Diretor de Fotografia" />
+                      <Label htmlFor="funcao">
+                        Função (livre)
+                        {funcaoNova.trim() && !deptNova && (
+                          <span className="ml-1 text-destructive text-xs">→ informe o departamento</span>
+                        )}
+                      </Label>
+                      <Input
+                        id="funcao"
+                        name="funcao"
+                        placeholder="Ex.: Diretor de Fotografia"
+                        value={funcaoNova}
+                        onChange={(e) => setFuncaoNova(e.target.value)}
+                      />
                     </div>
                     <div className="space-y-1.5">
-                      <Label htmlFor="departamento">Departamento</Label>
-                      <Select name="departamento">
-                        <SelectTrigger id="departamento"><SelectValue placeholder="--" /></SelectTrigger>
+                      <Label htmlFor="departamento">
+                        Departamento
+                        {funcaoNova.trim() && <span className="ml-1 text-destructive text-xs">*obrigatório</span>}
+                      </Label>
+                      <Select
+                        name="departamento"
+                        value={deptNova}
+                        onValueChange={setDeptNova}
+                        required={!!funcaoNova.trim()}
+                      >
+                        <SelectTrigger
+                          id="departamento"
+                          className={funcaoNova.trim() && !deptNova ? "border-destructive" : ""}
+                        >
+                          <SelectValue placeholder="--" />
+                        </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="desenvolvimento">Desenvolvimento</SelectItem>
-                          <SelectItem value="direcao">Direcao</SelectItem>
-                          <SelectItem value="producao">Producao</SelectItem>
-                          <SelectItem value="fotografia">Fotografia</SelectItem>
-                          <SelectItem value="arte">Arte</SelectItem>
-                          <SelectItem value="som">Som</SelectItem>
-                          <SelectItem value="figurino">Figurino</SelectItem>
-                          <SelectItem value="maquiagem">Maquiagem</SelectItem>
-                          <SelectItem value="elenco">Elenco</SelectItem>
-                          <SelectItem value="logistica">Logistica</SelectItem>
-                          <SelectItem value="pos">Pos-producao</SelectItem>
-                          <SelectItem value="outros">Outros</SelectItem>
+                          {DEPARTAMENTOS_AV.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                     </div>
@@ -361,15 +399,15 @@ export default function Team() {
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
-                    <FuncaoAvSelect funcoes={funcoesAv ?? []} />
+                    <FuncaoAvSelect funcoes={(funcoesAv ?? []).filter((f: any) => !deptNova || f.departamento === deptNova)} />
                     <div className="space-y-1.5">
                       <Label htmlFor="valor_contratacao_n">Valor de contratacao (R$)</Label>
                       <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-                    <Button type="submit" disabled={criarEVincular.isPending}>
+                    <Button type="button" variant="outline" onClick={() => { setOpen(false); setFuncaoNova(""); setDeptNova(""); }}>Cancelar</Button>
+                    <Button type="submit" disabled={criarEVincular.isPending || (!!funcaoNova.trim() && !deptNova)}>
                       {criarEVincular.isPending ? "Criando..." : "Criar e adicionar"}
                     </Button>
                   </DialogFooter>

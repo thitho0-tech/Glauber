@@ -1,9 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Bell, LogOut, Menu } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrgs } from "@/hooks/useOrg";
 import { useSidebar } from "@/hooks/useSidebar";
+import { NotificationBell } from "@/components/NotificationBell";
 
 export function Topbar() {
   const { user } = useAuth();
@@ -23,9 +24,9 @@ export function Topbar() {
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" aria-label="Notificações" className="hidden sm:inline-flex">
-          <Bell className="h-5 w-5" />
-        </Button>
+        <div className="hidden sm:block">
+          <NotificationBell />
+        </div>
         <div className="hidden text-right text-sm md:block">
           <p className="font-medium">{user?.email}</p>
           <p className="text-xs text-muted-foreground">Owner</p>

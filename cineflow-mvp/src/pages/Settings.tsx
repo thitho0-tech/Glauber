@@ -11,15 +11,16 @@ import { Empty } from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
-import { Shield, Users } from "lucide-react";
+import { Shield, Users, Bell, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
 
 const PAPEIS = [
-  { value: "owner", label: "Owner", desc: "Todos os direitos (criador do projeto)" },
-  { value: "admin", label: "Admin", desc: "Tudo exceto excluir projeto" },
-  { value: "producao", label: "Produção", desc: "Edita cronograma, OD, financeiro, equipe" },
-  { value: "departamento", label: "Departamento", desc: "Edita apenas seu departamento" },
-  { value: "leitor", label: "Leitor", desc: "Somente leitura" },
+  { value: "owner",        label: "Owner",        desc: "Todos os direitos (criador do projeto)" },
+  { value: "admin",        label: "Admin",         desc: "Tudo exceto excluir projeto" },
+  { value: "producao",     label: "Producao",      desc: "Edita cronograma, OD, financeiro, equipe" },
+  { value: "departamento", label: "Departamento",  desc: "Edita apenas seu departamento" },
+  { value: "leitor",       label: "Leitor",        desc: "Somente leitura" },
 ];
 
 type ProjetoMin = { id: string; nome: string; criado_por: string };
@@ -83,7 +84,7 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
 
   if (lp) return <Loading />;
   if (!projetos || projetos.length === 0) {
-    return <Empty icon={<Shield className="h-5 w-5" />} title="Sem projetos" description="Crie um projeto para gerenciar papéis." />;
+    return <Empty icon={<Shield className="h-5 w-5" />} title="Sem projetos" description="Crie um projeto para gerenciar papeis." />;
   }
 
   const projetoAtual = projetos.find((p) => p.id === projetoSel);
@@ -98,15 +99,14 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
           onChange={(e) => setProjetoSel(e.target.value)}
           className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
         >
-          <option value="">— escolher projeto —</option>
+          <option value="">escolher projeto</option>
           {projetos.map((p) => (
             <option key={p.id} value={p.id}>{p.nome}</option>
           ))}
         </select>
         {projetoSel && !ehDono && (
           <p className="text-xs text-amber-700 dark:text-amber-400">
-            Você não é o criador deste projeto. Pode visualizar os papéis mas as mudanças
-            podem ser bloqueadas pela RLS conforme seu nível de acesso.
+            Voce nao e o criador deste projeto. Mudancas podem ser bloqueadas pela RLS.
           </p>
         )}
       </div>
@@ -114,14 +114,14 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
       {projetoSel && membros && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4" /> Membros e papéis</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4" /> Membros e papeis</CardTitle>
             <CardDescription>
-              O <strong>owner</strong> sempre é o criador (não editável aqui). Para os demais, escolha o nível.
+              O <strong>owner</strong> e sempre o criador. Para os demais, escolha o nivel.
             </CardDescription>
           </CardHeader>
           <CardContent>
             {membros.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem membros vinculados. Cadastre pessoas em Equipe.</p>
+              <p className="text-sm text-muted-foreground">Sem membros vinculados. Cadastre em Equipe.</p>
             ) : (
               <div className="space-y-2">
                 {membros.map((m) => (
@@ -139,7 +139,7 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
                         onChange={(e) => atualizarPapel.mutate({ ppId: m.id, papel: e.target.value })}
                         className="h-9 rounded-md border bg-background px-2 text-xs"
                       >
-                        <option value="">— sem papel —</option>
+                        <option value="">sem papel</option>
                         {PAPEIS.filter((p) => p.value !== "owner").map((p) => (
                           <option key={p.value} value={p.value}>{p.label}</option>
                         ))}
@@ -155,9 +155,7 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
       )}
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Legenda</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle className="text-base">Legenda</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           {PAPEIS.map((p) => (
             <div key={p.value} className="flex items-start gap-2">
@@ -165,6 +163,124 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
               <span className="text-muted-foreground">{p.desc}</span>
             </div>
           ))}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function NotificacoesPanel({ userId }: { userId: string }) {
+  const qc = useQueryClient();
+  const [projetoSel, setProjetoSel] = useState<string>("");
+  const { data: orgs } = useOrgs(userId);
+  const orgId = orgs?.[0]?.org.id;
+
+  const { data: projetos } = useQuery({
+    queryKey: ["projetos-notif", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .eq("org_id", orgId!)
+        .is("deleted_at", null)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: meuVinculo } = useQuery({
+    queryKey: ["meu-vinculo-notif", projetoSel, userId],
+    enabled: !!projetoSel && !!userId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projeto_pessoas")
+        .select("id, notif_od_inapp, notif_od_email, pessoa:pessoas!inner(user_id)")
+        .eq("projeto_id", projetoSel)
+        .eq("pessoa.user_id", userId)
+        .maybeSingle();
+      if (error) return null;
+      return data as any;
+    },
+  });
+
+  const salvar = useMutation({
+    mutationFn: async ({ campo, valor }: { campo: string; valor: boolean }) => {
+      if (!meuVinculo?.id) throw new Error("Voce nao e membro deste projeto");
+      const { error } = await supabase
+        .from("projeto_pessoas")
+        .update({ [campo]: valor })
+        .eq("id", meuVinculo.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Preferencia salva");
+      qc.invalidateQueries({ queryKey: ["meu-vinculo-notif", projetoSel, userId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Bell className="h-4 w-4" /> Notificacoes por projeto</CardTitle>
+          <CardDescription>
+            Escolha como quer ser avisado quando uma Ordem do Dia for publicada.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1.5">
+            <Label>Projeto</Label>
+            <select
+              value={projetoSel}
+              onChange={(e) => setProjetoSel(e.target.value)}
+              className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
+            >
+              <option value="">escolher projeto</option>
+              {(projetos ?? []).map((p: any) => (
+                <option key={p.id} value={p.id}>{p.nome}</option>
+              ))}
+            </select>
+          </div>
+
+          {projetoSel && !meuVinculo && (
+            <p className="text-sm text-muted-foreground">Voce nao e membro deste projeto.</p>
+          )}
+
+          {projetoSel && meuVinculo && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="font-medium">Sino in-app</p>
+                  <p className="text-xs text-muted-foreground">Aparece no sino no topo quando uma OD for publicada.</p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 cursor-pointer accent-primary"
+                  checked={meuVinculo.notif_od_inapp ?? true}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => salvar.mutate({ campo: "notif_od_inapp", valor: e.target.checked })}
+                  disabled={salvar.isPending}
+                />
+              </div>
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div>
+                  <p className="font-medium">E-mail (via Resend)</p>
+                  <p className="text-xs text-muted-foreground">
+                    Requer RESEND_API_KEY configurada no painel do Vercel.
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 cursor-pointer accent-primary"
+                  checked={meuVinculo.notif_od_email ?? false}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => salvar.mutate({ campo: "notif_od_email", valor: e.target.checked })}
+                  disabled={salvar.isPending}
+                />
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -196,9 +312,7 @@ export default function Settings() {
       const nome_completo = String(form.get("nome_completo") ?? "");
       const telefone = String(form.get("telefone") ?? "");
       const cargo = String(form.get("cargo") ?? "");
-      const { error } = await supabase.auth.updateUser({
-        data: { nome_completo, telefone, cargo },
-      });
+      const { error } = await supabase.auth.updateUser({ data: { nome_completo, telefone, cargo } });
       if (error) throw error;
     },
     onSuccess: () => toast.success("Cadastro pessoal atualizado"),
@@ -208,7 +322,7 @@ export default function Settings() {
   const trocarSenha = useMutation({
     mutationFn: async (form: FormData) => {
       const novaSenha = String(form.get("nova_senha") ?? "");
-      if (novaSenha.length < 8) throw new Error("A senha precisa ter pelo menos 8 caracteres");
+      if (novaSenha.length < 8) throw new Error("Senha precisa ter pelo menos 8 caracteres");
       const { error } = await supabase.auth.updateUser({ password: novaSenha });
       if (error) throw error;
     },
@@ -223,23 +337,25 @@ export default function Settings() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Configurações</h1>
+        <h1 className="text-2xl font-bold">Configuracoes</h1>
         <p className="text-sm text-muted-foreground">Dados da produtora, conta e cadastro pessoal.</p>
       </div>
 
       <Tabs defaultValue="pessoal">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="pessoal">Cadastro pessoal</TabsTrigger>
           <TabsTrigger value="produtora">Produtora</TabsTrigger>
-          <TabsTrigger value="conta">Conta & segurança</TabsTrigger>
-          <TabsTrigger value="autorizacoes">Autorizações</TabsTrigger>
+          <TabsTrigger value="conta">Conta</TabsTrigger>
+          <TabsTrigger value="autorizacoes">Autorizacoes</TabsTrigger>
+          <TabsTrigger value="notificacoes">Notificacoes</TabsTrigger>
+          <TabsTrigger value="lixeira">Lixeira</TabsTrigger>
         </TabsList>
 
         <TabsContent value="pessoal">
           <Card>
             <CardHeader>
               <CardTitle>Cadastro pessoal</CardTitle>
-              <CardDescription>Seus dados aparecem nas ordens do dia em que você está escalado.</CardDescription>
+              <CardDescription>Seus dados aparecem nas ordens do dia em que voce esta escalado.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={(e) => { e.preventDefault(); salvarPessoal.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
@@ -253,7 +369,7 @@ export default function Settings() {
                     <Input id="telefone" name="telefone" defaultValue={meta.telefone ?? ""} placeholder="(81) 9 9999-9999" />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="cargo">Cargo / Função principal</Label>
+                    <Label htmlFor="cargo">Cargo principal</Label>
                     <Input id="cargo" name="cargo" defaultValue={meta.cargo ?? ""} placeholder="Ex.: Produtora Executiva" />
                   </div>
                 </div>
@@ -267,7 +383,7 @@ export default function Settings() {
           <Card>
             <CardHeader>
               <CardTitle>Produtora</CardTitle>
-              <CardDescription>Estes dados aparecem no cabeçalho de Ordens do Dia e relatórios.</CardDescription>
+              <CardDescription>Estes dados aparecem no cabecalho de Ordens do Dia e relatorios.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={(e) => { e.preventDefault(); salvarOrg.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
@@ -287,9 +403,7 @@ export default function Settings() {
 
         <TabsContent value="conta">
           <Card>
-            <CardHeader>
-              <CardTitle>Conta</CardTitle>
-            </CardHeader>
+            <CardHeader><CardTitle>Conta</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p><span className="text-muted-foreground">E-mail:</span> <span className="font-medium">{user?.email}</span></p>
               <p><span className="text-muted-foreground">Papel na produtora:</span> <span className="font-medium">{orgs?.[0]?.membership.papel}</span></p>
@@ -298,10 +412,13 @@ export default function Settings() {
           <Card className="mt-4">
             <CardHeader>
               <CardTitle>Trocar senha</CardTitle>
-              <CardDescription>Mínimo 8 caracteres.</CardDescription>
+              <CardDescription>Minimo 8 caracteres.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={(e) => { e.preventDefault(); trocarSenha.mutate(new FormData(e.currentTarget)); (e.target as HTMLFormElement).reset(); }} className="space-y-4">
+              <form
+                onSubmit={(e) => { e.preventDefault(); trocarSenha.mutate(new FormData(e.currentTarget)); (e.target as HTMLFormElement).reset(); }}
+                className="space-y-4"
+              >
                 <div className="space-y-1.5">
                   <Label htmlFor="nova_senha">Nova senha</Label>
                   <Input id="nova_senha" name="nova_senha" type="password" minLength={8} required />
@@ -315,14 +432,37 @@ export default function Settings() {
         <TabsContent value="autorizacoes">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" /> Autorizações por projeto</CardTitle>
+              <CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" /> Autorizacoes por projeto</CardTitle>
               <CardDescription>
-                Escolha um projeto e defina o papel de cada pessoa. Esses papéis controlam o que cada
-                um pode ver e editar nas telas do projeto (cronograma, OD, financeiro, equipe).
+                Defina o papel de cada membro. Controla o que cada um pode ver e editar.
               </CardDescription>
             </CardHeader>
             <CardContent>
               {orgId && user?.id ? <AutorizacoesPanel orgId={orgId} userId={user.id} /> : <Loading />}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="notificacoes">
+          <NotificacoesPanel userId={user?.id ?? ""} />
+        </TabsContent>
+
+        <TabsContent value="lixeira">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Trash2 className="h-4 w-4" /> Lixeira
+              </CardTitle>
+              <CardDescription>
+                Itens excluidos ficam aqui por 30 dias. Voce pode restaurar ou remover definitivamente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button asChild>
+                <Link to="/lixeira">
+                  <Trash2 className="h-4 w-4 mr-2" /> Abrir lixeira
+                </Link>
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
