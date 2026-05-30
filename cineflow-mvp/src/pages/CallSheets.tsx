@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileText, ChevronLeft, Plus, Calendar, ExternalLink, Copy, Check } from "lucide-react";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -33,6 +34,7 @@ const TIPO_VARIANT: Record<string, "default" | "outline" | "secondary"> = {
 
 export default function CallSheets() {
   const { id: projetoId } = useParams<{ id: string }>();
+  const { canEdit } = useProjectRole(projetoId);
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState<string>("filmagem");
   const [linkOdId, setLinkOdId] = useState<string | null>(null);
@@ -117,10 +119,12 @@ export default function CallSheets() {
             Crie ODs de filmagem, ensaio, reuniao ou pesquisa. Cada OD e independente e pode ou nao estar vinculada a um dia do cronograma.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={canEdit ? setOpen : undefined}>
+          {canEdit && (
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4" /> Nova OD</Button>
           </DialogTrigger>
+          )}
           <DialogContent>
             <form
               onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }}

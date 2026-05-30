@@ -57,7 +57,7 @@ export default function App() {
           >
             <Route path="/" element={<Dashboard />} />
             <Route path="/projetos" element={<Projects />} />
-            <Route path="/projetos/:id" element={<ProjectDetail />} />
+            <Route path="/projetos/:id" element={<Navigate to="dashboard" replace />} />
             <Route path="/projetos/:id/dashboard" element={<ProjectDashboard />} />
             <Route path="/projetos/:id/cronograma" element={<Schedule />} />
             <Route path="/projetos/:id/cronograma/:diaId" element={<PlanejamentoDetalhe />} />

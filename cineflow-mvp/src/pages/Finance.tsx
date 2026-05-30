@@ -18,11 +18,13 @@ import { formatBRL, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { FornecedorSelect } from "@/components/finance/FornecedorSelect";
 import { UploadComprovante } from "@/components/finance/UploadComprovante";
 
 export default function Finance() {
   const { id } = useParams<{ id: string }>();
+  const { canEdit } = useProjectRole(id);
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -224,7 +226,7 @@ export default function Finance() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Rubricas</CardTitle>
               <Dialog open={openLinha} onOpenChange={setOpenLinha}>
-                <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova rubrica</Button></DialogTrigger>
+                {canEdit && <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova rubrica</Button></DialogTrigger>}
                 <DialogContent>
                   <form onSubmit={(e) => { e.preventDefault(); criarLinha.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
                     <DialogHeader><DialogTitle>Nova rubrica do orcamento</DialogTitle></DialogHeader>
@@ -292,7 +294,7 @@ export default function Finance() {
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Despesas lancadas</CardTitle>
               <Dialog open={openDespesa} onOpenChange={(v) => { if (!v) fecharDespesa(); else setOpenDespesa(true); }}>
-                <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova despesa</Button></DialogTrigger>
+                {canEdit && <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova despesa</Button></DialogTrigger>}
                 <DialogContent className="max-w-lg">
                   {!novaDespesaId ? (
                     <form onSubmit={(e) => { e.preventDefault(); criarDespesa.mutate(new FormData(e.currentTarget)); }} className="space-y-4">

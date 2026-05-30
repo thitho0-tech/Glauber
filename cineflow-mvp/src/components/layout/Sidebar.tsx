@@ -1,5 +1,5 @@
 import { NavLink, useParams } from "react-router-dom";
-import { LayoutDashboard, FolderKanban, Calendar, FileText, Users, MapPin, Wallet, Receipt, Settings, Clapperboard, X, MessageSquare, FileSignature, Shirt, Drama, ScrollText, FileCheck, Gauge, Building2 } from "lucide-react";
+import { LayoutDashboard, FolderKanban, Calendar, FileText, Users, MapPin, Wallet, Receipt, Settings, Clapperboard, X, MessageSquare, FileSignature, Shirt, Drama, ScrollText, FileCheck, Gauge, Building2, CalendarDays, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Button } from "@/components/ui/button";
@@ -8,10 +8,10 @@ const globalItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
   { to: "/projetos", icon: FolderKanban, label: "Projetos" },
   { to: "/onboarding", icon: FileCheck, label: "Onboarding" },
+  { to: "/lixeira", icon: Trash2, label: "Lixeira" },
 ];
 
 const projectItems = (id: string) => [
-  { to: `/projetos/${id}`, icon: FolderKanban, label: "Visao geral" },
   { to: `/projetos/${id}/dashboard`, icon: Gauge, label: "Command Center" },
   { to: `/projetos/${id}/cronograma`, icon: Calendar, label: "Cronograma" },
   { to: `/projetos/${id}/ordens-do-dia`, icon: FileText, label: "Ordem do Dia" },
@@ -23,6 +23,7 @@ const projectItems = (id: string) => [
   { to: `/projetos/${id}/financeiro`, icon: Wallet, label: "Financeiro" },
   { to: `/projetos/${id}/fornecedores`, icon: Building2, label: "Fornecedores" },
   { to: `/projetos/${id}/contrato`, icon: FileSignature, label: "Contrato" },
+  { to: `/projetos/${id}/agenda`, icon: CalendarDays, label: "Agenda" },
   { to: `/projetos/${id}/comunicacao`, icon: MessageSquare, label: "Comunicacao" },
   { to: `/projetos/${id}/prestacao`, icon: Receipt, label: "Prestacao" },
 ];

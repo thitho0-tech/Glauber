@@ -85,7 +85,7 @@ export function CommandCenter({ projectId }: Props) {
 
       {/* View segmentada por role */}
       {(dashRole === "dp" || dashRole === "produtor") && (
-        <DPView kpis={kpis} />
+        <DPView kpis={kpis} projectId={projectId} />
       )}
       {dashRole === "diretor" && (
         <DirectorView kpis={kpis} projectId={projectId} />

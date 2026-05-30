@@ -234,6 +234,20 @@ export default function CallSheetEditor() {
         p_projeto_id: od.projeto_id,
         p_titulo_od: od.titulo ?? "Sem titulo",
       });
+      // D5 — notificacao por email via Edge Function (membros com notif_od_email = true)
+      try {
+        const edgeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notificar-od`;
+        const secret = import.meta.env.VITE_EDGE_SHARED_SECRET ?? "";
+        if (secret) {
+          await fetch(edgeUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-glauber-secret": secret },
+            body: JSON.stringify({ od_id: od.id }),
+          });
+        }
+      } catch {
+        // Email falhou silenciosamente — notificação in-app já foi enviada
+      }
     },
     onSuccess: () => { toast.success("Publicada! Membros notificados."); qc.invalidateQueries({ queryKey: ["od-edit", od?.id] }); },
     onError: (e: any) => toast.error(e.message),

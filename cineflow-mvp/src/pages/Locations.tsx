@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -35,6 +36,7 @@ function extractLatLng(url: string): { lat: number; lng: number } | null {
 
 export default function Locations() {
   const { id } = useParams();
+  const { canEdit } = useProjectRole(id);
   const [open, setOpen] = useState(false);
   const [mapsUrl, setMapsUrl] = useState("");
   const [latLng, setLatLng] = useState<{ lat: number; lng: number } | null>(null);
@@ -160,7 +162,7 @@ export default function Locations() {
       </div>
 
       {!locacoes?.length ? (
-        <Empty icon={<MapPin className="h-5 w-5" />} title="Sem locações cadastradas" action={<Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nova locação</Button>} />
+        <Empty icon={<MapPin className="h-5 w-5" />} title="Sem locações cadastradas" action={canEdit ? <Button onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Nova locação</Button> : undefined} />
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {locacoes.map((l: any) => {
@@ -171,9 +173,11 @@ export default function Locations() {
                 <CardContent className="space-y-2 p-5">
                   <div className="flex items-start justify-between">
                     <h3 className="font-semibold">{l.nome}</h3>
+                    {canEdit && (
                     <Button size="icon" variant="ghost" onClick={() => remover.mutate(l.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground">{l.endereco ?? "—"}</p>
                   {l.lat && l.lng && (

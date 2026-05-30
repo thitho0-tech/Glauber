@@ -16,6 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
+import { useProjectRole } from "@/hooks/useProjectRole";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 import { InviteButton } from "@/components/InviteButton";
@@ -86,6 +87,7 @@ const DEPARTAMENTOS_AV = [
 
 export default function Team() {
   const { id: projetoId } = useParams();
+  const { canEdit } = useProjectRole(projetoId);
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"catalogo" | "nova">("catalogo");
   const [openRegime, setOpenRegime] = useState<string | null>(null);
@@ -274,9 +276,9 @@ export default function Team() {
             Cada projeto tem sua propria equipe. O catalogo da produtora fica disponivel para reaproveitar pessoas entre projetos.
           </p>
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4" /> Adicionar ao projeto</Button>
+        <Dialog open={open} onOpenChange={canEdit ? setOpen : undefined}>
+          <DialogTrigger asChild disabled={!canEdit}>
+            <Button disabled={!canEdit}><Plus className="h-4 w-4" /> Adicionar ao projeto</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>Adicionar pessoa ao projeto</DialogTitle></DialogHeader>
@@ -424,9 +426,11 @@ export default function Team() {
           title="Sem pessoas neste projeto"
           description="Adicione pessoas do catalogo da produtora ou crie novas."
           action={
-            <Button onClick={() => setOpen(true)}>
-              <UserPlus className="h-4 w-4" /> Adicionar ao projeto
-            </Button>
+            canEdit ? (
+              <Button onClick={() => setOpen(true)}>
+                <UserPlus className="h-4 w-4" /> Adicionar ao projeto
+              </Button>
+            ) : undefined
           }
         />
       ) : (
@@ -506,7 +510,8 @@ export default function Team() {
                             size="icon"
                             variant="ghost"
                             onClick={() => desvincular.mutate(v.id)}
-                            title="Remover do projeto (mantem no catalogo)"
+                            disabled={!canEdit}
+                            title={canEdit ? "Remover do projeto (mantem no catalogo)" : "Sem permissão"}
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -587,3 +592,4 @@ export default function Team() {
     </div>
   );
 }
+      
