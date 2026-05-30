@@ -36,3 +36,50 @@
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
+
+/* ── Print / PDF da Ordem do Dia ─────────────────────────── */
+@media print {
+  /* Ocultar navegação, sidebar e controles */
+  aside,
+  nav,
+  header,
+  .no-print,
+  [data-radix-popper-content-wrapper],
+  button:not(.print-visible) {
+    display: none !important;
+  }
+
+  /* Resetar cores para impressão */
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 11pt;
+  }
+
+  /* Cards ficam sem sombra */
+  .card,
+  [class*="rounded"] {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+  }
+
+  /* Garantir que o conteúdo ocupe toda a largura */
+  main,
+  .space-y-6,
+  .space-y-4 {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Quebra de página entre seções grandes */
+  .card + .card {
+    page-break-inside: avoid;
+  }
+
+  /* Título da OD em destaque */
+  h1, h2 {
+    color: black !important;
+  }
+}

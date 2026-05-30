@@ -434,74 +434,98 @@ export default function Finance() {
               ) : !despesasFiltradas.length ? (
                 <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma despesa corresponde aos filtros aplicados.</div>
               ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Descricao</TableHead>
-                      <TableHead>Fornecedor</TableHead>
-                      <TableHead>Rubrica</TableHead>
-                      <TableHead className="text-right">Valor</TableHead>
-                      <TableHead>NF</TableHead>
-                      <TableHead>Validacao</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <>
+                  {/* Mobile: cards */}
+                  <div className="md:hidden divide-y">
                     {despesasFiltradas.map((d: any) => {
                       const val = d.validacao?.[0];
-                      const icon = val?.status === "ok" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                  : val?.status === "warn" ? <AlertCircle className="h-4 w-4 text-amber-500" />
-                                  : val?.status === "fail" ? <XCircle className="h-4 w-4 text-destructive" />
-                                  : null;
                       return (
-                        <>
-                          <TableRow key={d.id} className={expandUpload === d.id ? "border-b-0" : ""}>
-                            <TableCell>{formatDate(d.data)}</TableCell>
-                            <TableCell className="font-medium">{d.descricao}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">{d.fornecedor?.nome ?? "—"}</TableCell>
-                            <TableCell>{d.linha?.rubrica_codigo ? <Badge variant="outline">{d.linha.rubrica_codigo}</Badge> : "—"}</TableCell>
-                            <TableCell className="text-right">{formatBRL(d.valor)}</TableCell>
-                            <TableCell>
-                              {d.comprovante_path ? (
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openSignedUrl(d.comprovante_path)} title="Ver comprovante">
-                                  <FileText className="h-4 w-4 text-emerald-600" />
-                                </Button>
-                              ) : (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 text-xs text-muted-foreground"
-                                  onClick={() => setExpandUpload(expandUpload === d.id ? null : d.id)}
-                                >
-                                  + Anexar
-                                </Button>
-                              )}
-                            </TableCell>
-                            <TableCell><div className="flex items-center gap-2">{icon}<span className="text-xs text-muted-foreground">{val?.mensagem ?? "—"}</span></div></TableCell>
-                          </TableRow>
+                        <div key={d.id} className="p-4 space-y-2">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-medium text-sm">{d.descricao}</p>
+                              <p className="text-xs text-muted-foreground">{formatDate(d.data)} · {d.fornecedor?.nome ?? "—"}</p>
+                            </div>
+                            <p className="font-semibold text-sm shrink-0">{formatBRL(d.valor)}</p>
+                          </div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {d.linha?.rubrica_codigo && <Badge variant="outline" className="text-xs">{d.linha.rubrica_codigo}</Badge>}
+                            {val?.status === "ok" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
+                            {val?.status === "fail" && <XCircle className="h-3.5 w-3.5 text-destructive" />}
+                            {val?.status === "warn" && <AlertCircle className="h-3.5 w-3.5 text-amber-500" />}
+                            {!d.comprovante_path && (
+                              <Button size="sm" variant="ghost" className="h-6 text-xs p-1 text-muted-foreground"
+                                onClick={() => setExpandUpload(expandUpload === d.id ? null : d.id)}>+ Comprovante</Button>
+                            )}
+                          </div>
                           {expandUpload === d.id && orgId && (
-                            <TableRow key={d.id + "-upload"}>
-                              <TableCell colSpan={7} className="pb-3 pt-0">
-                                <div className="pl-2 max-w-sm">
-                                  <UploadComprovante
-                                    despesaId={d.id}
-                                    projectId={id!}
-                                    orgId={orgId}
-                                    currentPath={d.comprovante_path}
-                                    onUploaded={() => {
-                                      qc.invalidateQueries({ queryKey: ["despesas", id] });
-                                      setExpandUpload(null);
-                                    }}
-                                  />
-                                </div>
-                              </TableCell>
-                            </TableRow>
+                            <div className="pt-1">
+                              <UploadComprovante despesaId={d.id} projectId={id!} orgId={orgId}
+                                currentPath={d.comprovante_path}
+                                onUploaded={() => { qc.invalidateQueries({ queryKey: ["despesas", id] }); setExpandUpload(null); }} />
+                            </div>
                           )}
-                        </>
+                        </div>
                       );
                     })}
-                  </TableBody>
-                </Table>
+                  </div>
+                  {/* Desktop: tabela */}
+                  <Table className="hidden md:table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Descricao</TableHead>
+                        <TableHead>Fornecedor</TableHead>
+                        <TableHead>Rubrica</TableHead>
+                        <TableHead className="text-right">Valor</TableHead>
+                        <TableHead>NF</TableHead>
+                        <TableHead>Validacao</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {despesasFiltradas.map((d: any) => {
+                        const val = d.validacao?.[0];
+                        const icon = val?.status === "ok" ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                    : val?.status === "warn" ? <AlertCircle className="h-4 w-4 text-amber-500" />
+                                    : val?.status === "fail" ? <XCircle className="h-4 w-4 text-destructive" />
+                                    : null;
+                        return (
+                          <>
+                            <TableRow key={d.id} className={expandUpload === d.id ? "border-b-0" : ""}>
+                              <TableCell>{formatDate(d.data)}</TableCell>
+                              <TableCell className="font-medium">{d.descricao}</TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{d.fornecedor?.nome ?? "—"}</TableCell>
+                              <TableCell>{d.linha?.rubrica_codigo ? <Badge variant="outline">{d.linha.rubrica_codigo}</Badge> : "—"}</TableCell>
+                              <TableCell className="text-right">{formatBRL(d.valor)}</TableCell>
+                              <TableCell>
+                                {d.comprovante_path ? (
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openSignedUrl(d.comprovante_path)} title="Ver comprovante">
+                                    <FileText className="h-4 w-4 text-emerald-600" />
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" variant="ghost" className="h-7 text-xs text-muted-foreground"
+                                    onClick={() => setExpandUpload(expandUpload === d.id ? null : d.id)}>+ Anexar</Button>
+                                )}
+                              </TableCell>
+                              <TableCell><div className="flex items-center gap-2">{icon}<span className="text-xs text-muted-foreground">{val?.mensagem ?? "—"}</span></div></TableCell>
+                            </TableRow>
+                            {expandUpload === d.id && orgId && (
+                              <TableRow key={d.id + "-upload"}>
+                                <TableCell colSpan={7} className="pb-3 pt-0">
+                                  <div className="pl-2 max-w-sm">
+                                    <UploadComprovante despesaId={d.id} projectId={id!} orgId={orgId}
+                                      currentPath={d.comprovante_path}
+                                      onUploaded={() => { qc.invalidateQueries({ queryKey: ["despesas", id] }); setExpandUpload(null); }} />
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </>
               )}
             </CardContent>
           </Card>

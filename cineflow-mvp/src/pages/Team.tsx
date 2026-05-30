@@ -436,7 +436,43 @@ export default function Team() {
       ) : (
         <Card>
           <CardContent className="p-0">
-            <Table>
+            {/* Mobile: cards */}
+            <div className="md:hidden divide-y">
+              {vinculos.map((v: any) => {
+                const dept = v.funcao_av?.departamento ?? v.pessoa?.departamento;
+                const regime = (regimes ?? []).find((r: any) => r.pessoa_id === v.pessoa?.id);
+                return (
+                  <div key={v.id} className="p-4 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="font-medium">{v.pessoa?.nome ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {v.funcao_av?.nome ?? v.papel_descricao ?? v.pessoa?.funcao ?? "—"}
+                        </p>
+                      </div>
+                      <div className="flex gap-1 shrink-0">
+                        <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
+                        {canEdit && (
+                          <Button size="icon" variant="ghost" onClick={() => desvincular.mutate(v.id)}>
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {dept && <Badge variant="outline" className="text-xs">{DEPT_LABEL[dept] ?? dept}</Badge>}
+                      {regime && <Badge variant={REGIME_VARIANT[regime.tipo] ?? "outline"} className="text-xs">{REGIME_LABEL[regime.tipo] ?? regime.tipo}</Badge>}
+                      {v.pessoa?.user_id
+                        ? <Badge className="text-xs bg-emerald-100 text-emerald-700 border-0">Ativo</Badge>
+                        : <Badge variant="outline" className="text-xs text-muted-foreground">Sem acesso</Badge>}
+                      <span className="text-xs text-muted-foreground">{formatBRL(v.valor_contratacao)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            {/* Desktop: tabela */}
+            <Table className="hidden md:table">
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
@@ -457,28 +493,17 @@ export default function Team() {
                     <TableRow key={v.id}>
                       <TableCell className="font-medium">{v.pessoa?.nome ?? "--"}</TableCell>
                       <TableCell>{v.funcao_av?.nome ?? v.papel_descricao ?? v.pessoa?.funcao ?? "--"}</TableCell>
-                      <TableCell>
-                        {dept ? <Badge variant="outline">{DEPT_LABEL[dept] ?? dept}</Badge> : "--"}
-                      </TableCell>
+                      <TableCell>{dept ? <Badge variant="outline">{DEPT_LABEL[dept] ?? dept}</Badge> : "--"}</TableCell>
                       <TableCell>
                         {regime ? (
                           <div className="flex flex-col gap-0.5">
-                            <Badge variant={REGIME_VARIANT[regime.tipo] ?? "outline"}>
-                              {REGIME_LABEL[regime.tipo] ?? regime.tipo}
-                            </Badge>
+                            <Badge variant={REGIME_VARIANT[regime.tipo] ?? "outline"}>{REGIME_LABEL[regime.tipo] ?? regime.tipo}</Badge>
                             {regime.tipo === "rpa" && regime.valor_liquido > 0 && (
                               <span className="text-xs text-muted-foreground">{formatBRL(regime.valor_liquido)} liq.</span>
                             )}
                           </div>
                         ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 text-xs text-muted-foreground"
-                            onClick={() => setOpenRegime(v.pessoa?.id)}
-                          >
-                            + Regime
-                          </Button>
+                          <Button size="sm" variant="ghost" className="h-6 text-xs text-muted-foreground" onClick={() => setOpenRegime(v.pessoa?.id)}>+ Regime</Button>
                         )}
                       </TableCell>
                       <TableCell>
@@ -491,28 +516,13 @@ export default function Team() {
                       <TableCell>
                         <div className="flex justify-end gap-1">
                           {regime && (
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={() => setOpenRegime(v.pessoa?.id)}
-                              title="Editar regime"
-                            >
+                            <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setOpenRegime(v.pessoa?.id)} title="Editar regime">
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
-                          <InviteButton
-                            projetoPessoaId={v.id}
-                            pessoaEmail={v.pessoa?.email}
-                            pessoaNome={v.pessoa?.nome}
-                          />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => desvincular.mutate(v.id)}
-                            disabled={!canEdit}
-                            title={canEdit ? "Remover do projeto (mantem no catalogo)" : "Sem permissão"}
-                          >
+                          <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
+                          <Button size="icon" variant="ghost" onClick={() => desvincular.mutate(v.id)}
+                            disabled={!canEdit} title={canEdit ? "Remover do projeto (mantem no catalogo)" : "Sem permissão"}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>

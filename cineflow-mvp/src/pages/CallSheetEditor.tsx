@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, Send, Save, Plus, Trash2, ExternalLink, MapPin, Utensils, ShieldAlert, Sparkles, Car, FileText } from "lucide-react";
+import { ChevronLeft, Send, Save, Plus, Trash2, ExternalLink, MapPin, Utensils, ShieldAlert, Sparkles, Car, FileText, Printer } from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -296,6 +296,9 @@ export default function CallSheetEditor() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => salvar.mutate()} disabled={salvar.isPending}>
               <Save className="h-4 w-4" /> Salvar
+            </Button>
+            <Button variant="outline" onClick={() => window.print()} title="Exportar como PDF">
+              <Printer className="h-4 w-4" /> PDF
             </Button>
             <Button onClick={() => publicar.mutate()} disabled={publicar.isPending}>
               <Send className="h-4 w-4" /> Publicar

@@ -9,7 +9,7 @@ import { Loading } from "@/components/ui/loading";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, Users, Trash2, FileText, LogIn, LogOut, Clock } from "lucide-react";
+import { ChevronLeft, Users, Trash2, FileText, LogIn, LogOut, Clock, Film, X, Plus } from "lucide-react";
 import { formatDate } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -200,6 +200,76 @@ export default function PlanejamentoDetalhe() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["check-ins", diaId] }),
+  });
+
+
+  // ── Stripboard — cenas alocadas a este dia ───────────────────
+  const { data: cenasAlocadas, isLoading: lCenas } = useQuery({
+    queryKey: ["stripboard", diaId],
+    enabled: !!diaId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("roteiro_cenas")
+        .select("id, numero_cena, cabecalho, sinopse, ambiente, horario, duracao_estimada_min, personagens")
+        .eq("dia_id", diaId!)
+        .order("ordem");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const { data: todasCenas } = useQuery({
+    queryKey: ["cenas-projeto", projetoId],
+    enabled: !!projetoId,
+    queryFn: async () => {
+      // Buscar roteiro_id do projeto
+      const { data: roteiro } = await supabase
+        .from("roteiros")
+        .select("id")
+        .eq("projeto_id", projetoId!)
+        .maybeSingle();
+      if (!roteiro) return [];
+      const { data, error } = await supabase
+        .from("roteiro_cenas")
+        .select("id, numero_cena, cabecalho, sinopse, dia_id")
+        .eq("roteiro_id", roteiro.id)
+        .is("dia_id", null)
+        .order("ordem");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const alocarCena = useMutation({
+    mutationFn: async (cenaId: string) => {
+      const { error } = await supabase
+        .from("roteiro_cenas")
+        .update({ dia_id: diaId })
+        .eq("id", cenaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Cena alocada ao dia");
+      qc.invalidateQueries({ queryKey: ["stripboard", diaId] });
+      qc.invalidateQueries({ queryKey: ["cenas-projeto", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const desalocarCena = useMutation({
+    mutationFn: async (cenaId: string) => {
+      const { error } = await supabase
+        .from("roteiro_cenas")
+        .update({ dia_id: null })
+        .eq("id", cenaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Cena removida do dia");
+      qc.invalidateQueries({ queryKey: ["stripboard", diaId] });
+      qc.invalidateQueries({ queryKey: ["cenas-projeto", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   if (lDia) return <Loading />;
@@ -413,6 +483,104 @@ export default function PlanejamentoDetalhe() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Stripboard ─────────────────────────────────────── */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Film className="h-4 w-4 text-cyan-600" />
+            Cenas do Dia (Stripboard)
+          </CardTitle>
+          <Badge variant="outline">{cenasAlocadas?.length ?? 0} cenas</Badge>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {/* Cenas já alocadas */}
+          {lCenas ? (
+            <p className="text-xs text-muted-foreground">Carregando...</p>
+          ) : !cenasAlocadas?.length ? (
+            <p className="text-xs text-muted-foreground">Nenhuma cena alocada para este dia.</p>
+          ) : (
+            <div className="space-y-2">
+              {cenasAlocadas.map((cena: any) => (
+                <div key={cena.id} className="flex items-start gap-3 rounded-lg border p-3 bg-cyan-50/40 dark:bg-cyan-950/10">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {cena.numero_cena && (
+                        <Badge variant="outline" className="text-xs font-mono">Cena {cena.numero_cena}</Badge>
+                      )}
+                      {cena.ambiente && <Badge variant="secondary" className="text-xs">{cena.ambiente}</Badge>}
+                      {cena.horario && <Badge variant="secondary" className="text-xs">{cena.horario}</Badge>}
+                      {cena.duracao_estimada_min && (
+                        <span className="text-xs text-muted-foreground">{cena.duracao_estimada_min}min</span>
+                      )}
+                    </div>
+                    {cena.cabecalho && (
+                      <p className="text-sm font-medium mt-1 font-mono">{cena.cabecalho}</p>
+                    )}
+                    {cena.sinopse && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{cena.sinopse}</p>
+                    )}
+                    {Array.isArray(cena.personagens) && cena.personagens.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {(cena.personagens as string[]).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="shrink-0"
+                    onClick={() => desalocarCena.mutate(cena.id)}
+                    title="Remover deste dia"
+                  >
+                    <X className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Adicionar cenas não alocadas */}
+          {todasCenas && todasCenas.length > 0 && (
+            <div className="border-t pt-3">
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Adicionar cena do roteiro ({todasCenas.length} não alocadas):
+              </p>
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {todasCenas.map((cena: any) => (
+                  <div key={cena.id} className="flex items-center justify-between gap-2 rounded px-2 py-1.5 hover:bg-muted/50">
+                    <div className="min-w-0">
+                      <span className="text-xs font-mono text-muted-foreground mr-2">
+                        {cena.numero_cena ? `Cena ${cena.numero_cena}` : "—"}
+                      </span>
+                      <span className="text-sm truncate">{cena.cabecalho ?? cena.sinopse ?? "Sem título"}</span>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="shrink-0 h-7 text-xs"
+                      onClick={() => alocarCena.mutate(cena.id)}
+                      disabled={alocarCena.isPending}
+                    >
+                      <Plus className="h-3 w-3 mr-1" /> Alocar
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {!todasCenas?.length && !cenasAlocadas?.length && (
+            <p className="text-xs text-muted-foreground">
+              Nenhuma cena decupada no roteiro.{" "}
+              <a href={`/projetos/${projetoId}/roteiro`} className="text-primary underline">
+                Enviar roteiro →
+              </a>
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
