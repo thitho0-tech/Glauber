@@ -9,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
-import { Shield, Users, Bell, Trash2, FolderKanban, User, Lock } from "lucide-react";
+import { Shield, Users, Bell, Trash2, FolderKanban, User, Lock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { formatBRL } from "@/lib/utils";
 
 // ─────────────────────────────────────────────
@@ -324,6 +325,11 @@ function NotificacoesPanel({ userId }: { userId: string }) {
 
 function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: boolean }) {
   const qc = useQueryClient();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [openDelete, setOpenDelete] = useState(false);
+  const [codigoEnviado, setCodigoEnviado] = useState<string | null>(null);
+  const [codigoInput, setCodigoInput] = useState("");
 
   const { data: projeto, isLoading } = useQuery({
     queryKey: ["projeto-dados-edit", projetoId],
@@ -332,7 +338,7 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projetos")
-        .select("id, nome, tipo, periodo_inicio, periodo_fim, orcamento_total, edital_id, status")
+        .select("id, nome, tipo, periodo_inicio, periodo_fim, orcamento_total, edital_id, status, criado_por")
         .eq("id", projetoId)
         .single();
       if (error) throw error;
@@ -372,6 +378,34 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
     onError: (e: any) => toast.error(e.message),
   });
 
+  const isCriador = !!user?.id && (projeto as any)?.criado_por === user.id;
+
+  const pedirCodigo = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("request_delete_project", { p_projeto_id: projetoId });
+      if (error) throw error;
+      return data as string;
+    },
+    onSuccess: (resultado) => {
+      setCodigoEnviado(resultado);
+      toast.success(resultado === "enviado" ? "Código enviado para seu e-mail." : "Código gerado. Confirme abaixo.");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const confirmarExclusao = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.rpc("confirm_delete_project", { p_projeto_id: projetoId, p_codigo: codigoInput });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Projeto excluído");
+      setOpenDelete(false);
+      navigate("/projetos");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   if (isLoading) return <Loading />;
   if (!projeto) return null;
 
@@ -399,6 +433,7 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
   }
 
   return (
+    <div className="space-y-6">
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -480,6 +515,93 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
         </form>
       </CardContent>
     </Card>
+
+    {isCriador && (
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <AlertTriangle className="h-4 w-4" /> Zona de perigo
+          </CardTitle>
+          <CardDescription>
+            Excluir o projeto é irreversível e exige confirmação por código.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={() => { setOpenDelete(true); setCodigoEnviado(null); setCodigoInput(""); }}
+          >
+            <Trash2 className="h-4 w-4 text-destructive" /> Excluir projeto
+          </Button>
+        </CardContent>
+      </Card>
+    )}
+
+    <Dialog open={openDelete} onOpenChange={setOpenDelete}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-destructive" /> Excluir projeto
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm">
+            <p className="font-medium text-destructive">Esta ação é irreversível.</p>
+            <p className="text-muted-foreground">
+              Serão apagados: cronograma, escalas, ordens do dia, equipe vinculada ao projeto, orçamentos e despesas.
+              O catálogo da produtora e locações continuam.
+            </p>
+          </div>
+          {!codigoEnviado ? (
+            <div className="space-y-3">
+              <p className="text-sm">
+                Para confirmar, vamos enviar um código de 6 dígitos para <strong>{user?.email}</strong>.
+              </p>
+              <Button onClick={() => pedirCodigo.mutate()} disabled={pedirCodigo.isPending}>
+                {pedirCodigo.isPending ? "Enviando..." : "Enviar código por e-mail"}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="rounded-md border bg-muted p-3">
+                {codigoEnviado === "enviado" ? (
+                  <p className="text-sm">
+                    Código enviado para <strong>{user?.email}</strong>. Confira a caixa de entrada (e spam) e digite abaixo.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-xs text-muted-foreground">Modo provisório: o código aparece aqui.</p>
+                    <p className="mt-2 text-center font-mono text-2xl tracking-widest">{codigoEnviado}</p>
+                  </>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="del_codigo">Digite o código para confirmar</Label>
+                <Input
+                  id="del_codigo"
+                  value={codigoInput}
+                  onChange={(e) => setCodigoInput(e.target.value)}
+                  placeholder="000000"
+                  maxLength={6}
+                  className="font-mono text-center text-lg tracking-widest"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpenDelete(false)}>Cancelar</Button>
+          <Button
+            variant="destructive"
+            disabled={!codigoEnviado || codigoInput.length !== 6 || confirmarExclusao.isPending}
+            onClick={() => confirmarExclusao.mutate()}
+          >
+            {confirmarExclusao.isPending ? "Excluindo..." : "Excluir definitivamente"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </div>
   );
 }
 
