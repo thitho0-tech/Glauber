@@ -53,7 +53,7 @@ export function UploadComprovante({ despesaId, projectId, orgId, currentPath, on
     // Salvar path na despesa
     const { error: dbErr } = await supabase
       .from("despesas")
-      .update({ comprovante_path: storagePath })
+      .update({ comprovante_url: storagePath })
       .eq("id", despesaId);
 
     if (dbErr) {
@@ -81,7 +81,7 @@ export function UploadComprovante({ despesaId, projectId, orgId, currentPath, on
     if (!path) return;
     const { error } = await supabase.storage.from("comprovantes").remove([path]);
     if (error) { toast.error("Erro ao remover arquivo"); return; }
-    await supabase.from("despesas").update({ comprovante_path: null }).eq("id", despesaId);
+    await supabase.from("despesas").update({ comprovante_url: null }).eq("id", despesaId);
     setPath(null);
     setState("idle");
     toast.success("Comprovante removido");

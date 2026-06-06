@@ -13,9 +13,10 @@ interface FornecedorSelectProps {
   orgId: string;
   value?: string;
   onChange: (id: string | undefined) => void;
+  onSelectFornecedor?: (f: { id: string; cnpj?: string | null; cpf?: string | null } | null) => void;
 }
 
-export function FornecedorSelect({ orgId, value, onChange }: FornecedorSelectProps) {
+export function FornecedorSelect({ orgId, value, onChange, onSelectFornecedor }: FornecedorSelectProps) {
   const qc = useQueryClient();
   const [openDialog, setOpenDialog] = useState(false);
   const [busca, setBusca] = useState("");
@@ -56,6 +57,7 @@ export function FornecedorSelect({ orgId, value, onChange }: FornecedorSelectPro
       toast.success("Fornecedor cadastrado");
       qc.invalidateQueries({ queryKey: ["fornecedores", orgId] });
       onChange(novo.id);
+      onSelectFornecedor?.(novo);
       setOpenDialog(false);
     },
     onError: (e: any) => toast.error(e.message),
@@ -98,7 +100,7 @@ export function FornecedorSelect({ orgId, value, onChange }: FornecedorSelectPro
                 key={f.id}
                 type="button"
                 className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted"
-                onClick={() => { onChange(f.id); setBusca(""); }}
+                onClick={() => { onChange(f.id); onSelectFornecedor?.(f); setBusca(""); }}
               >
                 <span className="font-medium">{f.nome}</span>
                 <span className="text-xs text-muted-foreground">{f.cnpj ?? f.cpf ?? f.tipo.toUpperCase()}</span>
@@ -110,7 +112,7 @@ export function FornecedorSelect({ orgId, value, onChange }: FornecedorSelectPro
         {selecionado && (
           <p className="text-xs text-muted-foreground">
             {selecionado.cnpj ?? selecionado.cpf} · {selecionado.tipo.toUpperCase()}
-            <button type="button" className="ml-2 text-destructive underline" onClick={() => onChange(undefined)}>remover</button>
+            <button type="button" className="ml-2 text-destructive underline" onClick={() => { onChange(undefined); onSelectFornecedor?.(null); }}>remover</button>
           </p>
         )}
       </div>

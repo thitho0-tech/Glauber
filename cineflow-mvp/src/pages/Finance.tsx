@@ -14,13 +14,27 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Wallet, ChevronLeft, CheckCircle2, AlertCircle, XCircle, AlertTriangle, FileText, Search, X } from "lucide-react";
-import { formatBRL, formatDate } from "@/lib/utils";
+import { formatBRL, formatDate, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
 import { FornecedorSelect } from "@/components/finance/FornecedorSelect";
 import { UploadComprovante } from "@/components/finance/UploadComprovante";
+
+const STATUS_LABEL: Record<string, string> = {
+  pendente: "Pendente",
+  aprovada: "Aprovada",
+  rejeitada: "Rejeitada",
+  paga: "Paga",
+};
+
+const STATUS_CLASS: Record<string, string> = {
+  pendente: "border text-muted-foreground",
+  aprovada: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0",
+  rejeitada: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-0",
+  paga: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-0",
+};
 
 export default function Finance() {
   const { id } = useParams<{ id: string }>();
@@ -33,6 +47,7 @@ export default function Finance() {
   const [openDespesa, setOpenDespesa] = useState(false);
   const [novaDespesaId, setNovaDespesaId] = useState<string | null>(null);
   const [fornecedorId, setFornecedorId] = useState<string | undefined>();
+  const [cnpjEmitente, setCnpjEmitente] = useState("");
   const [expandUpload, setExpandUpload] = useState<string | null>(null);
 
   // C2 — filtros locais
@@ -146,10 +161,20 @@ export default function Finance() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const atualizarStatus = useMutation({
+    mutationFn: async ({ despesaId, status }: { despesaId: string; status: string }) => {
+      const { error } = await supabase.from("despesas").update({ status }).eq("id", despesaId);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["despesas", id] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+
   function fecharDespesa() {
     setOpenDespesa(false);
     setNovaDespesaId(null);
     setFornecedorId(undefined);
+    setCnpjEmitente("");
   }
 
   async function openSignedUrl(path: string) {
@@ -317,10 +342,24 @@ export default function Finance() {
                           </Select>
                         </div>
                         {orgId && (
-                          <FornecedorSelect orgId={orgId} value={fornecedorId} onChange={setFornecedorId} />
+                          <FornecedorSelect
+                            orgId={orgId}
+                            value={fornecedorId}
+                            onChange={setFornecedorId}
+                            onSelectFornecedor={(f) => setCnpjEmitente(f?.cnpj ?? f?.cpf ?? "")}
+                          />
                         )}
                         <div className="grid grid-cols-2 gap-3">
-                          <div className="space-y-1.5"><Label htmlFor="cnpj_emitente">CNPJ emitente</Label><Input id="cnpj_emitente" name="cnpj_emitente" placeholder="00.000.000/0000-00" /></div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="cnpj_emitente">CNPJ / CPF emitente</Label>
+                            <Input
+                              id="cnpj_emitente"
+                              name="cnpj_emitente"
+                              placeholder="00.000.000/0000-00"
+                              value={cnpjEmitente}
+                              onChange={(e) => setCnpjEmitente(e.target.value)}
+                            />
+                          </div>
                           <div className="space-y-1.5"><Label htmlFor="numero_nf">No da NF</Label><Input id="numero_nf" name="numero_nf" /></div>
                         </div>
                         <div className="grid grid-cols-2 gap-3">
@@ -394,8 +433,9 @@ export default function Finance() {
                     <SelectContent>
                       <SelectItem value="todos">Todos status</SelectItem>
                       <SelectItem value="pendente">Pendente</SelectItem>
-                      <SelectItem value="aprovado">Aprovado</SelectItem>
-                      <SelectItem value="reprovado">Reprovado</SelectItem>
+                      <SelectItem value="aprovada">Aprovada</SelectItem>
+                      <SelectItem value="rejeitada">Rejeitada</SelectItem>
+                      <SelectItem value="paga">Paga</SelectItem>
                     </SelectContent>
                   </Select>
                   {rubricasUnicas.length > 0 && (
@@ -450,10 +490,27 @@ export default function Finance() {
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             {d.linha?.rubrica_codigo && <Badge variant="outline" className="text-xs">{d.linha.rubrica_codigo}</Badge>}
+                            {/* status editável / leitura */}
+                            {canEdit ? (
+                              <select
+                                value={d.status ?? "pendente"}
+                                onChange={(e) => atualizarStatus.mutate({ despesaId: d.id, status: e.target.value })}
+                                className="text-xs rounded border bg-background px-1.5 py-0.5"
+                              >
+                                <option value="pendente">Pendente</option>
+                                <option value="aprovada">Aprovada</option>
+                                <option value="rejeitada">Rejeitada</option>
+                                <option value="paga">Paga</option>
+                              </select>
+                            ) : (
+                              <Badge className={cn("text-xs", STATUS_CLASS[d.status ?? "pendente"])}>
+                                {STATUS_LABEL[d.status ?? "pendente"]}
+                              </Badge>
+                            )}
                             {val?.status === "ok" && <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />}
                             {val?.status === "fail" && <XCircle className="h-3.5 w-3.5 text-destructive" />}
                             {val?.status === "warn" && <AlertCircle className="h-3.5 w-3.5 text-amber-500" />}
-                            {!d.comprovante_path && (
+                            {!d.comprovante_url && (
                               <Button size="sm" variant="ghost" className="h-6 text-xs p-1 text-muted-foreground"
                                 onClick={() => setExpandUpload(expandUpload === d.id ? null : d.id)}>+ Comprovante</Button>
                             )}
@@ -461,7 +518,7 @@ export default function Finance() {
                           {expandUpload === d.id && orgId && (
                             <div className="pt-1">
                               <UploadComprovante despesaId={d.id} projectId={id!} orgId={orgId}
-                                currentPath={d.comprovante_path}
+                                currentPath={d.comprovante_url}
                                 onUploaded={() => { qc.invalidateQueries({ queryKey: ["despesas", id] }); setExpandUpload(null); }} />
                             </div>
                           )}
@@ -474,12 +531,13 @@ export default function Finance() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Data</TableHead>
-                        <TableHead>Descricao</TableHead>
+                        <TableHead>Descrição</TableHead>
                         <TableHead>Fornecedor</TableHead>
                         <TableHead>Rubrica</TableHead>
                         <TableHead className="text-right">Valor</TableHead>
-                        <TableHead>NF</TableHead>
-                        <TableHead>Validacao</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Comprovante</TableHead>
+                        <TableHead>Validação</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -497,9 +555,28 @@ export default function Finance() {
                               <TableCell className="text-sm text-muted-foreground">{d.fornecedor?.nome ?? "—"}</TableCell>
                               <TableCell>{d.linha?.rubrica_codigo ? <Badge variant="outline">{d.linha.rubrica_codigo}</Badge> : "—"}</TableCell>
                               <TableCell className="text-right">{formatBRL(d.valor)}</TableCell>
+                              {/* Status editável / leitura */}
                               <TableCell>
-                                {d.comprovante_path ? (
-                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openSignedUrl(d.comprovante_path)} title="Ver comprovante">
+                                {canEdit ? (
+                                  <select
+                                    value={d.status ?? "pendente"}
+                                    onChange={(e) => atualizarStatus.mutate({ despesaId: d.id, status: e.target.value })}
+                                    className="text-xs rounded border bg-background px-2 py-1"
+                                  >
+                                    <option value="pendente">Pendente</option>
+                                    <option value="aprovada">Aprovada</option>
+                                    <option value="rejeitada">Rejeitada</option>
+                                    <option value="paga">Paga</option>
+                                  </select>
+                                ) : (
+                                  <Badge className={cn("text-xs", STATUS_CLASS[d.status ?? "pendente"])}>
+                                    {STATUS_LABEL[d.status ?? "pendente"]}
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                {d.comprovante_url ? (
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => openSignedUrl(d.comprovante_url)} title="Ver comprovante">
                                     <FileText className="h-4 w-4 text-emerald-600" />
                                   </Button>
                                 ) : (
@@ -511,10 +588,10 @@ export default function Finance() {
                             </TableRow>
                             {expandUpload === d.id && orgId && (
                               <TableRow key={d.id + "-upload"}>
-                                <TableCell colSpan={7} className="pb-3 pt-0">
+                                <TableCell colSpan={8} className="pb-3 pt-0">
                                   <div className="pl-2 max-w-sm">
                                     <UploadComprovante despesaId={d.id} projectId={id!} orgId={orgId}
-                                      currentPath={d.comprovante_path}
+                                      currentPath={d.comprovante_url}
                                       onUploaded={() => { qc.invalidateQueries({ queryKey: ["despesas", id] }); setExpandUpload(null); }} />
                                   </div>
                                 </TableCell>
