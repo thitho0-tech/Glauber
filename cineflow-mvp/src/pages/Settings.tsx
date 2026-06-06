@@ -357,7 +357,7 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
         periodo_inicio: form.get("periodo_inicio") || null,
         periodo_fim: form.get("periodo_fim") || null,
         orcamento_total: Number(form.get("orcamento_total") ?? 0),
-        edital_id: form.get("edital_id") || null,
+        edital_id: form.get("edital_id") === "__none__" ? null : (form.get("edital_id") || null),
         status: form.get("status") || null,
       };
       if (!payload.nome) throw new Error("Informe o nome do projeto");
@@ -462,10 +462,10 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="proj_edital">Edital vinculado</Label>
-              <Select name="edital_id" defaultValue={projeto.edital_id ?? ""}>
+              <Select name="edital_id" defaultValue={projeto.edital_id ?? "__none__"}>
                 <SelectTrigger id="proj_edital"><SelectValue placeholder="Nenhum" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nenhum</SelectItem>
+                  <SelectItem value="__none__">Nenhum</SelectItem>
                   {(editais ?? []).map((e: any) => (
                     <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
                   ))}
