@@ -422,72 +422,89 @@ export default function Team() {
           <DialogTrigger asChild disabled={!canEdit}>
             <Button disabled={!canEdit}><Plus className="h-4 w-4" /> Adicionar ao projeto</Button>
           </DialogTrigger>
-          <DialogContent>
-            <DialogHeader><DialogTitle>Adicionar pessoa ao projeto</DialogTitle></DialogHeader>
-            <Tabs value={tab} onValueChange={(v: any) => setTab(v)}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="catalogo">Do catálogo</TabsTrigger>
-                <TabsTrigger value="nova">Nova pessoa</TabsTrigger>
-              </TabsList>
+          {/* flex flex-col + max-h para header/footer fixos e miolo rolando */}
+          <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0">
+            <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
+              <DialogTitle>Adicionar pessoa ao projeto</DialogTitle>
+            </DialogHeader>
+
+            <Tabs
+              value={tab}
+              onValueChange={(v: any) => setTab(v)}
+              className="flex flex-col flex-1 min-h-0 overflow-hidden"
+            >
+              <div className="px-6 pb-2 shrink-0">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="catalogo">Do catálogo</TabsTrigger>
+                  <TabsTrigger value="nova">Nova pessoa</TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* ── Catálogo ── */}
-              <TabsContent value="catalogo">
+              <TabsContent
+                value="catalogo"
+                className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden"
+              >
                 <form
                   onSubmit={(e) => { e.preventDefault(); vincular.mutate(new FormData(e.currentTarget)); }}
-                  className="space-y-4 pt-2"
+                  className="flex flex-col flex-1 min-h-0"
                 >
-                  <div className="space-y-1.5">
-                    <Label htmlFor="pessoa_id">Pessoa do catálogo</Label>
-                    <Select name="pessoa_id">
-                      <SelectTrigger id="pessoa_id"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                      <SelectContent>
-                        {disponiveis.length === 0 ? (
-                          <div className="px-3 py-2 text-xs text-muted-foreground">
-                            Todas as pessoas do catálogo já estão no projeto.
-                          </div>
-                        ) : (
-                          disponiveis.map((p: any) => (
-                            <SelectItem key={p.id} value={p.id}>
-                              {p.nome}{p.funcao ? " — " + p.funcao : ""}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label>Departamento</Label>
-                    <Select value={catDept} onValueChange={(v) => { setCatDept(v); setCatFuncoes([]); setCatPrincipal(""); }}>
-                      <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
-                      <SelectContent>
-                        {DEPARTAMENTOS_AV.map((d) => (
-                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <FuncoesProjetoSelect
-                    funcoes={funcoesAvFiltCat}
-                    selected={catFuncoes}
-                    principal={catPrincipal}
-                    onToggle={(id) => toggleFuncao(id, catFuncoes, setCatFuncoes, catPrincipal, setCatPrincipal)}
-                    onSetPrincipal={setCatPrincipal}
-                  />
-
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* campos roláveis */}
+                  <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="valor_contratacao_c">Valor de contratação (R$)</Label>
-                      <Input id="valor_contratacao_c" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
+                      <Label htmlFor="pessoa_id">Pessoa do catálogo</Label>
+                      <Select name="pessoa_id">
+                        <SelectTrigger id="pessoa_id"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>
+                          {disponiveis.length === 0 ? (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">
+                              Todas as pessoas do catálogo já estão no projeto.
+                            </div>
+                          ) : (
+                            disponiveis.map((p: any) => (
+                              <SelectItem key={p.id} value={p.id}>
+                                {p.nome}{p.funcao ? " — " + p.funcao : ""}
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
                     </div>
+
                     <div className="space-y-1.5">
-                      <Label htmlFor="papel_descricao_c">Papel livre (opcional)</Label>
-                      <Input id="papel_descricao_c" name="papel_descricao" placeholder="Ex.: DF substituto" />
+                      <Label>Departamento</Label>
+                      <Select value={catDept} onValueChange={(v) => { setCatDept(v); setCatFuncoes([]); setCatPrincipal(""); }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
+                        <SelectContent>
+                          {DEPARTAMENTOS_AV.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <FuncoesProjetoSelect
+                      funcoes={funcoesAvFiltCat}
+                      selected={catFuncoes}
+                      principal={catPrincipal}
+                      onToggle={(id) => toggleFuncao(id, catFuncoes, setCatFuncoes, catPrincipal, setCatPrincipal)}
+                      onSetPrincipal={setCatPrincipal}
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="valor_contratacao_c">Valor de contratação (R$)</Label>
+                        <Input id="valor_contratacao_c" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="papel_descricao_c">Papel livre (opcional)</Label>
+                        <Input id="papel_descricao_c" name="papel_descricao" placeholder="Ex.: DF substituto" />
+                      </div>
                     </div>
                   </div>
 
-                  <DialogFooter>
+                  {/* footer fixo */}
+                  <DialogFooter className="px-6 py-3 border-t shrink-0">
                     <Button type="button" variant="outline" onClick={() => { setOpen(false); resetCatForm(); }}>Cancelar</Button>
                     <Button type="submit" disabled={vincular.isPending}>
                       {vincular.isPending ? "Adicionando..." : "Adicionar"}
@@ -497,65 +514,72 @@ export default function Team() {
               </TabsContent>
 
               {/* ── Nova pessoa ── */}
-              <TabsContent value="nova">
+              <TabsContent
+                value="nova"
+                className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden"
+              >
                 <form
                   onSubmit={(e) => { e.preventDefault(); criarEVincular.mutate(new FormData(e.currentTarget)); }}
-                  className="space-y-4 pt-2"
+                  className="flex flex-col flex-1 min-h-0"
                 >
-                  <div className="space-y-1.5">
-                    <Label htmlFor="nome">Nome completo</Label>
-                    <Input id="nome" name="nome" required />
-                  </div>
-
-                  {/* Departamento ANTES da Função — 3A.2 */}
-                  <div className="space-y-1.5">
-                    <Label>Departamento</Label>
-                    <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); }}>
-                      <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
-                      <SelectContent>
-                        {DEPARTAMENTOS_AV.map((d) => (
-                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label htmlFor="funcao">Função/título livre (opcional)</Label>
-                    <Input id="funcao" name="funcao" placeholder="Ex.: Diretor de Fotografia" />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
+                  {/* campos roláveis */}
+                  <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
                     <div className="space-y-1.5">
-                      <Label htmlFor="telefone">Telefone</Label>
-                      <Input id="telefone" name="telefone" />
+                      <Label htmlFor="nome">Nome completo</Label>
+                      <Input id="nome" name="nome" required />
                     </div>
+
+                    {/* Departamento ANTES da Função — 3A.2 */}
                     <div className="space-y-1.5">
-                      <Label htmlFor="email">E-mail</Label>
-                      <Input id="email" name="email" type="email" />
+                      <Label>Departamento</Label>
+                      <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); }}>
+                        <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
+                        <SelectContent>
+                          {DEPARTAMENTOS_AV.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <Label htmlFor="funcao">Função/título livre (opcional)</Label>
+                      <Input id="funcao" name="funcao" placeholder="Ex.: Diretor de Fotografia" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="telefone">Telefone</Label>
+                        <Input id="telefone" name="telefone" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="email">E-mail</Label>
+                        <Input id="email" name="email" type="email" />
+                      </div>
+                    </div>
+
+                    <FuncoesProjetoSelect
+                      funcoes={funcoesAvFiltNova}
+                      selected={novaFuncoes}
+                      principal={novaPrincipal}
+                      onToggle={(id) => toggleFuncao(id, novaFuncoes, setNovaFuncoes, novaPrincipal, setNovaPrincipal)}
+                      onSetPrincipal={setNovaPrincipal}
+                    />
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="valor_contratacao_n">Valor de contratação (R$)</Label>
+                        <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="papel_descricao_n">Papel livre (opcional)</Label>
+                        <Input id="papel_descricao_n" name="papel_descricao" placeholder="Ex.: DF substituto" />
+                      </div>
                     </div>
                   </div>
 
-                  <FuncoesProjetoSelect
-                    funcoes={funcoesAvFiltNova}
-                    selected={novaFuncoes}
-                    principal={novaPrincipal}
-                    onToggle={(id) => toggleFuncao(id, novaFuncoes, setNovaFuncoes, novaPrincipal, setNovaPrincipal)}
-                    onSetPrincipal={setNovaPrincipal}
-                  />
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="valor_contratacao_n">Valor de contratação (R$)</Label>
-                      <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label htmlFor="papel_descricao_n">Papel livre (opcional)</Label>
-                      <Input id="papel_descricao_n" name="papel_descricao" placeholder="Ex.: DF substituto" />
-                    </div>
-                  </div>
-
-                  <DialogFooter>
+                  {/* footer fixo */}
+                  <DialogFooter className="px-6 py-3 border-t shrink-0">
                     <Button type="button" variant="outline" onClick={() => { setOpen(false); resetNovaForm(); }}>Cancelar</Button>
                     <Button type="submit" disabled={criarEVincular.isPending}>
                       {criarEVincular.isPending ? "Criando..." : "Criar e adicionar"}
