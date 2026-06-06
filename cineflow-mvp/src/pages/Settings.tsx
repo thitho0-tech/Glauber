@@ -7,21 +7,50 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
-import { Empty } from "@/components/ui/empty";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
-import { Shield, Users, Bell, Trash2 } from "lucide-react";
+import { useProjectRole } from "@/hooks/useProjectRole";
+import { Shield, Users, Bell, Trash2, FolderKanban, User, Lock } from "lucide-react";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
+import { formatBRL } from "@/lib/utils";
+
+// ─────────────────────────────────────────────
+// Constantes compartilhadas
+// ─────────────────────────────────────────────
 
 const PAPEIS = [
   { value: "owner",        label: "Owner",        desc: "Todos os direitos (criador do projeto)" },
   { value: "admin",        label: "Admin",         desc: "Tudo exceto excluir projeto" },
-  { value: "producao",     label: "Producao",      desc: "Edita cronograma, OD, financeiro, equipe" },
+  { value: "producao",     label: "Produção",      desc: "Edita cronograma, OD, financeiro, equipe" },
   { value: "departamento", label: "Departamento",  desc: "Edita apenas seu departamento" },
   { value: "leitor",       label: "Leitor",        desc: "Somente leitura" },
 ];
+
+const TIPOS_PROJETO = [
+  { value: "curta",        label: "Curta-metragem" },
+  { value: "longa",        label: "Longa-metragem" },
+  { value: "serie",        label: "Série" },
+  { value: "documentario", label: "Documentário" },
+  { value: "publicidade",  label: "Publicidade" },
+  { value: "clipe",        label: "Videoclipe" },
+  { value: "outro",        label: "Outro" },
+];
+
+const STATUS_PROJETO = [
+  { value: "em_desenvolvimento", label: "Em desenvolvimento" },
+  { value: "pre_producao",       label: "Pré-produção" },
+  { value: "producao",           label: "Produção" },
+  { value: "pos_producao",       label: "Pós-produção" },
+  { value: "concluido",          label: "Concluído" },
+  { value: "cancelado",          label: "Cancelado" },
+];
+
+// ─────────────────────────────────────────────
+// AutorizacoesPanel — aceita projetoId externo
+// ─────────────────────────────────────────────
 
 type ProjetoMin = { id: string; nome: string; criado_por: string };
 type Membro = {
@@ -31,13 +60,22 @@ type Membro = {
   funcao_av: { nome: string; departamento: string } | null;
 };
 
-function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string }) {
+function AutorizacoesPanel({
+  orgId,
+  userId,
+  projetoId: externalProjetoId,
+}: {
+  orgId: string;
+  userId: string;
+  projetoId?: string;
+}) {
   const qc = useQueryClient();
-  const [projetoSel, setProjetoSel] = useState<string>("");
+  const [localProjetoId, setLocalProjetoId] = useState<string>("");
+  const projetoSel = externalProjetoId ?? localProjetoId;
 
   const { data: projetos, isLoading: lp } = useQuery({
     queryKey: ["projetos-min-rbac", orgId],
-    enabled: !!orgId,
+    enabled: !!orgId && !externalProjetoId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projetos")
@@ -83,83 +121,73 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
   });
 
   if (lp) return <Loading />;
-  if (!projetos || projetos.length === 0) {
-    return <Empty icon={<Shield className="h-5 w-5" />} title="Sem projetos" description="Crie um projeto para gerenciar papeis." />;
-  }
 
-  const projetoAtual = projetos.find((p) => p.id === projetoSel);
+  const projetoAtual = (projetos ?? []).find((p) => p.id === projetoSel);
   const ehDono = projetoAtual?.criado_por === userId;
 
   return (
     <div className="space-y-4">
-      <div className="space-y-1.5">
-        <Label>Projeto</Label>
-        <select
-          value={projetoSel}
-          onChange={(e) => setProjetoSel(e.target.value)}
-          className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
-        >
-          <option value="">escolher projeto</option>
-          {projetos.map((p) => (
-            <option key={p.id} value={p.id}>{p.nome}</option>
-          ))}
-        </select>
-        {projetoSel && !ehDono && (
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            Voce nao e o criador deste projeto. Mudancas podem ser bloqueadas pela RLS.
-          </p>
-        )}
-      </div>
+      {/* Seletor de projeto — só exibido quando sem projetoId externo */}
+      {!externalProjetoId && (
+        <div className="space-y-1.5">
+          <Label>Projeto</Label>
+          <select
+            value={localProjetoId}
+            onChange={(e) => setLocalProjetoId(e.target.value)}
+            className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">escolher projeto</option>
+            {(projetos ?? []).map((p) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+          {projetoSel && !ehDono && (
+            <p className="text-xs text-amber-700 dark:text-amber-400">
+              Você não é o criador deste projeto. Mudanças podem ser bloqueadas pela RLS.
+            </p>
+          )}
+        </div>
+      )}
 
       {projetoSel && membros && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4" /> Membros e papeis</CardTitle>
-            <CardDescription>
-              O <strong>owner</strong> e sempre o criador. Para os demais, escolha o nivel.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {membros.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Sem membros vinculados. Cadastre em Equipe.</p>
-            ) : (
-              <div className="space-y-2">
-                {membros.map((m) => (
-                  <div key={m.id} className="flex items-center justify-between rounded-md border p-3">
-                    <div>
-                      <p className="font-medium">{m.pessoa.nome}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {m.pessoa.email ?? "sem e-mail"}
-                        {m.funcao_av && ` · ${m.funcao_av.nome} (${m.funcao_av.departamento})`}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={m.papel_projeto ?? ""}
-                        onChange={(e) => atualizarPapel.mutate({ ppId: m.id, papel: e.target.value })}
-                        className="h-9 rounded-md border bg-background px-2 text-xs"
-                      >
-                        <option value="">sem papel</option>
-                        {PAPEIS.filter((p) => p.value !== "owner").map((p) => (
-                          <option key={p.value} value={p.value}>{p.label}</option>
-                        ))}
-                      </select>
-                      {m.papel_projeto && <Badge variant="outline">{m.papel_projeto}</Badge>}
-                    </div>
-                  </div>
-                ))}
+        <div className="space-y-2">
+          {membros.length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sem membros vinculados. Cadastre em Equipe.</p>
+          ) : (
+            membros.map((m) => (
+              <div key={m.id} className="flex items-center justify-between rounded-md border p-3">
+                <div>
+                  <p className="font-medium">{m.pessoa.nome}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {m.pessoa.email ?? "sem e-mail"}
+                    {m.funcao_av && ` · ${m.funcao_av.nome} (${m.funcao_av.departamento})`}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    value={m.papel_projeto ?? ""}
+                    onChange={(e) => atualizarPapel.mutate({ ppId: m.id, papel: e.target.value })}
+                    className="h-9 rounded-md border bg-background px-2 text-xs"
+                  >
+                    <option value="">sem papel</option>
+                    {PAPEIS.filter((p) => p.value !== "owner").map((p) => (
+                      <option key={p.value} value={p.value}>{p.label}</option>
+                    ))}
+                  </select>
+                  {m.papel_projeto && <Badge variant="outline">{m.papel_projeto}</Badge>}
+                </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            ))
+          )}
+        </div>
       )}
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Legenda</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">Legenda de papéis</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-sm">
           {PAPEIS.map((p) => (
             <div key={p.value} className="flex items-start gap-2">
-              <Badge variant="outline" className="min-w-[100px] justify-center">{p.label}</Badge>
+              <Badge variant="outline" className="min-w-[110px] justify-center shrink-0">{p.label}</Badge>
               <span className="text-muted-foreground">{p.desc}</span>
             </div>
           ))}
@@ -168,6 +196,10 @@ function AutorizacoesPanel({ orgId, userId }: { orgId: string; userId: string })
     </div>
   );
 }
+
+// ─────────────────────────────────────────────
+// NotificacoesPanel
+// ─────────────────────────────────────────────
 
 function NotificacoesPanel({ userId }: { userId: string }) {
   const qc = useQueryClient();
@@ -190,7 +222,6 @@ function NotificacoesPanel({ userId }: { userId: string }) {
     },
   });
 
-  // Busca por email match — pessoas não tem user_id confiável (3A.5/04/15)
   const { data: meuVinculo } = useQuery({
     queryKey: ["meu-vinculo-notif", projetoSel, userId],
     enabled: !!projetoSel && !!userId,
@@ -211,7 +242,7 @@ function NotificacoesPanel({ userId }: { userId: string }) {
 
   const salvar = useMutation({
     mutationFn: async ({ campo, valor }: { campo: string; valor: boolean }) => {
-      if (!meuVinculo?.id) throw new Error("Voce nao e membro deste projeto");
+      if (!meuVinculo?.id) throw new Error("Você não é membro deste projeto");
       const { error } = await supabase
         .from("projeto_pessoas")
         .update({ [campo]: valor })
@@ -219,77 +250,315 @@ function NotificacoesPanel({ userId }: { userId: string }) {
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Preferencia salva");
+      toast.success("Preferência salva");
       qc.invalidateQueries({ queryKey: ["meu-vinculo-notif", projetoSel, userId] });
     },
     onError: (e: any) => toast.error(e.message),
   });
 
   return (
-    <div className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Bell className="h-4 w-4" /> Notificações por projeto</CardTitle>
+        <CardDescription>
+          Escolha como quer ser avisado quando uma Ordem do Dia for publicada.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-1.5">
+          <Label>Projeto</Label>
+          <select
+            value={projetoSel}
+            onChange={(e) => setProjetoSel(e.target.value)}
+            className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">escolher projeto</option>
+            {(projetos ?? []).map((p: any) => (
+              <option key={p.id} value={p.id}>{p.nome}</option>
+            ))}
+          </select>
+        </div>
+
+        {projetoSel && !meuVinculo && (
+          <p className="text-sm text-muted-foreground">Você não é membro deste projeto.</p>
+        )}
+
+        {projetoSel && meuVinculo && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="font-medium">Sino in-app</p>
+                <p className="text-xs text-muted-foreground">Aparece no sino no topo quando uma OD for publicada.</p>
+              </div>
+              <input
+                type="checkbox"
+                className="h-5 w-5 cursor-pointer accent-primary"
+                checked={meuVinculo.notif_od_inapp ?? true}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => salvar.mutate({ campo: "notif_od_inapp", valor: e.target.checked })}
+                disabled={salvar.isPending}
+              />
+            </div>
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <p className="font-medium">E-mail</p>
+                <p className="text-xs text-muted-foreground">Requer configuração de e-mail no painel de deploy.</p>
+              </div>
+              <input
+                type="checkbox"
+                className="h-5 w-5 cursor-pointer accent-primary"
+                checked={meuVinculo.notif_od_email ?? false}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => salvar.mutate({ campo: "notif_od_email", valor: e.target.checked })}
+                disabled={salvar.isPending}
+              />
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────
+// ProjetoDadosForm — editar dados do projeto
+// ─────────────────────────────────────────────
+
+function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: boolean }) {
+  const qc = useQueryClient();
+
+  const { data: projeto, isLoading } = useQuery({
+    queryKey: ["projeto-dados-edit", projetoId],
+    enabled: !!projetoId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("id, nome, tipo, periodo_inicio, periodo_fim, orcamento_total, edital_id, status")
+        .eq("id", projetoId)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: editais } = useQuery({
+    queryKey: ["editais"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("editais").select("id, nome").order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const salvar = useMutation({
+    mutationFn: async (form: FormData) => {
+      const payload: any = {
+        nome: String(form.get("nome") ?? "").trim(),
+        tipo: form.get("tipo") || null,
+        periodo_inicio: form.get("periodo_inicio") || null,
+        periodo_fim: form.get("periodo_fim") || null,
+        orcamento_total: Number(form.get("orcamento_total") ?? 0),
+        edital_id: form.get("edital_id") || null,
+        status: form.get("status") || null,
+      };
+      if (!payload.nome) throw new Error("Informe o nome do projeto");
+      const { error } = await supabase.from("projetos").update(payload).eq("id", projetoId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Projeto atualizado");
+      qc.invalidateQueries({ queryKey: ["projeto-dados-edit", projetoId] });
+      qc.invalidateQueries({ queryKey: ["projetos"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  if (isLoading) return <Loading />;
+  if (!projeto) return null;
+
+  if (!canEdit) {
+    return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Bell className="h-4 w-4" /> Notificacoes por projeto</CardTitle>
-          <CardDescription>
-            Escolha como quer ser avisado quando uma Ordem do Dia for publicada.
-          </CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <FolderKanban className="h-4 w-4" /> Dados do projeto
+          </CardTitle>
+          <CardDescription>Somente leitura — você não tem permissão para editar este projeto.</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Projeto</Label>
-            <select
-              value={projetoSel}
-              onChange={(e) => setProjetoSel(e.target.value)}
-              className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
-            >
-              <option value="">escolher projeto</option>
-              {(projetos ?? []).map((p: any) => (
-                <option key={p.id} value={p.id}>{p.nome}</option>
-              ))}
-            </select>
+        <CardContent className="space-y-2 text-sm">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            <div><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{projeto.nome}</span></div>
+            <div><span className="text-muted-foreground">Tipo:</span> <span className="font-medium">{projeto.tipo}</span></div>
+            <div><span className="text-muted-foreground">Início:</span> <span className="font-medium">{projeto.periodo_inicio ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Fim:</span> <span className="font-medium">{projeto.periodo_fim ?? "—"}</span></div>
+            <div><span className="text-muted-foreground">Orçamento:</span> <span className="font-medium">{formatBRL(projeto.orcamento_total ?? 0)}</span></div>
+            <div><span className="text-muted-foreground">Status:</span> <span className="font-medium">{projeto.status ?? "—"}</span></div>
           </div>
-
-          {projetoSel && !meuVinculo && (
-            <p className="text-sm text-muted-foreground">Voce nao e membro deste projeto.</p>
-          )}
-
-          {projetoSel && meuVinculo && (
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">Sino in-app</p>
-                  <p className="text-xs text-muted-foreground">Aparece no sino no topo quando uma OD for publicada.</p>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 cursor-pointer accent-primary"
-                  checked={meuVinculo.notif_od_inapp ?? true}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => salvar.mutate({ campo: "notif_od_inapp", valor: e.target.checked })}
-                  disabled={salvar.isPending}
-                />
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-4">
-                <div>
-                  <p className="font-medium">E-mail (via Resend)</p>
-                  <p className="text-xs text-muted-foreground">
-                    Requer RESEND_API_KEY configurada no painel do Vercel.
-                  </p>
-                </div>
-                <input
-                  type="checkbox"
-                  className="h-5 w-5 cursor-pointer accent-primary"
-                  checked={meuVinculo.notif_od_email ?? false}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => salvar.mutate({ campo: "notif_od_email", valor: e.target.checked })}
-                  disabled={salvar.isPending}
-                />
-              </div>
-            </div>
-          )}
         </CardContent>
       </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <FolderKanban className="h-4 w-4" /> Dados do projeto
+        </CardTitle>
+        <CardDescription>
+          Nome, tipo, período e orçamento. Alterações salvas imediatamente.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          key={projeto.id}
+          onSubmit={(e) => { e.preventDefault(); salvar.mutate(new FormData(e.currentTarget)); }}
+          className="space-y-4"
+        >
+          <div className="space-y-1.5">
+            <Label htmlFor="proj_nome">Nome do projeto</Label>
+            <Input id="proj_nome" name="nome" defaultValue={projeto.nome} required />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="proj_tipo">Tipo</Label>
+              <Select name="tipo" defaultValue={projeto.tipo ?? "curta"}>
+                <SelectTrigger id="proj_tipo"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_PROJETO.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="proj_status">Status</Label>
+              <Select name="status" defaultValue={projeto.status ?? "em_desenvolvimento"}>
+                <SelectTrigger id="proj_status"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {STATUS_PROJETO.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="proj_inicio">Início</Label>
+              <Input id="proj_inicio" name="periodo_inicio" type="date" defaultValue={projeto.periodo_inicio ?? ""} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="proj_fim">Fim</Label>
+              <Input id="proj_fim" name="periodo_fim" type="date" defaultValue={projeto.periodo_fim ?? ""} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="proj_orc">Orçamento total (R$)</Label>
+              <Input id="proj_orc" name="orcamento_total" type="number" step="0.01" defaultValue={projeto.orcamento_total ?? 0} />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="proj_edital">Edital vinculado</Label>
+              <Select name="edital_id" defaultValue={projeto.edital_id ?? ""}>
+                <SelectTrigger id="proj_edital"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Nenhum</SelectItem>
+                  {(editais ?? []).map((e: any) => (
+                    <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <Button type="submit" disabled={salvar.isPending}>
+            {salvar.isPending ? "Salvando..." : "Salvar alterações"}
+          </Button>
+        </form>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─────────────────────────────────────────────
+// GestaoProjetoPanel — seletor único + dados + RBAC
+// ─────────────────────────────────────────────
+
+function GestaoProjetoPanel({ orgId, userId }: { orgId: string; userId: string }) {
+  const [projetoSel, setProjetoSel] = useState<string>("");
+  const { canEdit, isLoading: roleLoading } = useProjectRole(projetoSel);
+
+  const { data: projetos, isLoading: lp } = useQuery({
+    queryKey: ["projetos-gestao", orgId],
+    enabled: !!orgId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projetos")
+        .select("id, nome")
+        .eq("org_id", orgId)
+        .is("deleted_at", null)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  if (lp) return <Loading />;
+
+  return (
+    <div className="space-y-4">
+      {/* Seletor de projeto */}
+      <div className="space-y-1.5">
+        <Label>Projeto</Label>
+        <select
+          value={projetoSel}
+          onChange={(e) => setProjetoSel(e.target.value)}
+          className="h-10 w-full max-w-md rounded-md border bg-background px-3 text-sm"
+        >
+          <option value="">escolher projeto</option>
+          {(projetos ?? []).map((p: any) => (
+            <option key={p.id} value={p.id}>{p.nome}</option>
+          ))}
+        </select>
+      </div>
+
+      {!projetoSel && (
+        <p className="text-sm text-muted-foreground">Selecione um projeto para gerenciá-lo.</p>
+      )}
+
+      {projetoSel && roleLoading && <Loading />}
+
+      {projetoSel && !roleLoading && (
+        <>
+          {/* Dados do projeto */}
+          <ProjetoDadosForm projetoId={projetoSel} canEdit={canEdit} />
+
+          {/* Autorizações RBAC */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-4 w-4" /> Autorizações por projeto
+              </CardTitle>
+              <CardDescription>
+                Defina o papel de cada membro. Controla o que cada um pode ver e editar.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AutorizacoesPanel orgId={orgId} userId={userId} projetoId={projetoSel} />
+            </CardContent>
+          </Card>
+        </>
+      )}
     </div>
   );
 }
+
+// ─────────────────────────────────────────────
+// Settings — componente principal
+// ─────────────────────────────────────────────
 
 export default function Settings() {
   const { user } = useAuth();
@@ -319,7 +588,7 @@ export default function Settings() {
       const { error } = await supabase.auth.updateUser({ data: { nome_completo, telefone, cargo } });
       if (error) throw error;
     },
-    onSuccess: () => toast.success("Cadastro pessoal atualizado"),
+    onSuccess: () => toast.success("Dados pessoais atualizados"),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -341,28 +610,32 @@ export default function Settings() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Configuracoes</h1>
-        <p className="text-sm text-muted-foreground">Dados da produtora, conta e cadastro pessoal.</p>
+        <h1 className="text-2xl font-bold">Configurações</h1>
+        <p className="text-sm text-muted-foreground">Conta pessoal e gestão dos projetos.</p>
       </div>
 
-      <Tabs defaultValue="pessoal">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="pessoal">Cadastro pessoal</TabsTrigger>
-          <TabsTrigger value="produtora">Produtora</TabsTrigger>
+      <Tabs defaultValue="conta">
+        <TabsList>
           <TabsTrigger value="conta">Conta</TabsTrigger>
-          <TabsTrigger value="autorizacoes">Autorizacoes</TabsTrigger>
-          <TabsTrigger value="notificacoes">Notificacoes</TabsTrigger>
-          <TabsTrigger value="lixeira">Lixeira</TabsTrigger>
+          <TabsTrigger value="projeto">Gestão do Projeto</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pessoal">
+        {/* ══════════════ ABA CONTA ══════════════ */}
+        <TabsContent value="conta" className="space-y-4 mt-4">
+
+          {/* Dados pessoais */}
           <Card>
             <CardHeader>
-              <CardTitle>Cadastro pessoal</CardTitle>
-              <CardDescription>Seus dados aparecem nas ordens do dia em que voce esta escalado.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <User className="h-4 w-4" /> Dados pessoais
+              </CardTitle>
+              <CardDescription>Seu nome e contato aparecem nas Ordens do Dia em que você está escalado.</CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={(e) => { e.preventDefault(); salvarPessoal.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+              <form
+                onSubmit={(e) => { e.preventDefault(); salvarPessoal.mutate(new FormData(e.currentTarget)); }}
+                className="space-y-4"
+              >
                 <div className="space-y-1.5">
                   <Label htmlFor="nome_completo">Nome completo</Label>
                   <Input id="nome_completo" name="nome_completo" defaultValue={meta.nome_completo ?? ""} required />
@@ -377,98 +650,99 @@ export default function Settings() {
                     <Input id="cargo" name="cargo" defaultValue={meta.cargo ?? ""} placeholder="Ex.: Produtora Executiva" />
                   </div>
                 </div>
-                <Button type="submit" disabled={salvarPessoal.isPending}>{salvarPessoal.isPending ? "Salvando..." : "Salvar"}</Button>
+                <div className="space-y-1.5">
+                  <Label>E-mail</Label>
+                  <p className="text-sm font-medium text-muted-foreground">{user?.email}</p>
+                </div>
+                <Button type="submit" disabled={salvarPessoal.isPending}>
+                  {salvarPessoal.isPending ? "Salvando..." : "Salvar dados pessoais"}
+                </Button>
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="produtora">
+          {/* Conta / senha */}
           <Card>
             <CardHeader>
-              <CardTitle>Produtora</CardTitle>
-              <CardDescription>Estes dados aparecem no cabecalho de Ordens do Dia e relatorios.</CardDescription>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="h-4 w-4" /> Segurança da conta
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <form onSubmit={(e) => { e.preventDefault(); salvarOrg.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="nome">Nome da produtora</Label>
-                  <Input id="nome" name="nome" defaultValue={org?.nome ?? ""} required />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="cnpj">CNPJ</Label>
-                  <Input id="cnpj" name="cnpj" defaultValue={org?.cnpj ?? ""} placeholder="00.000.000/0000-00" />
-                </div>
-                <Button type="submit" disabled={salvarOrg.isPending}>{salvarOrg.isPending ? "Salvando..." : "Salvar"}</Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="conta">
-          <Card>
-            <CardHeader><CardTitle>Conta</CardTitle></CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <p><span className="text-muted-foreground">E-mail:</span> <span className="font-medium">{user?.email}</span></p>
-              <p><span className="text-muted-foreground">Papel na produtora:</span> <span className="font-medium">{orgs?.[0]?.membership.papel}</span></p>
-            </CardContent>
-          </Card>
-          <Card className="mt-4">
-            <CardHeader>
-              <CardTitle>Trocar senha</CardTitle>
-              <CardDescription>Minimo 8 caracteres.</CardDescription>
-            </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              <div className="space-y-1 text-sm">
+                <p><span className="text-muted-foreground">Papel na produtora:</span> <Badge variant="outline" className="ml-1">{orgs?.[0]?.membership.papel ?? "—"}</Badge></p>
+              </div>
               <form
                 onSubmit={(e) => { e.preventDefault(); trocarSenha.mutate(new FormData(e.currentTarget)); (e.target as HTMLFormElement).reset(); }}
-                className="space-y-4"
+                className="space-y-3"
               >
                 <div className="space-y-1.5">
                   <Label htmlFor="nova_senha">Nova senha</Label>
-                  <Input id="nova_senha" name="nova_senha" type="password" minLength={8} required />
+                  <Input id="nova_senha" name="nova_senha" type="password" minLength={8} required placeholder="mínimo 8 caracteres" />
                 </div>
-                <Button type="submit" disabled={trocarSenha.isPending}>{trocarSenha.isPending ? "Atualizando..." : "Atualizar senha"}</Button>
+                <Button type="submit" variant="outline" disabled={trocarSenha.isPending}>
+                  {trocarSenha.isPending ? "Atualizando..." : "Alterar senha"}
+                </Button>
               </form>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="autorizacoes">
+          {/* Produtora */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2"><Shield className="h-4 w-4" /> Autorizacoes por projeto</CardTitle>
-              <CardDescription>
-                Defina o papel de cada membro. Controla o que cada um pode ver e editar.
-              </CardDescription>
+              <CardTitle>Produtora</CardTitle>
+              <CardDescription>Estes dados aparecem no cabeçalho das Ordens do Dia e relatórios.</CardDescription>
             </CardHeader>
             <CardContent>
-              {orgId && user?.id ? <AutorizacoesPanel orgId={orgId} userId={user.id} /> : <Loading />}
+              <form
+                onSubmit={(e) => { e.preventDefault(); salvarOrg.mutate(new FormData(e.currentTarget)); }}
+                className="space-y-4"
+              >
+                <div className="space-y-1.5">
+                  <Label htmlFor="org_nome">Nome da produtora</Label>
+                  <Input id="org_nome" name="nome" defaultValue={org?.nome ?? ""} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="org_cnpj">CNPJ</Label>
+                  <Input id="org_cnpj" name="cnpj" defaultValue={org?.cnpj ?? ""} placeholder="00.000.000/0000-00" />
+                </div>
+                <Button type="submit" disabled={salvarOrg.isPending}>
+                  {salvarOrg.isPending ? "Salvando..." : "Salvar produtora"}
+                </Button>
+              </form>
             </CardContent>
           </Card>
-        </TabsContent>
 
-        <TabsContent value="notificacoes">
+          {/* Notificações */}
           <NotificacoesPanel userId={user?.id ?? ""} />
-        </TabsContent>
 
-        <TabsContent value="lixeira">
+          {/* Lixeira */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Trash2 className="h-4 w-4" /> Lixeira
               </CardTitle>
               <CardDescription>
-                Itens excluidos ficam aqui por 30 dias. Voce pode restaurar ou remover definitivamente.
+                Itens excluídos ficam aqui por 30 dias. Você pode restaurar ou remover definitivamente.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button asChild>
+              <Button asChild variant="outline">
                 <Link to="/lixeira">
                   <Trash2 className="h-4 w-4 mr-2" /> Abrir lixeira
                 </Link>
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ══════════════ ABA GESTÃO DO PROJETO ══════════════ */}
+        <TabsContent value="projeto" className="mt-4">
+          {orgId && user?.id ? (
+            <GestaoProjetoPanel orgId={orgId} userId={user.id} />
+          ) : (
+            <Loading />
+          )}
         </TabsContent>
       </Tabs>
     </div>
