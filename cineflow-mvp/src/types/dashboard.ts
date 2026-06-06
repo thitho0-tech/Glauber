@@ -20,15 +20,18 @@ export type ProjectKPIs = {
   updated_by: string | null;
 };
 
-/** Roles do dashboard — mapeados de ProjectRole (useProjectRole) */
+/** Roles do dashboard — mapeados de ProjectRole ou de funcao_av.departamento */
 export type DashboardRole =
   | "dp"
   | "produtor"
   | "diretor"
   | "ad"
+  | "continuity"
+  | "elenco"
+  | "pos"
   | "colaborador";
 
-/** Mapeamento ProjectRole → DashboardRole */
+/** Mapeamento ProjectRole (RBAC) → DashboardRole */
 export function mapRoleToDashboard(
   role: "owner" | "admin" | "producao" | "departamento" | "leitor" | null
 ): DashboardRole {
@@ -43,6 +46,26 @@ export function mapRoleToDashboard(
     case "leitor":
     default:
       return "colaborador";
+  }
+}
+
+/**
+ * Mapeamento funcao_av.departamento + nome → DashboardRole cinematográfico.
+ * Retorna null quando deve usar a role RBAC como fallback.
+ */
+export function mapFuncaoDepartamento(
+  departamento: string | null | undefined,
+  nome: string | null | undefined,
+): DashboardRole | null {
+  if (!departamento) return null;
+  const nomeLower = (nome ?? "").toLowerCase();
+  // Continuísta tem seu próprio nome dentro de vários deptos possíveis
+  if (nomeLower.includes("continu")) return "continuity";
+  switch (departamento) {
+    case "direcao":     return "diretor";
+    case "pos_producao": return "pos";
+    case "elenco":      return "elenco";
+    default:            return null;
   }
 }
 

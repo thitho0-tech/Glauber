@@ -19,9 +19,27 @@ import { toast } from "sonner";
 import { EquipePrincipalImport } from "@/components/EquipePrincipalImport";
 import type { TeamRow } from "@/lib/parseTeamCsv";
 
+const DEPARTAMENTOS_AV = [
+  { value: "desenvolvimento", label: "Desenvolvimento" },
+  { value: "direcao",         label: "Direção" },
+  { value: "producao",        label: "Produção" },
+  { value: "fotografia",      label: "Fotografia" },
+  { value: "arte",            label: "Arte" },
+  { value: "som",             label: "Som" },
+  { value: "elenco",          label: "Elenco" },
+  { value: "logistica",       label: "Logística" },
+  { value: "pos_producao",    label: "Pós-produção" },
+  { value: "figurino",        label: "Figurino" },
+  { value: "maquiagem",       label: "Maquiagem" },
+  { value: "outros",          label: "Outros" },
+];
+
 export default function Projects() {
   const [open, setOpen] = useState(false);
   const [equipe, setEquipe] = useState<TeamRow[]>([]);
+  // Owner function selection (3A.4)
+  const [ownerDept, setOwnerDept] = useState("");
+  const [ownerFuncaoId, setOwnerFuncaoId] = useState("");
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -44,6 +62,23 @@ export default function Projects() {
       return data;
     },
   });
+
+  const { data: funcoesAv } = useQuery({
+    queryKey: ["funcoes-av"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("funcoes_av")
+        .select("id, nome, departamento")
+        .order("departamento")
+        .order("nivel");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const funcoesOwner = (funcoesAv ?? []).filter(
+    (f: any) => !ownerDept || f.departamento === ownerDept
+  );
 
   const criar = useMutation({
     mutationFn: async (form: FormData) => {
@@ -71,7 +106,30 @@ export default function Projects() {
         p_payload: { projeto, equipe: equipeLimpa },
       });
       if (error) throw error;
-      return data as { projeto_id: string; pessoas_criadas: number; convites_enviados: number };
+      const res = data as { projeto_id: string; pessoas_criadas: number; convites_enviados: number };
+
+      // Insert owner's chosen function into projeto_pessoa_funcoes (3A.4)
+      if (ownerFuncaoId && res?.projeto_id) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser?.email) {
+          const { data: pps } = await supabase
+            .from("projeto_pessoas")
+            .select("id, pessoa:pessoas!inner(email)")
+            .eq("projeto_id", res.projeto_id);
+          const ownerPP = (pps as any[] ?? []).find((p: any) =>
+            p.pessoa?.email?.toLowerCase() === authUser.email!.toLowerCase()
+          );
+          if (ownerPP) {
+            await supabase.from("projeto_pessoa_funcoes").insert({
+              projeto_pessoa_id: ownerPP.id,
+              funcao_av_id: ownerFuncaoId,
+              principal: true,
+            });
+          }
+        }
+      }
+
+      return res;
     },
     onSuccess: (res) => {
       const partes: string[] = ["Projeto criado"];
@@ -81,6 +139,8 @@ export default function Projects() {
       qc.invalidateQueries({ queryKey: ["projetos"] });
       setOpen(false);
       setEquipe([]);
+      setOwnerDept("");
+      setOwnerFuncaoId("");
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -156,6 +216,35 @@ export default function Projects() {
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+
+                {/* Função inicial do owner — 3A.4 */}
+                <div className="space-y-3 rounded-lg border p-3">
+                  <p className="text-sm font-medium">Sua função no projeto</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <Label>Departamento</Label>
+                      <Select value={ownerDept} onValueChange={(v) => { setOwnerDept(v); setOwnerFuncaoId(""); }}>
+                        <SelectTrigger><SelectValue placeholder="Departamento" /></SelectTrigger>
+                        <SelectContent>
+                          {DEPARTAMENTOS_AV.map((d) => (
+                            <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label>Função (organograma)</Label>
+                      <Select value={ownerFuncaoId} onValueChange={setOwnerFuncaoId} disabled={!ownerDept}>
+                        <SelectTrigger><SelectValue placeholder={ownerDept ? "Selecione" : "Escolha o depto antes"} /></SelectTrigger>
+                        <SelectContent>
+                          {funcoesOwner.map((f: any) => (
+                            <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
                 </div>
 
                 <EquipePrincipalImport rows={equipe} onChange={setEquipe} />

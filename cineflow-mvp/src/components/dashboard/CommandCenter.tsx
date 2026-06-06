@@ -1,6 +1,7 @@
 import { useProjectKPIs } from "@/hooks/useProjectKPIs";
 import { useProjectRole } from "@/hooks/useProjectRole";
-import { mapRoleToDashboard } from "@/types/dashboard";
+import { useProjectFunction } from "@/hooks/useProjectFunction";
+import { mapRoleToDashboard, mapFuncaoDepartamento } from "@/types/dashboard";
 import { Loading } from "@/components/ui/loading";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertTriangle, RefreshCcw } from "lucide-react";
@@ -9,6 +10,9 @@ import { DPView } from "./views/DPView";
 import { DirectorView } from "./views/DirectorView";
 import { ADView } from "./views/ADView";
 import { CollaboratorView } from "./views/CollaboratorView";
+import { ContinuityView } from "./views/ContinuityView";
+import { CastView } from "./views/CastView";
+import { PostView } from "./views/PostView";
 
 type Props = {
   projectId: string;
@@ -51,8 +55,9 @@ function RealtimeDot({ updated_at }: { updated_at: string }) {
 export function CommandCenter({ projectId }: Props) {
   const { kpis, loading: kpisLoading, error: kpisError } = useProjectKPIs(projectId);
   const { role, isLoading: roleLoading } = useProjectRole(projectId);
+  const { funcao, isLoading: funcaoLoading } = useProjectFunction(projectId);
 
-  if (kpisLoading || roleLoading) {
+  if (kpisLoading || roleLoading || funcaoLoading) {
     return <Loading />;
   }
 
@@ -70,7 +75,14 @@ export function CommandCenter({ projectId }: Props) {
     );
   }
 
-  const dashRole = mapRoleToDashboard(role);
+  // Prioridade: função cinematográfica > papel RBAC
+  let dashRole = mapRoleToDashboard(role);
+  if (funcao) {
+    const funcaoMapped = mapFuncaoDepartamento(funcao.departamento, funcao.nome);
+    if (funcaoMapped) dashRole = funcaoMapped;
+  }
+
+  const roleLabel = funcao?.nome ?? dashRole;
 
   return (
     <div className="space-y-4">
@@ -78,12 +90,12 @@ export function CommandCenter({ projectId }: Props) {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold">Command Center</h2>
-          <p className="text-sm text-muted-foreground capitalize">{dashRole}</p>
+          <p className="text-sm text-muted-foreground capitalize">{roleLabel}</p>
         </div>
         <RealtimeDot updated_at={kpis.updated_at} />
       </div>
 
-      {/* View segmentada por role */}
+      {/* View segmentada por role / função */}
       {(dashRole === "dp" || dashRole === "produtor") && (
         <DPView kpis={kpis} projectId={projectId} />
       )}
@@ -92,6 +104,15 @@ export function CommandCenter({ projectId }: Props) {
       )}
       {dashRole === "ad" && (
         <ADView kpis={kpis} projectId={projectId} />
+      )}
+      {dashRole === "continuity" && (
+        <ContinuityView kpis={kpis} projectId={projectId} />
+      )}
+      {dashRole === "elenco" && (
+        <CastView kpis={kpis} projectId={projectId} />
+      )}
+      {dashRole === "pos" && (
+        <PostView kpis={kpis} projectId={projectId} />
       )}
       {dashRole === "colaborador" && (
         <CollaboratorView kpis={kpis} projectId={projectId} />

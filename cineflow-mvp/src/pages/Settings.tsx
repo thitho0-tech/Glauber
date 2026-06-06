@@ -190,18 +190,22 @@ function NotificacoesPanel({ userId }: { userId: string }) {
     },
   });
 
+  // Busca por email match — pessoas não tem user_id confiável (3A.5/04/15)
   const { data: meuVinculo } = useQuery({
     queryKey: ["meu-vinculo-notif", projetoSel, userId],
     enabled: !!projetoSel && !!userId,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser?.email) return null;
+      const { data: pps } = await supabase
         .from("projeto_pessoas")
-        .select("id, notif_od_inapp, notif_od_email, pessoa:pessoas!inner(user_id)")
+        .select("id, notif_od_inapp, notif_od_email, pessoa:pessoas!inner(email)")
         .eq("projeto_id", projetoSel)
-        .eq("pessoa.user_id", userId)
-        .maybeSingle();
-      if (error) return null;
-      return data as any;
+        .is("deleted_at", null);
+      if (!pps) return null;
+      return (pps as any[]).find(
+        (p) => p.pessoa?.email?.toLowerCase() === authUser.email!.toLowerCase()
+      ) ?? null;
     },
   });
 
