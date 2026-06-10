@@ -64,7 +64,7 @@ export function CommandCenter({ projectId }: Props) {
   if (kpisError) {
     return (
       <ErrorCard
-        message={`Erro ao carregar KPIs: ${kpisError.message}`}
+        message={`Erro ao carregar KPIs: ${kpisError.message ?? JSON.stringify(kpisError)}`}
       />
     );
   }
@@ -89,7 +89,7 @@ export function CommandCenter({ projectId }: Props) {
       {/* Header com indicador Realtime */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold">Command Center</h2>
+          <h2 className="text-xl font-bold">Mural</h2>
           <p className="text-sm text-muted-foreground capitalize">{roleLabel}</p>
         </div>
         <RealtimeDot updated_at={kpis.updated_at} />

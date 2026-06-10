@@ -4,8 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Clapperboard, Loader2, Mail } from "lucide-react";
+import { Loader2, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import personaLogo from "@/assets/persona-logo.jpeg";
 import { toast } from "sonner";
 
 // ── Validação de senha (mínimo 8 caracteres) ─────────────────
@@ -54,8 +55,8 @@ export default function Login() {
     <div className="grid min-h-screen place-items-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-primary text-primary-foreground">
-            <Clapperboard className="h-6 w-6" />
+          <div className="mx-auto">
+            <img src={personaLogo} alt="Glauber" className="h-16 w-auto object-contain mx-auto rounded-xl" />
           </div>
           <CardTitle className="mt-3 text-2xl">Entrar no Glauber</CardTitle>
           <CardDescription>Gestão de produções audiovisuais</CardDescription>

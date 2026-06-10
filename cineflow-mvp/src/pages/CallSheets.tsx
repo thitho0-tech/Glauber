@@ -36,7 +36,6 @@ export default function CallSheets() {
   const { id: projetoId } = useParams<{ id: string }>();
   const { canEdit } = useProjectRole(projetoId);
   const [open, setOpen] = useState(false);
-  const [tipo, setTipo] = useState<string>("filmagem");
   const [linkOdId, setLinkOdId] = useState<string | null>(null);
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -86,7 +85,7 @@ export default function CallSheets() {
 
       const payload: any = {
         projeto_id: projetoId,
-        tipo: form.get("tipo") || "filmagem",
+        tipo: "filmagem",
         titulo: form.get("titulo"),
         data: dataFinal,
         dia_id: dia_id,
@@ -134,17 +133,8 @@ export default function CallSheets() {
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="tipo">Tipo</Label>
-                    <Select name="tipo" defaultValue="filmagem" onValueChange={setTipo}>
-                      <SelectTrigger id="tipo"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="filmagem">Filmagem</SelectItem>
-                        <SelectItem value="ensaio">Ensaio</SelectItem>
-                        <SelectItem value="reuniao">Reuniao</SelectItem>
-                        <SelectItem value="pesquisa">Pesquisa</SelectItem>
-                        <SelectItem value="outro">Outro</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="titulo">Titulo</Label>
+                    <Input id="titulo" name="titulo" required placeholder="Ex.: Dia 1 — Sequencia casa do Joao" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="data">Data (opcional)</Label>
@@ -152,28 +142,22 @@ export default function CallSheets() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <Label htmlFor="titulo">Titulo</Label>
-                  <Input id="titulo" name="titulo" required placeholder="Ex.: Dia 1 — Sequencia casa do Joao" />
+                  <Label htmlFor="dia_id">Vincular a um dia de filmagem (opcional)</Label>
+                  <Select name="dia_id">
+                    <SelectTrigger id="dia_id"><SelectValue placeholder="Nenhum" /></SelectTrigger>
+                    <SelectContent>
+                      {(diasFilmagem ?? []).length === 0 ? (
+                        <div className="px-3 py-2 text-xs text-muted-foreground">Sem dias de filmagem cadastrados.</div>
+                      ) : (
+                        (diasFilmagem ?? []).map((d: any) => (
+                          <SelectItem key={d.id} value={d.id}>
+                            {formatDate(d.data)} {d.locacao?.nome ? " - " + d.locacao.nome : ""}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                 </div>
-                {tipo === "filmagem" && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="dia_id">Vincular a um dia de filmagem (opcional)</Label>
-                    <Select name="dia_id">
-                      <SelectTrigger id="dia_id"><SelectValue placeholder="Nenhum" /></SelectTrigger>
-                      <SelectContent>
-                        {(diasFilmagem ?? []).length === 0 ? (
-                          <div className="px-3 py-2 text-xs text-muted-foreground">Sem dias de filmagem cadastrados.</div>
-                        ) : (
-                          (diasFilmagem ?? []).map((d: any) => (
-                            <SelectItem key={d.id} value={d.id}>
-                              {formatDate(d.data)} {d.locacao?.nome ? " - " + d.locacao.nome : ""}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>

@@ -46,7 +46,8 @@ export function useProjectKPIs(projectId: string) {
       })
       .catch((err) => {
         if (!mountedRef.current) return;
-        setError(err instanceof Error ? err : new Error(String(err)));
+        const msg = err?.message ?? String(err);
+        setError(err instanceof Error ? err : new Error(msg));
         setLoading(false);
       });
 

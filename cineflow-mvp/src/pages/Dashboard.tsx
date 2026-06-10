@@ -36,7 +36,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">Página Inicial</h1>
           <p className="text-sm text-muted-foreground">Visao geral da sua produtora</p>
         </div>
       </div>

@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
@@ -117,7 +116,7 @@ function FuncoesProjetoSelect({
                       ? "bg-primary text-primary-foreground border-primary"
                       : "text-muted-foreground hover:text-foreground border-border"
                   }`}
-                  title={isPrincipal ? "Função principal (Command Center)" : "Marcar como principal"}
+                  title={isPrincipal ? "Função principal" : "Marcar como principal"}
                 >
                   {isPrincipal ? "★ principal" : "☆"}
                 </button>
@@ -149,15 +148,9 @@ export default function Team() {
   const { id: projetoId } = useParams();
   const { canEdit } = useProjectRole(projetoId);
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"catalogo" | "nova">("catalogo");
   const [openRegime, setOpenRegime] = useState<string | null>(null);
 
-  // Catalog tab — multi-function state
-  const [catDept, setCatDept] = useState("");
-  const [catFuncoes, setCatFuncoes] = useState<string[]>([]);
-  const [catPrincipal, setCatPrincipal] = useState("");
-
-  // Nova pessoa tab — multi-function state
+  // Nova pessoa — multi-function state
   const [deptNova, setDeptNova] = useState("");
   const [novaFuncoes, setNovaFuncoes] = useState<string[]>([]);
   const [novaPrincipal, setNovaPrincipal] = useState("");
@@ -185,10 +178,6 @@ export default function Team() {
     }
   }
 
-  function resetCatForm() {
-    setCatDept(""); setCatFuncoes([]); setCatPrincipal("");
-  }
-
   function resetNovaForm() {
     setDeptNova(""); setNovaFuncoes([]); setNovaPrincipal("");
   }
@@ -207,15 +196,6 @@ export default function Team() {
         .eq("projeto_id", projetoId!)
         .is("deleted_at", null)
         .order("criado_em");
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: catalogo } = useQuery({
-    queryKey: ["pessoas-catalogo"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("pessoas").select("*").order("nome");
       if (error) throw error;
       return data;
     },
@@ -250,14 +230,10 @@ export default function Team() {
     },
   });
 
-  const idsVinculados = new Set((vinculos ?? []).map((v: any) => v.pessoa_id));
-  const disponiveis = (catalogo ?? []).filter((p: any) => !idsVinculados.has(p.id));
-  const funcoesAvFiltCat = (funcoesAv ?? []).filter(
-    (f: any) => !catDept || f.departamento === catDept
-  );
-  const funcoesAvFiltNova = (funcoesAv ?? []).filter(
-    (f: any) => !deptNova || f.departamento === deptNova
-  );
+  // L8: funções filtradas por departamento selecionado (lista vazia se sem depto)
+  const funcoesAvFiltNova = deptNova
+    ? (funcoesAv ?? []).filter((f: any) => f.departamento === deptNova)
+    : [];
 
   async function insertFuncoes(ppId: string, funcoes: string[], principal: string) {
     if (funcoes.length === 0) return;
@@ -270,42 +246,14 @@ export default function Team() {
     if (error) throw error;
   }
 
-  const vincular = useMutation({
-    mutationFn: async (form: FormData) => {
-      if (!projetoId) throw new Error("Projeto não encontrado");
-      const pessoa_id = String(form.get("pessoa_id") ?? "");
-      if (!pessoa_id) throw new Error("Selecione uma pessoa");
-      const payload: any = {
-        projeto_id: projetoId,
-        pessoa_id,
-        funcao_av_id: catPrincipal || catFuncoes[0] || null,
-        papel_descricao: form.get("papel_descricao") || null,
-        valor_contratacao: Number(form.get("valor_contratacao") ?? 0),
-      };
-      const { data: pp, error } = await supabase
-        .from("projeto_pessoas")
-        .insert(payload)
-        .select("id")
-        .single();
-      if (error) throw error;
-      await insertFuncoes(pp.id, catFuncoes, catPrincipal);
-    },
-    onSuccess: () => {
-      toast.success("Pessoa adicionada ao projeto");
-      qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
-      setOpen(false);
-      resetCatForm();
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
+  // L9: apenas "nova pessoa" (sem catálogo)
   const criarEVincular = useMutation({
     mutationFn: async (form: FormData) => {
       if (!orgId || !projetoId) throw new Error("Contexto inválido");
       const pessoaPayload: any = {
         org_id: orgId,
         nome: form.get("nome"),
-        funcao: form.get("funcao") || null,
+        funcao: null,
         departamento: deptNova || null,
         telefone: form.get("telefone") || null,
         email: form.get("email") || null,
@@ -320,7 +268,6 @@ export default function Team() {
         projeto_id: projetoId,
         pessoa_id: pessoa.id,
         funcao_av_id: novaPrincipal || novaFuncoes[0] || null,
-        papel_descricao: form.get("papel_descricao") || null,
         valor_contratacao: Number(form.get("valor_contratacao") ?? 0),
       };
       const { data: pp, error: e2 } = await supabase
@@ -334,7 +281,6 @@ export default function Team() {
     onSuccess: () => {
       toast.success("Pessoa criada e vinculada ao projeto");
       qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
-      qc.invalidateQueries({ queryKey: ["pessoas-catalogo"] });
       setOpen(false);
       resetNovaForm();
     },
@@ -409,185 +355,81 @@ export default function Team() {
           </Link>
           <h1 className="text-2xl font-bold">Equipe e Elenco do projeto</h1>
           <p className="text-sm text-muted-foreground">
-            Cada projeto tem sua própria equipe. O catálogo da produtora fica disponível para reaproveitar pessoas entre projetos.
+            Adicione pessoas à equipe deste projeto.
           </p>
         </div>
 
         <Dialog
           open={open}
           onOpenChange={(v) => {
-            if (canEdit) { setOpen(v); if (!v) { resetCatForm(); resetNovaForm(); } }
+            if (canEdit) { setOpen(v); if (!v) resetNovaForm(); }
           }}
         >
           <DialogTrigger asChild disabled={!canEdit}>
             <Button disabled={!canEdit}><Plus className="h-4 w-4" /> Adicionar ao projeto</Button>
           </DialogTrigger>
-          {/* flex flex-col + max-h para header/footer fixos e miolo rolando */}
           <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0">
             <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
               <DialogTitle>Adicionar pessoa ao projeto</DialogTitle>
             </DialogHeader>
 
-            <Tabs
-              value={tab}
-              onValueChange={(v: any) => setTab(v)}
-              className="flex flex-col flex-1 min-h-0 overflow-hidden"
+            <form
+              onSubmit={(e) => { e.preventDefault(); criarEVincular.mutate(new FormData(e.currentTarget)); }}
+              className="flex flex-col flex-1 min-h-0"
             >
-              <div className="px-6 pb-2 shrink-0">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="catalogo">Do catálogo</TabsTrigger>
-                  <TabsTrigger value="nova">Nova pessoa</TabsTrigger>
-                </TabsList>
+              {/* campos roláveis */}
+              <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="nome">Nome completo</Label>
+                  <Input id="nome" name="nome" required />
+                </div>
+
+                {/* L8: Departamento obrigatório antes de ver funções */}
+                <div className="space-y-1.5">
+                  <Label>Departamento</Label>
+                  <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); }}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
+                    <SelectContent>
+                      {DEPARTAMENTOS_AV.map((d) => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <FuncoesProjetoSelect
+                  funcoes={funcoesAvFiltNova}
+                  selected={novaFuncoes}
+                  principal={novaPrincipal}
+                  onToggle={(id) => toggleFuncao(id, novaFuncoes, setNovaFuncoes, novaPrincipal, setNovaPrincipal)}
+                  onSetPrincipal={setNovaPrincipal}
+                />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="telefone">Telefone</Label>
+                    <Input id="telefone" name="telefone" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input id="email" name="email" type="email" />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="valor_contratacao_n">Valor de contratação (R$)</Label>
+                  <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
+                </div>
               </div>
 
-              {/* ── Catálogo ── */}
-              <TabsContent
-                value="catalogo"
-                className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden"
-              >
-                <form
-                  onSubmit={(e) => { e.preventDefault(); vincular.mutate(new FormData(e.currentTarget)); }}
-                  className="flex flex-col flex-1 min-h-0"
-                >
-                  {/* campos roláveis */}
-                  <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="pessoa_id">Pessoa do catálogo</Label>
-                      <Select name="pessoa_id">
-                        <SelectTrigger id="pessoa_id"><SelectValue placeholder="Selecione" /></SelectTrigger>
-                        <SelectContent>
-                          {disponiveis.length === 0 ? (
-                            <div className="px-3 py-2 text-xs text-muted-foreground">
-                              Todas as pessoas do catálogo já estão no projeto.
-                            </div>
-                          ) : (
-                            disponiveis.map((p: any) => (
-                              <SelectItem key={p.id} value={p.id}>
-                                {p.nome}{p.funcao ? " — " + p.funcao : ""}
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label>Departamento</Label>
-                      <Select value={catDept} onValueChange={(v) => { setCatDept(v); setCatFuncoes([]); setCatPrincipal(""); }}>
-                        <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
-                        <SelectContent>
-                          {DEPARTAMENTOS_AV.map((d) => (
-                            <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <FuncoesProjetoSelect
-                      funcoes={funcoesAvFiltCat}
-                      selected={catFuncoes}
-                      principal={catPrincipal}
-                      onToggle={(id) => toggleFuncao(id, catFuncoes, setCatFuncoes, catPrincipal, setCatPrincipal)}
-                      onSetPrincipal={setCatPrincipal}
-                    />
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="valor_contratacao_c">Valor de contratação (R$)</Label>
-                        <Input id="valor_contratacao_c" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="papel_descricao_c">Papel livre (opcional)</Label>
-                        <Input id="papel_descricao_c" name="papel_descricao" placeholder="Ex.: DF substituto" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* footer fixo */}
-                  <DialogFooter className="px-6 py-3 border-t shrink-0">
-                    <Button type="button" variant="outline" onClick={() => { setOpen(false); resetCatForm(); }}>Cancelar</Button>
-                    <Button type="submit" disabled={vincular.isPending}>
-                      {vincular.isPending ? "Adicionando..." : "Adicionar"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </TabsContent>
-
-              {/* ── Nova pessoa ── */}
-              <TabsContent
-                value="nova"
-                className="flex-1 min-h-0 flex flex-col mt-0 overflow-hidden"
-              >
-                <form
-                  onSubmit={(e) => { e.preventDefault(); criarEVincular.mutate(new FormData(e.currentTarget)); }}
-                  className="flex flex-col flex-1 min-h-0"
-                >
-                  {/* campos roláveis */}
-                  <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-                    <div className="space-y-1.5">
-                      <Label htmlFor="nome">Nome completo</Label>
-                      <Input id="nome" name="nome" required />
-                    </div>
-
-                    {/* Departamento ANTES da Função — 3A.2 */}
-                    <div className="space-y-1.5">
-                      <Label>Departamento</Label>
-                      <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); }}>
-                        <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
-                        <SelectContent>
-                          {DEPARTAMENTOS_AV.map((d) => (
-                            <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <Label htmlFor="funcao">Função/título livre (opcional)</Label>
-                      <Input id="funcao" name="funcao" placeholder="Ex.: Diretor de Fotografia" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="telefone">Telefone</Label>
-                        <Input id="telefone" name="telefone" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="email">E-mail</Label>
-                        <Input id="email" name="email" type="email" />
-                      </div>
-                    </div>
-
-                    <FuncoesProjetoSelect
-                      funcoes={funcoesAvFiltNova}
-                      selected={novaFuncoes}
-                      principal={novaPrincipal}
-                      onToggle={(id) => toggleFuncao(id, novaFuncoes, setNovaFuncoes, novaPrincipal, setNovaPrincipal)}
-                      onSetPrincipal={setNovaPrincipal}
-                    />
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="valor_contratacao_n">Valor de contratação (R$)</Label>
-                        <Input id="valor_contratacao_n" name="valor_contratacao" type="number" step="0.01" defaultValue="0" />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="papel_descricao_n">Papel livre (opcional)</Label>
-                        <Input id="papel_descricao_n" name="papel_descricao" placeholder="Ex.: DF substituto" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* footer fixo */}
-                  <DialogFooter className="px-6 py-3 border-t shrink-0">
-                    <Button type="button" variant="outline" onClick={() => { setOpen(false); resetNovaForm(); }}>Cancelar</Button>
-                    <Button type="submit" disabled={criarEVincular.isPending}>
-                      {criarEVincular.isPending ? "Criando..." : "Criar e adicionar"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </TabsContent>
-            </Tabs>
+              {/* footer fixo */}
+              <DialogFooter className="px-6 py-3 border-t shrink-0">
+                <Button type="button" variant="outline" onClick={() => { setOpen(false); resetNovaForm(); }}>Cancelar</Button>
+                <Button type="submit" disabled={criarEVincular.isPending}>
+                  {criarEVincular.isPending ? "Criando..." : "Criar e adicionar"}
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
@@ -596,7 +438,7 @@ export default function Team() {
         <Empty
           icon={<Users className="h-5 w-5" />}
           title="Sem pessoas neste projeto"
-          description="Adicione pessoas do catálogo da produtora ou crie novas."
+          description="Adicione pessoas à equipe deste projeto."
           action={
             canEdit ? (
               <Button onClick={() => setOpen(true)}>

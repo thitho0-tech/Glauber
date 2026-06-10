@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,7 @@ const STATUS_OPTS: Array<Contrato["status"]> = ["rascunho", "vigente", "encerrad
 export default function Contract() {
   const { id: projetoId } = useParams<{ id: string }>();
   const qc = useQueryClient();
+  const navigate = useNavigate();
   const [form, setForm] = useState<Partial<Contrato>>({});
 
   const { data: projeto } = useQuery({
@@ -90,6 +91,7 @@ export default function Contract() {
     onSuccess: () => {
       toast.success("Contrato salvo");
       qc.invalidateQueries({ queryKey: ["contrato", projetoId] });
+      navigate(`/projetos/${projetoId}/dashboard`);
     },
     onError: (e: any) => toast.error(e.message),
   });
