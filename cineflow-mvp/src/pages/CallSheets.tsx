@@ -48,7 +48,7 @@ export default function CallSheets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_do_dia")
-        .select("id, titulo, tipo, data, versao, publicada_em, token, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
+        .select("id, titulo, tipo, data, versao, publicada_em, token_publico, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
         .eq("projeto_id", projetoId!)
         .order("data", { ascending: false, nullsFirst: false })
         .order("criado_em", { ascending: false });
@@ -182,7 +182,7 @@ export default function CallSheets() {
           {ods.map((od: any) => {
             const dataOd = od.data ?? od.dia?.data;
             const tipoOd = od.tipo ?? "filmagem";
-            const publicLink = od.token ? `${window.location.origin}/od/${od.token}` : null;
+            const publicLink = od.token_publico ? `${window.location.origin}/od/${od.token_publico}` : null;
             return (
               <div key={od.id} className="relative">
                 <Link to={`/projetos/${projetoId}/ordens-do-dia/od/${od.id}`}>
