@@ -1,6 +1,6 @@
 # Estado Glauber — SPRINT 4 em execução (10/06/2026)
 
-**Último commit:** 5112ce5 (pending push 4B)
+**Último commit:** 385b34e (4A+4B em origin/main; deploy confirmado em glauber.app.br)
 **Build:** Limpo. `npx tsc --noEmit` = 0 erros (verificado 10/06 após 4B).
 **Deploy:** glauber.app.br (Vercel)
 **Migrations aplicadas em produção:** 39 (0001 → 0039).

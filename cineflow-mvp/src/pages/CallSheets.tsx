@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { FileText, ChevronLeft, Plus, Calendar, ExternalLink, Copy, Check } from "lucide-react";
-import { useProjectRole } from "@/hooks/useProjectRole";
+import { useProjectDeptAccess } from "@/hooks/useProjectDeptAccess";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -34,7 +34,8 @@ const TIPO_VARIANT: Record<string, "default" | "outline" | "secondary"> = {
 
 export default function CallSheets() {
   const { id: projetoId } = useParams<{ id: string }>();
-  const { canEdit } = useProjectRole(projetoId);
+  const { canEditSection } = useProjectDeptAccess(projetoId);
+  const canEdit = canEditSection("od");
   const [open, setOpen] = useState(false);
   const [linkOdId, setLinkOdId] = useState<string | null>(null);
   const [linkToken, setLinkToken] = useState<string | null>(null);

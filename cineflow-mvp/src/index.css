@@ -39,31 +39,40 @@
 
 /* ── Print / PDF da Ordem do Dia ─────────────────────────── */
 @media print {
+  @page { margin: 1.2cm; size: A4; }
+
   /* Ocultar navegação, sidebar e controles */
   aside,
   nav,
   header,
   .no-print,
   [data-radix-popper-content-wrapper],
+  [role="tablist"],
   button:not(.print-visible) {
     display: none !important;
   }
 
-  /* Resetar cores para impressão */
+  /* Mostrar todas as TabsContent no print (não só a ativa) */
+  [role="tabpanel"] {
+    display: block !important;
+    opacity: 1 !important;
+  }
+
   body {
     background: white !important;
     color: black !important;
-    font-size: 11pt;
+    font-size: 10pt;
   }
 
-  /* Cards ficam sem sombra */
   .card,
-  [class*="rounded"] {
+  [class*="rounded-lg"],
+  [class*="rounded-md"] {
     box-shadow: none !important;
-    border: 1px solid #ccc !important;
+    border: 1px solid #bbb !important;
+    break-inside: avoid;
+    margin-bottom: 8pt !important;
   }
 
-  /* Garantir que o conteúdo ocupe toda a largura */
   main,
   .space-y-6,
   .space-y-4 {
@@ -73,13 +82,24 @@
     padding: 0 !important;
   }
 
-  /* Quebra de página entre seções grandes */
-  .card + .card {
-    page-break-inside: avoid;
+  /* Grid compacta de chamadas */
+  .print-grid-chamadas {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 4pt !important;
   }
 
-  /* Título da OD em destaque */
-  h1, h2 {
-    color: black !important;
+  /* Tabela hora a hora */
+  .print-table th, .print-table td {
+    border: 1px solid #bbb;
+    padding: 3pt 6pt;
+    font-size: 9pt;
   }
+
+  h1 { font-size: 16pt !important; color: black !important; }
+  h2 { font-size: 12pt !important; color: black !important; }
+  h3 { font-size: 10pt !important; color: black !important; }
+
+  /* Não quebrar tabelas pequenas */
+  table { break-inside: avoid; }
 }

@@ -11,33 +11,81 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft, Send, Save, Plus, Trash2, ExternalLink, MapPin, Utensils, ShieldAlert, Sparkles, Car, FileText, Printer } from "lucide-react";
+import {
+  ChevronLeft, Send, Save, Plus, Trash2, ExternalLink,
+  MapPin, Utensils, ShieldAlert, Sparkles, Car, FileText,
+  Printer, Clock, Sun, Bell, Users, Radio,
+} from "lucide-react";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface Contato { nome: string; funcao: string; telefone: string; }
+interface HoraHora { inicio: string; fim: string; atividade: string; }
+interface ElencoODItem {
+  personagem: string; ator: string; cenas: string;
+  chega: string; caracterizacao: string; figurino: string;
+  pronta: string; prev_saida: string;
+}
+interface FiguracaoItem {
+  qtd: string; descricao: string; cenas: string;
+  chega: string; camarim: string; prontos: string; saida: string;
+}
 
 interface ODData {
-  // Bloco Alimentação
-  refeicoes?: { tipo: string; horario: string }[];
+  // Seção 1 — Cabeçalho adicional
+  od_numero?: string;
+  unidade_ciclo?: string;
+  direcao_nome?: string;
+  producao_nome?: string;
+  // Seção 2 — Chamadas
+  chamada_geral?: string;
+  cafe_inicio?: string;
+  cafe_fim?: string;
+  cafe_local?: string;
+  roda?: string;
   almoco_inicio?: string;
   almoco_fim?: string;
+  almoco_local?: string;
+  corta_camera?: string;
+  fim_dia?: string;
+  // Seção 3 — Previsão do tempo
+  tempo_condicao?: string;
+  tempo_min?: string;
+  tempo_max?: string;
+  tempo_chuva_pct?: string;
+  tempo_nascer_sol?: string;
+  tempo_por_sol?: string;
+  // Seção 4 — Avisos do dia
+  avisos?: string[];
+  // Seção 5 — Bases
+  base_camarim?: string;
+  base_refeicao?: string;
+  base_logger?: string;
+  // Seção 6 — Hora a hora
+  hora_a_hora?: HoraHora[];
+  // Seção 8 — Elenco OD
+  elenco_od?: ElencoODItem[];
+  // Seção 9 — Figuração
+  figuracao?: FiguracaoItem[];
+  // Seção 12 — Contatos importantes
+  contatos_emergencia_lista?: Contato[];
+  // Seção 13 — Rodapé
+  hospital?: string;
+  canais_radio?: string;
+  links_uteis?: string;
+  notas_importantes?: string;
+  resumo_dia_seguinte?: string;
+  // Legado
+  refeicoes?: { tipo: string; horario: string }[];
   bebidas?: string;
-  // Bloco Estacionamento
   estacionamento_local?: string;
   estacionamento_vagas?: string;
   estacionamento_observacoes?: string;
-  // Bloco Segurança
-  hospital?: string;
   bloqueio_ruas?: string;
-  // Bloco Efeitos especiais
-  efeitos_especiais?: string;
-  // Bloco Info / Riscos
   clima?: string;
-  contatos_emergencia_lista?: Contato[];
-  contatos_emergencia?: string; // texto livre legado
-  notas_importantes?: string;
+  efeitos_especiais?: string;
   observacoes?: string;
+  contatos_emergencia?: string;
 }
 
 const DEPARTAMENTOS = [
@@ -52,15 +100,10 @@ const DEPARTAMENTOS = [
   { value: "maquiagem", label: "Maquiagem" },
   { value: "outros", label: "Outros" },
 ];
-
 const DEPT_LABEL: Record<string, string> = Object.fromEntries(DEPARTAMENTOS.map((d) => [d.value, d.label]));
-
 const TIPO_LABEL: Record<string, string> = {
-  filmagem: "Filmagem",
-  ensaio: "Ensaio",
-  reuniao: "Reunião",
-  pesquisa: "Pesquisa",
-  outro: "Outro",
+  filmagem: "Filmagem", ensaio: "Ensaio", reuniao: "Reunião",
+  pesquisa: "Pesquisa", outro: "Outro",
 };
 
 export default function CallSheetEditor() {
@@ -91,21 +134,11 @@ export default function CallSheetEditor() {
       if (e1) throw e1;
       if (existente) return existente;
       const { data: dia, error: eDia } = await supabase
-        .from("dias_filmagem")
-        .select("projeto_id, data")
-        .eq("id", diaId!)
-        .single();
+        .from("dias_filmagem").select("projeto_id, data").eq("id", diaId!).single();
       if (eDia) throw eDia;
       const { data: nova, error: e2 } = await supabase
         .from("ordens_do_dia")
-        .insert({
-          projeto_id: dia.projeto_id,
-          dia_id: diaId,
-          data: dia.data,
-          tipo: "filmagem",
-          titulo: "OD de " + dia.data,
-          dados_json: {},
-        })
+        .insert({ projeto_id: dia.projeto_id, dia_id: diaId, data: dia.data, tipo: "filmagem", titulo: "OD de " + dia.data, dados_json: {} })
         .select("*, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome, endereco, maps_url))")
         .single();
       if (e2) throw e2;
@@ -228,13 +261,9 @@ export default function CallSheetEditor() {
         .update({ publicada_em: new Date().toISOString(), publicada_por: u.user?.id, versao: od.versao })
         .eq("id", od.id);
       if (error) throw error;
-      // D4 — notificacoes in-app para membros com notif_od_inapp = true
       await supabase.rpc("notificar_od_publicada", {
-        p_od_id: od.id,
-        p_projeto_id: od.projeto_id,
-        p_titulo_od: od.titulo ?? "Sem titulo",
+        p_od_id: od.id, p_projeto_id: od.projeto_id, p_titulo_od: od.titulo ?? "Sem titulo",
       });
-      // D5 — notificacao por email via Edge Function (membros com notif_od_email = true)
       try {
         const edgeUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notificar-od`;
         const secret = import.meta.env.VITE_EDGE_SHARED_SECRET ?? "";
@@ -245,9 +274,7 @@ export default function CallSheetEditor() {
             body: JSON.stringify({ od_id: od.id }),
           });
         }
-      } catch {
-        // Email falhou silenciosamente — notificação in-app já foi enviada
-      }
+      } catch { /* Email falhou silenciosamente */ }
     },
     onSuccess: () => { toast.success("Publicada! Membros notificados."); qc.invalidateQueries({ queryKey: ["od-edit", od?.id] }); },
     onError: (e: any) => toast.error(e.message),
@@ -259,23 +286,39 @@ export default function CallSheetEditor() {
   const linkPublico = od.token_publico ? `${window.location.origin}/od/${od.token_publico}` : null;
   const dataExibicao = od.data ?? od.dia?.data;
   const contatos = dados.contatos_emergencia_lista ?? [];
+  const avisos = dados.avisos ?? [];
+  const horaHora = dados.hora_a_hora ?? [];
+  const elencoOd = dados.elenco_od ?? [];
+  const figuracao = dados.figuracao ?? [];
 
   function setContato(i: number, patch: Partial<Contato>) {
     const list = [...contatos];
     list[i] = { ...list[i], ...patch };
     setDados({ ...dados, contatos_emergencia_lista: list });
   }
-  function addContato() {
-    setDados({ ...dados, contatos_emergencia_lista: [...contatos, { nome: "", funcao: "", telefone: "" }] });
+  function setHoraHora(i: number, patch: Partial<HoraHora>) {
+    const list = [...horaHora];
+    list[i] = { ...list[i], ...patch };
+    setDados({ ...dados, hora_a_hora: list });
   }
-  function rmContato(i: number) {
-    setDados({ ...dados, contatos_emergencia_lista: contatos.filter((_, j) => j !== i) });
+  function setElencoOd(i: number, patch: Partial<ElencoODItem>) {
+    const list = [...elencoOd];
+    list[i] = { ...list[i], ...patch };
+    setDados({ ...dados, elenco_od: list });
+  }
+  function setFiguracao(i: number, patch: Partial<FiguracaoItem>) {
+    const list = [...figuracao];
+    list[i] = { ...list[i], ...patch };
+    setDados({ ...dados, figuracao: list });
   }
 
   return (
     <div className="space-y-6">
       <div>
-        <Link to={`/projetos/${projetoId}/ordens-do-dia`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+        <Link
+          to={`/projetos/${projetoId}/ordens-do-dia`}
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+        >
           <ChevronLeft className="h-4 w-4" /> Voltar
         </Link>
         <div className="mt-2 flex items-center justify-between">
@@ -290,10 +333,12 @@ export default function CallSheetEditor() {
               {od.dia?.locacao?.nome ? " · Locação: " + od.dia.locacao.nome : ""}
             </p>
             {od.publicada_em && (
-              <p className="mt-1 text-xs text-emerald-600">Publicada v{od.versao} em {formatDateTime(od.publicada_em)}</p>
+              <p className="mt-1 text-xs text-emerald-600">
+                Publicada v{od.versao} em {formatDateTime(od.publicada_em)}
+              </p>
             )}
           </div>
-          <div className="flex gap-2">
+          <div className="no-print flex gap-2">
             <Button variant="outline" onClick={() => salvar.mutate()} disabled={salvar.isPending}>
               <Save className="h-4 w-4" /> Salvar
             </Button>
@@ -308,7 +353,7 @@ export default function CallSheetEditor() {
       </div>
 
       {linkPublico && (
-        <Card>
+        <Card className="no-print">
           <CardContent className="flex flex-col gap-2 p-4 md:flex-row md:items-center md:justify-between">
             <div>
               <p className="text-sm font-medium">Link público (sem login)</p>
@@ -332,31 +377,89 @@ export default function CallSheetEditor() {
       )}
 
       <Tabs defaultValue="geral">
-        <TabsList>
+        <TabsList className="no-print">
           <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="chamadas">Chamadas</TabsTrigger>
           <TabsTrigger value="cenas">Cenas ({cenas?.length ?? 0})</TabsTrigger>
+          <TabsTrigger value="elenco_od">Elenco OD</TabsTrigger>
           <TabsTrigger value="departamentos">Departamentos ({secoes?.length ?? 0})</TabsTrigger>
           {od.dia_id && <TabsTrigger value="equipe">Equipe ({escalas?.length ?? 0})</TabsTrigger>}
         </TabsList>
 
+        {/* ─── ABA GERAL ──────────────────────────────────────── */}
         <TabsContent value="geral" className="space-y-4">
-          {/* Bloco Locação (somente leitura, vem do dia) */}
+
+          {/* Cabeçalho adicional */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <FileText className="h-4 w-4" /> Cabeçalho
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="od_numero">Nº da OD (ex: 3 de 12)</Label>
+                <Input id="od_numero" value={dados.od_numero ?? ""} onChange={(e) => setDados({ ...dados, od_numero: e.target.value })} placeholder="3 de 12" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="unidade_ciclo">Unidade / Ciclo</Label>
+                <Input id="unidade_ciclo" value={dados.unidade_ciclo ?? ""} onChange={(e) => setDados({ ...dados, unidade_ciclo: e.target.value })} placeholder="Episódio 2, Bloco A..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="direcao_nome">Direção</Label>
+                <Input id="direcao_nome" value={dados.direcao_nome ?? ""} onChange={(e) => setDados({ ...dados, direcao_nome: e.target.value })} placeholder="Nome do(a) diretor(a)" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="producao_nome">Produção</Label>
+                <Input id="producao_nome" value={dados.producao_nome ?? ""} onChange={(e) => setDados({ ...dados, producao_nome: e.target.value })} placeholder="Nome do(a) produtor(a)" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Locação — somente leitura do dia vinculado */}
           {od.dia?.locacao && (
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><MapPin className="h-4 w-4" /> Locação</CardTitle></CardHeader>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base"><MapPin className="h-4 w-4" /> Locação</CardTitle>
+              </CardHeader>
               <CardContent className="space-y-1 text-sm">
                 <p className="font-medium">{od.dia.locacao.nome}</p>
                 {od.dia.locacao.endereco && <p className="text-muted-foreground">{od.dia.locacao.endereco}</p>}
                 {od.dia.locacao.maps_url && (
-                  <a href={od.dia.locacao.maps_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline">Abrir no Google Maps</a>
+                  <a href={od.dia.locacao.maps_url} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline no-print">
+                    Abrir no Google Maps
+                  </a>
                 )}
               </CardContent>
             </Card>
           )}
 
-          {/* Bloco Estacionamento */}
+          {/* Bases */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Car className="h-4 w-4" /> Estacionamento</CardTitle></CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><MapPin className="h-4 w-4" /> Bases do dia</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="base_camarim">Camarim</Label>
+                <Input id="base_camarim" value={dados.base_camarim ?? ""} onChange={(e) => setDados({ ...dados, base_camarim: e.target.value })} placeholder="Local, sala nº..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="base_refeicao">Base refeição</Label>
+                <Input id="base_refeicao" value={dados.base_refeicao ?? ""} onChange={(e) => setDados({ ...dados, base_refeicao: e.target.value })} placeholder="Tenda lateral, praça..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="base_logger">Logger / PA</Label>
+                <Input id="base_logger" value={dados.base_logger ?? ""} onChange={(e) => setDados({ ...dados, base_logger: e.target.value })} placeholder="Local do logger/som" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Estacionamento */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Car className="h-4 w-4" /> Estacionamento</CardTitle>
+            </CardHeader>
             <CardContent className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="est_local">Local</Label>
@@ -368,25 +471,17 @@ export default function CallSheetEditor() {
               </div>
               <div className="md:col-span-2 space-y-1.5">
                 <Label htmlFor="est_obs">Observações</Label>
-                <Input id="est_obs" value={dados.estacionamento_observacoes ?? ""} onChange={(e) => setDados({ ...dados, estacionamento_observacoes: e.target.value })} placeholder="Procurar Marcelo (zelador), bloquear entre 6h e 21h..." />
+                <Input id="est_obs" value={dados.estacionamento_observacoes ?? ""} onChange={(e) => setDados({ ...dados, estacionamento_observacoes: e.target.value })} placeholder="Procurar Marcelo (zelador)..." />
               </div>
             </CardContent>
           </Card>
 
-          {/* Bloco Alimentação */}
+          {/* Alimentação */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Utensils className="h-4 w-4" /> Alimentação</CardTitle></CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Utensils className="h-4 w-4" /> Alimentação extra</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="alm_inicio">Almoço início</Label>
-                  <Input id="alm_inicio" type="time" value={dados.almoco_inicio ?? ""} onChange={(e) => setDados({ ...dados, almoco_inicio: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="alm_fim">Almoço fim</Label>
-                  <Input id="alm_fim" type="time" value={dados.almoco_fim ?? ""} onChange={(e) => setDados({ ...dados, almoco_fim: e.target.value })} />
-                </div>
-              </div>
               <div className="space-y-1.5">
                 <Label htmlFor="bebidas">Bebidas / lanches</Label>
                 <Input id="bebidas" value={dados.bebidas ?? ""} onChange={(e) => setDados({ ...dados, bebidas: e.target.value })} placeholder="Café, água e fruta o dia todo · catering Maria" />
@@ -406,8 +501,7 @@ export default function CallSheetEditor() {
                       setDados({ ...dados, refeicoes: refs });
                     }} placeholder="Horário" />
                     <Button size="icon" variant="ghost" onClick={() => {
-                      const refs = (dados.refeicoes ?? []).filter((_, j) => j !== i);
-                      setDados({ ...dados, refeicoes: refs });
+                      setDados({ ...dados, refeicoes: (dados.refeicoes ?? []).filter((_, j) => j !== i) });
                     }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -420,49 +514,63 @@ export default function CallSheetEditor() {
             </CardContent>
           </Card>
 
-          {/* Bloco Segurança */}
+          {/* Previsão do tempo */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><ShieldAlert className="h-4 w-4" /> Segurança</CardTitle></CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="hospital">Hospital mais próximo</Label>
-                <Input id="hospital" value={dados.hospital ?? ""} onChange={(e) => setDados({ ...dados, hospital: e.target.value })} placeholder="Nome · endereço · telefone (192 SAMU)" />
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Sun className="h-4 w-4" /> Previsão do tempo</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              <div className="md:col-span-3 space-y-1.5">
+                <Label htmlFor="tempo_condicao">Condição</Label>
+                <Input id="tempo_condicao" value={dados.tempo_condicao ?? dados.clima ?? ""} onChange={(e) => setDados({ ...dados, tempo_condicao: e.target.value, clima: e.target.value })} placeholder="Sol forte, céu nublado, chuva à tarde..." />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="bloqueio">Bloqueio de ruas / autorizações</Label>
-                <Input id="bloqueio" value={dados.bloqueio_ruas ?? ""} onChange={(e) => setDados({ ...dados, bloqueio_ruas: e.target.value })} placeholder="Bloqueio Rua X das 7h às 14h · CTTU notificado" />
+                <Label htmlFor="tempo_min">Mín (°C)</Label>
+                <Input id="tempo_min" value={dados.tempo_min ?? ""} onChange={(e) => setDados({ ...dados, tempo_min: e.target.value })} placeholder="18" />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="clima">Previsão do tempo</Label>
-                <Input id="clima" value={dados.clima ?? ""} onChange={(e) => setDados({ ...dados, clima: e.target.value })} placeholder="Sol, 28°C, vento leve" />
+                <Label htmlFor="tempo_max">Máx (°C)</Label>
+                <Input id="tempo_max" value={dados.tempo_max ?? ""} onChange={(e) => setDados({ ...dados, tempo_max: e.target.value })} placeholder="32" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tempo_chuva">% Chuva</Label>
+                <Input id="tempo_chuva" value={dados.tempo_chuva_pct ?? ""} onChange={(e) => setDados({ ...dados, tempo_chuva_pct: e.target.value })} placeholder="20%" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tempo_nascer">Nascer do sol</Label>
+                <Input id="tempo_nascer" type="time" value={dados.tempo_nascer_sol ?? ""} onChange={(e) => setDados({ ...dados, tempo_nascer_sol: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="tempo_por">Pôr do sol</Label>
+                <Input id="tempo_por" type="time" value={dados.tempo_por_sol ?? ""} onChange={(e) => setDados({ ...dados, tempo_por_sol: e.target.value })} />
               </div>
             </CardContent>
           </Card>
 
-          {/* Bloco Efeitos especiais */}
-          <Card>
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" /> Efeitos especiais</CardTitle></CardHeader>
-            <CardContent>
-              <Textarea rows={3} value={dados.efeitos_especiais ?? ""} onChange={(e) => setDados({ ...dados, efeitos_especiais: e.target.value })} placeholder="Descrição do efeito · responsável · materiais · riscos · perímetro" />
-            </CardContent>
-          </Card>
-
-          {/* Bloco Contatos de emergência */}
+          {/* Avisos do dia */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-3">
-              <CardTitle className="text-base">Contatos de emergência</CardTitle>
-              <Button size="sm" variant="outline" onClick={addContato}><Plus className="h-4 w-4" /> Adicionar</Button>
+              <CardTitle className="flex items-center gap-2 text-base"><Bell className="h-4 w-4" /> Avisos do dia</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setDados({ ...dados, avisos: [...avisos, ""] })}>
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
             </CardHeader>
             <CardContent className="space-y-2">
-              {contatos.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Liste produtor executivo, dir. de produção, segurança, hospital, bombeiros...</p>
+              {avisos.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Informe avisos, alterações de última hora, restrições de locação...</p>
               ) : (
-                contatos.map((c, i) => (
-                  <div key={i} className="grid grid-cols-12 gap-2">
-                    <Input className="col-span-4" placeholder="Nome" value={c.nome} onChange={(e) => setContato(i, { nome: e.target.value })} />
-                    <Input className="col-span-4" placeholder="Função" value={c.funcao} onChange={(e) => setContato(i, { funcao: e.target.value })} />
-                    <Input className="col-span-3" placeholder="Telefone" value={c.telefone} onChange={(e) => setContato(i, { telefone: e.target.value })} />
-                    <Button size="icon" variant="ghost" onClick={() => rmContato(i)}>
+                avisos.map((a, i) => (
+                  <div key={i} className="flex gap-2">
+                    <Input
+                      value={a}
+                      onChange={(e) => {
+                        const list = [...avisos];
+                        list[i] = e.target.value;
+                        setDados({ ...dados, avisos: list });
+                      }}
+                      placeholder="Aviso..."
+                    />
+                    <Button size="icon" variant="ghost" onClick={() => setDados({ ...dados, avisos: avisos.filter((_, j) => j !== i) })}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
@@ -471,15 +579,170 @@ export default function CallSheetEditor() {
             </CardContent>
           </Card>
 
-          {/* Bloco Notas importantes */}
+          {/* Efeitos especiais */}
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><FileText className="h-4 w-4" /> Notas importantes</CardTitle></CardHeader>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4" /> Efeitos especiais</CardTitle>
+            </CardHeader>
             <CardContent>
-              <Textarea rows={4} value={dados.notas_importantes ?? ""} onChange={(e) => setDados({ ...dados, notas_importantes: e.target.value })} placeholder="Avisos, restrições da locação, alterações de última hora, lembretes..." />
+              <Textarea rows={3} value={dados.efeitos_especiais ?? ""} onChange={(e) => setDados({ ...dados, efeitos_especiais: e.target.value })} placeholder="Descrição do efeito · responsável · materiais · riscos · perímetro" />
+            </CardContent>
+          </Card>
+
+          {/* Segurança */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><ShieldAlert className="h-4 w-4" /> Segurança</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="bloqueio">Bloqueio de ruas / autorizações</Label>
+                <Input id="bloqueio" value={dados.bloqueio_ruas ?? ""} onChange={(e) => setDados({ ...dados, bloqueio_ruas: e.target.value })} placeholder="Bloqueio Rua X das 7h às 14h · CTTU notificado" />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Contatos de emergência */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base">Contatos importantes</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setDados({ ...dados, contatos_emergencia_lista: [...contatos, { nome: "", funcao: "", telefone: "" }] })}>
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {contatos.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Prod. executivo, dir. de produção, segurança, hospital, bombeiros...</p>
+              ) : (
+                contatos.map((c, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2">
+                    <Input className="col-span-4" placeholder="Nome" value={c.nome} onChange={(e) => setContato(i, { nome: e.target.value })} />
+                    <Input className="col-span-4" placeholder="Função" value={c.funcao} onChange={(e) => setContato(i, { funcao: e.target.value })} />
+                    <Input className="col-span-3" placeholder="Telefone" value={c.telefone} onChange={(e) => setContato(i, { telefone: e.target.value })} />
+                    <Button size="icon" variant="ghost" onClick={() => setDados({ ...dados, contatos_emergencia_lista: contatos.filter((_, j) => j !== i) })}>
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Rodapé */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Radio className="h-4 w-4" /> Rodapé / Informações finais</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="hospital">Hospital mais próximo</Label>
+                <Input id="hospital" value={dados.hospital ?? ""} onChange={(e) => setDados({ ...dados, hospital: e.target.value })} placeholder="Nome · endereço · telefone (192 SAMU)" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="canais_radio">Canais de rádio</Label>
+                <Input id="canais_radio" value={dados.canais_radio ?? ""} onChange={(e) => setDados({ ...dados, canais_radio: e.target.value })} placeholder="Canal 1 — Direção · Canal 2 — Produção · Canal 3 — Segurança" />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="links_uteis">Links úteis</Label>
+                <Input id="links_uteis" value={dados.links_uteis ?? ""} onChange={(e) => setDados({ ...dados, links_uteis: e.target.value })} placeholder="Maps, forecast, drive de arte..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="notas_importantes">Notas importantes</Label>
+                <Textarea rows={3} id="notas_importantes" value={dados.notas_importantes ?? ""} onChange={(e) => setDados({ ...dados, notas_importantes: e.target.value })} placeholder="Avisos gerais, restrições, lembretes..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="resumo_dia_seguinte">Resumo do dia seguinte</Label>
+                <Textarea rows={2} id="resumo_dia_seguinte" value={dados.resumo_dia_seguinte ?? ""} onChange={(e) => setDados({ ...dados, resumo_dia_seguinte: e.target.value })} placeholder="Amanhã: Cenas 10-14, locação Armazém Norte, chamada geral 7h30..." />
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* ─── ABA CHAMADAS ───────────────────────────────────── */}
+        <TabsContent value="chamadas" className="space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" /> Chamadas do dia</CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-3 md:grid-cols-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="chamada_geral">Chamada geral</Label>
+                <Input id="chamada_geral" type="time" value={dados.chamada_geral ?? ""} onChange={(e) => setDados({ ...dados, chamada_geral: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cafe_inicio">Café início</Label>
+                <Input id="cafe_inicio" type="time" value={dados.cafe_inicio ?? ""} onChange={(e) => setDados({ ...dados, cafe_inicio: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cafe_fim">Café fim</Label>
+                <Input id="cafe_fim" type="time" value={dados.cafe_fim ?? ""} onChange={(e) => setDados({ ...dados, cafe_fim: e.target.value })} />
+              </div>
+              <div className="md:col-span-3 space-y-1.5">
+                <Label htmlFor="cafe_local">Local do café</Label>
+                <Input id="cafe_local" value={dados.cafe_local ?? ""} onChange={(e) => setDados({ ...dados, cafe_local: e.target.value })} placeholder="Tenda de alimentação, corredor..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="roda">Roda (RODA)</Label>
+                <Input id="roda" type="time" value={dados.roda ?? ""} onChange={(e) => setDados({ ...dados, roda: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="almoco_inicio">Almoço início</Label>
+                <Input id="almoco_inicio" type="time" value={dados.almoco_inicio ?? ""} onChange={(e) => setDados({ ...dados, almoco_inicio: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="almoco_fim">Almoço fim</Label>
+                <Input id="almoco_fim" type="time" value={dados.almoco_fim ?? ""} onChange={(e) => setDados({ ...dados, almoco_fim: e.target.value })} />
+              </div>
+              <div className="md:col-span-3 space-y-1.5">
+                <Label htmlFor="almoco_local">Local do almoço</Label>
+                <Input id="almoco_local" value={dados.almoco_local ?? ""} onChange={(e) => setDados({ ...dados, almoco_local: e.target.value })} placeholder="Restaurante X, praça coberta..." />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="corta_camera">Corta câmera</Label>
+                <Input id="corta_camera" type="time" value={dados.corta_camera ?? ""} onChange={(e) => setDados({ ...dados, corta_camera: e.target.value })} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="fim_dia">Fim do dia</Label>
+                <Input id="fim_dia" type="time" value={dados.fim_dia ?? ""} onChange={(e) => setDados({ ...dados, fim_dia: e.target.value })} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Hora a hora */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" /> Hora a hora</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setDados({ ...dados, hora_a_hora: [...horaHora, { inicio: "", fim: "", atividade: "" }] })}>
+                <Plus className="h-4 w-4" /> Adicionar linha
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {horaHora.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Café, preparação, RODA, almoço, desprodução, deslocamento, gravações...</p>
+              ) : (
+                <>
+                  <div className="grid grid-cols-12 gap-2 text-xs font-medium text-muted-foreground px-1">
+                    <span className="col-span-2">Início</span>
+                    <span className="col-span-2">Fim</span>
+                    <span className="col-span-7">Atividade</span>
+                  </div>
+                  {horaHora.map((h, i) => (
+                    <div key={i} className="grid grid-cols-12 gap-2">
+                      <Input className="col-span-2" type="time" value={h.inicio} onChange={(e) => setHoraHora(i, { inicio: e.target.value })} />
+                      <Input className="col-span-2" type="time" value={h.fim} onChange={(e) => setHoraHora(i, { fim: e.target.value })} />
+                      <Input className="col-span-7" placeholder="Atividade" value={h.atividade} onChange={(e) => setHoraHora(i, { atividade: e.target.value })} />
+                      <Button size="icon" variant="ghost" onClick={() => setDados({ ...dados, hora_a_hora: horaHora.filter((_, j) => j !== i) })}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── ABA CENAS ──────────────────────────────────────── */}
         <TabsContent value="cenas">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -507,6 +770,128 @@ export default function CallSheetEditor() {
           </Card>
         </TabsContent>
 
+        {/* ─── ABA ELENCO OD ──────────────────────────────────── */}
+        <TabsContent value="elenco_od" className="space-y-4">
+          {/* Elenco do dia */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Elenco do dia</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setDados({
+                ...dados,
+                elenco_od: [...elencoOd, { personagem: "", ator: "", cenas: "", chega: "", caracterizacao: "", figurino: "", pronta: "", prev_saida: "" }],
+              })}>
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {elencoOd.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Adicione os atores com chamadas para o dia.</p>
+              ) : (
+                elencoOd.map((e, i) => (
+                  <div key={i} className="space-y-2 rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">#{i + 1}</span>
+                      <Button size="icon" variant="ghost" onClick={() => setDados({ ...dados, elenco_od: elencoOd.filter((_, j) => j !== i) })}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Personagem</Label>
+                        <Input value={e.personagem} onChange={(ev) => setElencoOd(i, { personagem: ev.target.value })} placeholder="João" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Ator / Atriz</Label>
+                        <Input value={e.ator} onChange={(ev) => setElencoOd(i, { ator: ev.target.value })} placeholder="Maria Silva" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cenas</Label>
+                        <Input value={e.cenas} onChange={(ev) => setElencoOd(i, { cenas: ev.target.value })} placeholder="1, 3, 7" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Chega</Label>
+                        <Input type="time" value={e.chega} onChange={(ev) => setElencoOd(i, { chega: ev.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Caracterização</Label>
+                        <Input type="time" value={e.caracterizacao} onChange={(ev) => setElencoOd(i, { caracterizacao: ev.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Figurino</Label>
+                        <Input type="time" value={e.figurino} onChange={(ev) => setElencoOd(i, { figurino: ev.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Pronta</Label>
+                        <Input type="time" value={e.pronta} onChange={(ev) => setElencoOd(i, { pronta: ev.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Prev. saída</Label>
+                        <Input type="time" value={e.prev_saida} onChange={(ev) => setElencoOd(i, { prev_saida: ev.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Figuração */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-3">
+              <CardTitle className="text-base">Figuração</CardTitle>
+              <Button size="sm" variant="outline" onClick={() => setDados({
+                ...dados,
+                figuracao: [...figuracao, { qtd: "", descricao: "", cenas: "", chega: "", camarim: "", prontos: "", saida: "" }],
+              })}>
+                <Plus className="h-4 w-4" /> Adicionar
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {figuracao.length === 0 ? (
+                <p className="text-xs text-muted-foreground">Adicione grupos de figuração com chamada e camarim.</p>
+              ) : (
+                figuracao.map((f, i) => (
+                  <div key={i} className="space-y-2 rounded-md border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-medium text-muted-foreground">Figuração #{i + 1}</span>
+                      <Button size="icon" variant="ghost" onClick={() => setDados({ ...dados, figuracao: figuracao.filter((_, j) => j !== i) })}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Qtd</Label>
+                        <Input value={f.qtd} onChange={(ev) => setFiguracao(i, { qtd: ev.target.value })} placeholder="10" />
+                      </div>
+                      <div className="md:col-span-3 space-y-1">
+                        <Label className="text-xs">Descrição</Label>
+                        <Input value={f.descricao} onChange={(ev) => setFiguracao(i, { descricao: ev.target.value })} placeholder="Passantes, público de festa, militares..." />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Cenas</Label>
+                        <Input value={f.cenas} onChange={(ev) => setFiguracao(i, { cenas: ev.target.value })} placeholder="2, 5" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Chega</Label>
+                        <Input type="time" value={f.chega} onChange={(ev) => setFiguracao(i, { chega: ev.target.value })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Camarim</Label>
+                        <Input value={f.camarim} onChange={(ev) => setFiguracao(i, { camarim: ev.target.value })} placeholder="Sala 3" />
+                      </div>
+                      <div className="space-y-1">
+                        <Label className="text-xs">Prontos</Label>
+                        <Input type="time" value={f.prontos} onChange={(ev) => setFiguracao(i, { prontos: ev.target.value })} />
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ─── ABA DEPARTAMENTOS ──────────────────────────────── */}
         <TabsContent value="departamentos">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -541,6 +926,7 @@ export default function CallSheetEditor() {
           </Card>
         </TabsContent>
 
+        {/* ─── ABA EQUIPE ─────────────────────────────────────── */}
         {od.dia_id && (
           <TabsContent value="equipe">
             <Card>
@@ -553,6 +939,7 @@ export default function CallSheetEditor() {
                     {escalas.map((e: any) => (
                       <li key={e.id} className="py-2 text-sm">
                         <span className="font-medium">{e.pessoa?.nome}</span>
+                        {e.pessoa?.departamento && <span className="text-muted-foreground"> · {e.pessoa.departamento}</span>}
                         {e.pessoa?.funcao && <span className="text-muted-foreground"> · {e.pessoa.funcao}</span>}
                         {e.pessoa?.telefone && <span className="text-muted-foreground"> · {e.pessoa.telefone}</span>}
                       </li>

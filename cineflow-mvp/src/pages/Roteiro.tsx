@@ -11,9 +11,11 @@ import { Label } from "@/components/ui/label";
 import { Loading } from "@/components/ui/loading";
 import { Empty } from "@/components/ui/empty";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   ChevronLeft, FileText, Sparkles, Upload, RefreshCw,
   MapPin, Users, Shirt, Drama, Sparkle, Music, Camera, AlertCircle,
+  AlertTriangle, Printer,
 } from "lucide-react";
 import { extrairTextoDoArquivo, paginasEstimadas } from "@/lib/parseRoteiro";
 import { toast } from "sonner";
@@ -69,6 +71,9 @@ export default function Roteiro() {
   const [arquivoNome, setArquivoNome] = useState<string>("");
   const [arquivoTipo, setArquivoTipo] = useState<string>("");
   const [parsingArquivo, setParsingArquivo] = useState(false);
+  const [abaAtiva, setAbaAtiva] = useState<string>("roteiro");
+  const [pendingSave, setPendingSave] = useState<{ texto: string; nome?: string; tipo?: string } | null>(null);
+  const [confirmSubst, setConfirmSubst] = useState(false);
 
   const { data: roteiro, isLoading } = useQuery({
     queryKey: ["roteiro", projetoId],
@@ -157,11 +162,35 @@ export default function Roteiro() {
       if ((data as any)?.error) throw new Error((data as any).message ?? (data as any).error);
       return data;
     },
-    onSuccess: (res: any) => {
+    onSuccess: async (res: any) => {
       toast.success(`Decupagem concluída: ${res?.cenas ?? 0} cenas, ${res?.planos ?? 0} planos`);
       qc.invalidateQueries({ queryKey: ["roteiro", projetoId] });
       qc.invalidateQueries({ queryKey: ["roteiro-cenas"] });
       qc.invalidateQueries({ queryKey: ["roteiro-planos"] });
+
+      // F7 — upsert personagens detectados na tabela personagens
+      if (roteiro?.id && projetoId) {
+        const { data: cenasData } = await supabase
+          .from("roteiro_cenas")
+          .select("personagens")
+          .eq("roteiro_id", roteiro.id);
+        const nomes = Array.from(
+          new Set(
+            (cenasData ?? []).flatMap((c: any) =>
+              Array.isArray(c.personagens) ? (c.personagens as string[]) : []
+            )
+          )
+        ).filter(Boolean) as string[];
+        if (nomes.length) {
+          await supabase.from("personagens").upsert(
+            nomes.map((nome) => ({ projeto_id: projetoId, nome })),
+            { onConflict: "projeto_id,nome", ignoreDuplicates: true }
+          );
+          toast.success(`${nomes.length} personagens registados no Elenco`);
+        }
+      }
+
+      setAbaAtiva("decupagem");
     },
     onError: (e: any) => toast.error("Falha na decupagem: " + e.message),
   });
@@ -181,163 +210,254 @@ export default function Roteiro() {
     }
   }
 
+  function handleSalvar(input: { texto: string; nome?: string; tipo?: string }) {
+    if (roteiro) {
+      setPendingSave(input);
+      setConfirmSubst(true);
+    } else {
+      salvar.mutate(input);
+    }
+  }
+
+  function confirmarSubstituicao() {
+    if (pendingSave) {
+      salvar.mutate(pendingSave);
+      setPendingSave(null);
+    }
+    setConfirmSubst(false);
+  }
+
   if (isLoading) return <Loading />;
 
   return (
     <div className="space-y-6">
-      <Link to={`/projetos/${projetoId}`} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+      <Link
+        to={`/projetos/${projetoId}`}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
         <ChevronLeft className="h-4 w-4" /> Projeto
       </Link>
 
       <div>
         <h1 className="text-2xl font-bold">Roteiro &amp; Decupagem</h1>
         <p className="text-sm text-muted-foreground">
-          Suba o roteiro do projeto e gere a análise técnica completa (cenas, personagens, arte, figurino, efeitos e planos sugeridos).
+          Suba o roteiro e gere análise técnica completa (cenas, personagens, arte, figurino, efeitos e planos sugeridos).
         </p>
       </div>
 
-      {/* Bloco: roteiro atual */}
-      {roteiro ? (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between gap-2 text-base">
-              <span className="flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Roteiro atual
-                {roteiro.status === "decupado" && <Badge variant="secondary">decupado</Badge>}
-                {roteiro.status === "analisando" && <Badge>analisando...</Badge>}
-                {roteiro.status === "cru" && <Badge variant="outline">não analisado</Badge>}
-                {roteiro.status === "erro" && <Badge variant="destructive">erro</Badge>}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  onClick={() => decupar.mutate()}
-                  disabled={decupar.isPending || roteiro.status === "analisando"}
-                >
-                  {roteiro.status === "decupado" ? (
-                    <><RefreshCw className="h-4 w-4" /> Re-decupar</>
-                  ) : (
-                    <><Sparkles className="h-4 w-4" /> Decupar com IA</>
-                  )}
-                </Button>
-              </div>
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              <span className="text-muted-foreground">Arquivo:</span>{" "}
-              {roteiro.arquivo_nome ? <strong>{roteiro.arquivo_nome}</strong> : <em>colado direto</em>}
-              {roteiro.arquivo_tipo && <Badge variant="outline" className="ml-2">{roteiro.arquivo_tipo}</Badge>}
-            </p>
-            <p>
-              <span className="text-muted-foreground">Tamanho:</span>{" "}
-              <strong>{(roteiro.texto?.length ?? 0).toLocaleString("pt-BR")} caracteres</strong>{" · "}
-              <strong>~{roteiro.paginas_estimadas ?? 0} páginas</strong>
-            </p>
-            {roteiro.mensagem_erro && (
-              <p className="flex items-start gap-1 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
-                <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
-                {roteiro.mensagem_erro}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <Empty
-          icon={<FileText className="h-5 w-5" />}
-          title="Nenhum roteiro ainda"
-          description="Faça upload (PDF, DOCX, FDX) ou cole o roteiro abaixo. Depois clique em Decupar com IA pra análise técnica completa."
-        />
-      )}
+      <Tabs value={abaAtiva} onValueChange={setAbaAtiva}>
+        <TabsList className="no-print">
+          <TabsTrigger value="roteiro">Roteiro</TabsTrigger>
+          <TabsTrigger value="decupagem">
+            Decupagem {cenas && cenas.length > 0 ? `(${cenas.length})` : ""}
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Bloco: upload/colar novo */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{roteiro ? "Substituir roteiro" : "Inserir roteiro"}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <Tabs defaultValue="arquivo">
-            <TabsList>
-              <TabsTrigger value="arquivo">Arquivo</TabsTrigger>
-              <TabsTrigger value="colar">Colar texto</TabsTrigger>
-            </TabsList>
-            <TabsContent value="arquivo" className="space-y-2 pt-2">
-              <Label htmlFor="arq" className="text-xs">
-                Aceita .pdf, .docx, .fdx, .txt — .doc precisa ser exportado como .docx antes
-              </Label>
-              <Input
-                id="arq"
-                type="file"
-                accept=".pdf,.docx,.fdx,.txt,.md"
-                disabled={parsingArquivo || salvar.isPending}
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) carregarArquivo(f);
-                }}
-              />
-              {parsingArquivo && (
-                <p className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Upload className="h-3.5 w-3.5 animate-pulse" /> Processando arquivo...
+        {/* ── ABA ROTEIRO ─────────────────────────────────────── */}
+        <TabsContent value="roteiro" className="space-y-4">
+          {roteiro ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between gap-2 text-base">
+                  <span className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" /> Roteiro atual
+                    {roteiro.status === "decupado" && <Badge variant="secondary">decupado</Badge>}
+                    {roteiro.status === "analisando" && <Badge>analisando...</Badge>}
+                    {roteiro.status === "cru" && <Badge variant="outline">não analisado</Badge>}
+                    {roteiro.status === "erro" && <Badge variant="destructive">erro</Badge>}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => decupar.mutate()}
+                    disabled={decupar.isPending || roteiro.status === "analisando"}
+                  >
+                    {roteiro.status === "decupado" ? (
+                      <><RefreshCw className="h-4 w-4" /> Re-decupar</>
+                    ) : (
+                      <><Sparkles className="h-4 w-4" /> Decupar com IA</>
+                    )}
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>
+                  <span className="text-muted-foreground">Arquivo:</span>{" "}
+                  {roteiro.arquivo_nome ? <strong>{roteiro.arquivo_nome}</strong> : <em>colado direto</em>}
+                  {roteiro.arquivo_tipo && <Badge variant="outline" className="ml-2">{roteiro.arquivo_tipo}</Badge>}
                 </p>
-              )}
-            </TabsContent>
-            <TabsContent value="colar" className="space-y-2 pt-2">
-              <Label htmlFor="colar" className="text-xs">Cole o texto integral do roteiro</Label>
-              <Textarea
-                id="colar"
-                rows={8}
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-                placeholder="CENA 1&#10;INT. SALA DE ESTAR - DIA&#10;&#10;Maria entra e..."
-                className="font-mono text-xs"
-              />
-            </TabsContent>
-          </Tabs>
-
-          {texto && (
-            <div className="rounded-md border bg-muted/30 p-3">
-              <p className="text-xs text-muted-foreground">
-                Preview: {texto.length.toLocaleString("pt-BR")} caracteres
-                {arquivoNome && <> · de <strong>{arquivoNome}</strong> ({arquivoTipo})</>}
-              </p>
-              <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] text-muted-foreground">
-                {texto.slice(0, 600)}{texto.length > 600 ? "..." : ""}
-              </pre>
-            </div>
+                <p>
+                  <span className="text-muted-foreground">Tamanho:</span>{" "}
+                  <strong>{(roteiro.texto?.length ?? 0).toLocaleString("pt-BR")} caracteres</strong>
+                  {" · "}
+                  <strong>~{roteiro.paginas_estimadas ?? 0} páginas</strong>
+                </p>
+                {roteiro.mensagem_erro && (
+                  <p className="flex items-start gap-1 rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+                    <AlertCircle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" />
+                    {roteiro.mensagem_erro}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ) : (
+            <Empty
+              icon={<FileText className="h-5 w-5" />}
+              title="Nenhum roteiro ainda"
+              description="Faça upload (PDF, DOCX, FDX) ou cole o roteiro abaixo. Depois clique em Decupar com IA pra análise técnica completa."
+            />
           )}
 
-          <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => { setTexto(""); setArquivoNome(""); setArquivoTipo(""); }} disabled={!texto}>
-              Limpar
-            </Button>
-            <Button
-              onClick={() => salvar.mutate({ texto, nome: arquivoNome || undefined, tipo: arquivoTipo || undefined })}
-              disabled={!texto || salvar.isPending}
-            >
-              {salvar.isPending ? "Salvando..." : (roteiro ? "Substituir roteiro" : "Salvar roteiro")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">{roteiro ? "Substituir roteiro" : "Inserir roteiro"}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Tabs defaultValue="arquivo">
+                <TabsList>
+                  <TabsTrigger value="arquivo">Arquivo</TabsTrigger>
+                  <TabsTrigger value="colar">Colar texto</TabsTrigger>
+                </TabsList>
+                <TabsContent value="arquivo" className="space-y-2 pt-2">
+                  <Label htmlFor="arq" className="text-xs">
+                    Aceita .pdf, .docx, .fdx, .txt — .doc precisa ser exportado como .docx antes
+                  </Label>
+                  <Input
+                    id="arq"
+                    type="file"
+                    accept=".pdf,.docx,.fdx,.txt,.md"
+                    disabled={parsingArquivo || salvar.isPending}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) carregarArquivo(f);
+                    }}
+                  />
+                  {parsingArquivo && (
+                    <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Upload className="h-3.5 w-3.5 animate-pulse" /> Processando arquivo...
+                    </p>
+                  )}
+                </TabsContent>
+                <TabsContent value="colar" className="space-y-2 pt-2">
+                  <Label htmlFor="colar" className="text-xs">Cole o texto integral do roteiro</Label>
+                  <Textarea
+                    id="colar"
+                    rows={8}
+                    value={texto}
+                    onChange={(e) => setTexto(e.target.value)}
+                    placeholder={"CENA 1\nINT. SALA DE ESTAR - DIA\n\nMaria entra e..."}
+                    className="font-mono text-xs"
+                  />
+                </TabsContent>
+              </Tabs>
 
-      {/* Bloco: cenas decupadas */}
-      {roteiro?.status === "decupado" && cenas && cenas.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <h2 className="text-lg font-semibold">{cenas.length} cenas analisadas</h2>
-            <p className="text-xs text-muted-foreground">
-              {roteiro.decupado_em && <>Decupado em {new Date(roteiro.decupado_em).toLocaleString("pt-BR")} · </>}
-              modelo: {roteiro.modelo_ia ?? "—"}
+              {texto && (
+                <div className="rounded-md border bg-muted/30 p-3">
+                  <p className="text-xs text-muted-foreground">
+                    Preview: {texto.length.toLocaleString("pt-BR")} caracteres
+                    {arquivoNome && <> · de <strong>{arquivoNome}</strong> ({arquivoTipo})</>}
+                  </p>
+                  <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap font-mono text-[11px] text-muted-foreground">
+                    {texto.slice(0, 600)}{texto.length > 600 ? "..." : ""}
+                  </pre>
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => { setTexto(""); setArquivoNome(""); setArquivoTipo(""); }}
+                  disabled={!texto}
+                >
+                  Limpar
+                </Button>
+                <Button
+                  onClick={() => handleSalvar({ texto, nome: arquivoNome || undefined, tipo: arquivoTipo || undefined })}
+                  disabled={!texto || salvar.isPending}
+                >
+                  {salvar.isPending ? "Salvando..." : (roteiro ? "Substituir roteiro" : "Salvar roteiro")}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── ABA DECUPAGEM ───────────────────────────────────── */}
+        <TabsContent value="decupagem" className="space-y-4">
+          <div className="flex items-center justify-between no-print">
+            <p className="text-sm text-muted-foreground">
+              {roteiro?.decupado_em
+                ? `Decupado em ${new Date(roteiro.decupado_em).toLocaleString("pt-BR")} · modelo: ${roteiro.modelo_ia ?? "—"}`
+                : "Rode a decupagem para ver a análise de cenas."}
             </p>
+            {cenas && cenas.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => window.print()}>
+                <Printer className="h-4 w-4" /> Exportar PDF
+              </Button>
+            )}
           </div>
-          <div className="space-y-3">
-            {cenas.map((c) => {
-              const planosCena = (planos ?? []).filter((p) => p.cena_id === c.id);
-              return <CenaCard key={c.id} cena={c} planos={planosCena} />;
-            })}
-          </div>
-        </div>
-      )}
+
+          {!roteiro || roteiro.status === "cru" ? (
+            <Empty
+              icon={<Sparkles className="h-5 w-5" />}
+              title="Nenhuma decupagem ainda"
+              description="Vá à aba Roteiro e clique em Decupar com IA."
+            />
+          ) : roteiro.status === "analisando" ? (
+            <Card>
+              <CardContent className="py-8 text-center text-sm text-muted-foreground">
+                <RefreshCw className="mx-auto mb-2 h-6 w-6 animate-spin" />
+                Analisando roteiro com IA... aguarde.
+              </CardContent>
+            </Card>
+          ) : roteiro.status === "erro" ? (
+            <Card>
+              <CardContent className="py-6">
+                <p className="flex items-start gap-1 text-sm text-destructive">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                  {roteiro.mensagem_erro ?? "Erro desconhecido na decupagem."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : cenas && cenas.length > 0 ? (
+            <div className="space-y-3">
+              <h2 className="text-lg font-semibold">{cenas.length} cenas analisadas</h2>
+              {cenas.map((c) => {
+                const planosCena = (planos ?? []).filter((p) => p.cena_id === c.id);
+                return <CenaCard key={c.id} cena={c} planos={planosCena} />;
+              })}
+            </div>
+          ) : (
+            <Empty
+              icon={<FileText className="h-5 w-5" />}
+              title="Decupagem vazia"
+              description="A análise não retornou cenas. Tente re-decupar."
+            />
+          )}
+        </TabsContent>
+      </Tabs>
+
+      {/* Dialog de confirmação ao substituir roteiro */}
+      <Dialog open={confirmSubst} onOpenChange={setConfirmSubst}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Substituir roteiro?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Isso vai substituir o roteiro atual e apagar a decupagem existente. Todas as cenas, planos e personagens associados serão removidos ao re-decupar.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setConfirmSubst(false); setPendingSave(null); }}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={confirmarSubstituicao} disabled={salvar.isPending}>
+              {salvar.isPending ? "Substituindo..." : "Substituir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -360,7 +480,8 @@ function CenaCard({ cena, planos }: { cena: Cena; planos: Plano[] }) {
         {cena.sinopse && <p className="text-sm">{cena.sinopse}</p>}
         {cena.locacao_sugerida && (
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3.5 w-3.5" /> Locação sugerida: <strong className="text-foreground">{cena.locacao_sugerida}</strong>
+            <MapPin className="h-3.5 w-3.5" /> Locação sugerida:{" "}
+            <strong className="text-foreground">{cena.locacao_sugerida}</strong>
           </p>
         )}
 
