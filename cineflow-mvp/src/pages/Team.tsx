@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil } from "lucide-react";
+import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil, FolderOpen } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
@@ -149,6 +149,9 @@ export default function Team() {
   const { canEdit } = useProjectRole(projetoId);
   const [open, setOpen] = useState(false);
   const [openRegime, setOpenRegime] = useState<string | null>(null);
+  const [openDocs, setOpenDocs] = useState<string | null>(null);
+  const [docsData, setDocsData] = useState<Record<string, string>>({});
+  const [pendingDocs, setPendingDocs] = useState<Record<string, File>>({});
 
   // Nova pessoa — multi-function state
   const [deptNova, setDeptNova] = useState("");
@@ -190,7 +193,7 @@ export default function Team() {
         .from("projeto_pessoas")
         .select(`
           *,
-          pessoa:pessoas(id, nome, email, telefone, departamento, funcao, user_id),
+          pessoa:pessoas(id, nome, email, telefone, departamento, funcao, user_id, documentos, foto_url),
           funcoes:projeto_pessoa_funcoes(id, principal, funcao_av:funcoes_av(id, nome, departamento))
         `)
         .eq("projeto_id", projetoId!)
@@ -299,6 +302,44 @@ export default function Team() {
       toast.success("Pessoa movida para a lixeira. Acesse Configurações → Lixeira para restaurar.");
       qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
     },
+  });
+
+  async function uploadDoc(pessoaId: string, tipo: string, file: File) {
+    const ext = file.name.split(".").pop();
+    const path = `pessoas/${pessoaId}/${tipo}.${ext}`;
+    const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: true });
+    if (error) throw error;
+    return path;
+  }
+
+  async function verDoc(path: string) {
+    const { data } = await supabase.storage.from("documentos").createSignedUrl(path, 300);
+    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    else toast.error("Não foi possível gerar link");
+  }
+
+  const salvarDocs = useMutation({
+    mutationFn: async (pessoaId: string) => {
+      const docUrls: Record<string, string> = { ...docsData };
+      let novaFoto: string | undefined;
+      for (const [tipo, file] of Object.entries(pendingDocs)) {
+        const url = await uploadDoc(pessoaId, tipo, file);
+        if (tipo === "foto_url") { novaFoto = url; }
+        else { docUrls[tipo] = url; }
+      }
+      const payload: any = { documentos: docUrls };
+      if (novaFoto) payload.foto_url = novaFoto;
+      const { error } = await supabase.from("pessoas").update(payload).eq("id", pessoaId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Documentos salvos");
+      setOpenDocs(null);
+      setDocsData({});
+      setPendingDocs({});
+      qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const salvarRegime = useMutation({
@@ -470,6 +511,13 @@ export default function Team() {
                         </p>
                       </div>
                       <div className="flex gap-1 shrink-0">
+                        <Button size="icon" variant="ghost" title="Documentos" onClick={() => {
+                          setOpenDocs(v.pessoa?.id ?? null);
+                          setDocsData(v.pessoa?.documentos ?? {});
+                          setPendingDocs({});
+                        }}>
+                          <FolderOpen className="h-4 w-4" />
+                        </Button>
                         <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
                         {canEdit && (
                           <Button size="icon" variant="ghost" onClick={() => desvincular.mutate(v.id)}>
@@ -551,6 +599,13 @@ export default function Team() {
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                           )}
+                          <Button size="icon" variant="ghost" className="h-7 w-7" title="Documentos" onClick={() => {
+                            setOpenDocs(v.pessoa?.id ?? null);
+                            setDocsData(v.pessoa?.documentos ?? {});
+                            setPendingDocs({});
+                          }}>
+                            <FolderOpen className="h-3.5 w-3.5" />
+                          </Button>
                           <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
                           <Button
                             size="icon"
@@ -571,6 +626,58 @@ export default function Team() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog: Documentos da pessoa */}
+      <Dialog open={!!openDocs} onOpenChange={(v) => { if (!v) { setOpenDocs(null); setDocsData({}); setPendingDocs({}); } }}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          {openDocs && (() => {
+            const pessoa = vinculos?.find((v: any) => v.pessoa?.id === openDocs)?.pessoa;
+            const DOC_TIPOS = [
+              { key: "foto_url",                   label: "Foto (perfil)",           accept: "image/*" },
+              { key: "rg_url",                     label: "RG",                      accept: ".pdf,image/*" },
+              { key: "cpf_url",                    label: "CPF",                     accept: ".pdf,image/*" },
+              { key: "cnpj_url",                   label: "Cartão CNPJ",             accept: ".pdf,image/*" },
+              { key: "comprovante_residencia_url",  label: "Comprovante de residência", accept: ".pdf,image/*" },
+              { key: "comprovante_bancario_url",    label: "Comprovante bancário",    accept: ".pdf,image/*" },
+            ];
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Documentos — {pessoa?.nome}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-3">
+                  {DOC_TIPOS.map(({ key, label, accept }) => {
+                    const existing = key === "foto_url" ? pessoa?.foto_url : docsData[key];
+                    const pending = pendingDocs[key];
+                    return (
+                      <div key={key} className="space-y-1.5">
+                        <Label>{label}</Label>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <input type="file" accept={accept} className="text-sm"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0];
+                              if (f) setPendingDocs((prev) => ({ ...prev, [key]: f }));
+                            }} />
+                          {pending && <span className="text-xs text-emerald-600">{pending.name}</span>}
+                          {!pending && existing && (
+                            <Button size="sm" variant="outline" onClick={() => verDoc(existing)}>Ver</Button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => { setOpenDocs(null); setDocsData({}); setPendingDocs({}); }}>Cancelar</Button>
+                  <Button onClick={() => salvarDocs.mutate(openDocs)} disabled={salvarDocs.isPending}>
+                    {salvarDocs.isPending ? "Salvando..." : "Salvar documentos"}
+                  </Button>
+                </DialogFooter>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog: Regime de contratação */}
       <Dialog open={!!openRegime} onOpenChange={(v) => { if (!v) setOpenRegime(null); }}>

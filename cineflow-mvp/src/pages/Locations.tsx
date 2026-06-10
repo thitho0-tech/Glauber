@@ -71,6 +71,9 @@ export default function Locations() {
         contato_telefone: form.get("contato_telefone") || null,
         valor_diaria: form.get("valor_diaria") ? Number(form.get("valor_diaria")) : null,
         restricoes: form.get("restricoes") || null,
+        responsavel_nome: form.get("responsavel_nome") || null,
+        responsavel_contato: form.get("responsavel_contato") || null,
+        comentarios: form.get("comentarios") || null,
       };
       const { error } = await supabase.from("locacoes").insert(payload);
       if (error) throw error;
@@ -151,6 +154,11 @@ export default function Locations() {
                 </div>
                 <div className="space-y-1.5"><Label htmlFor="valor_diaria">Valor da diária (R$)</Label><Input id="valor_diaria" name="valor_diaria" type="number" step="0.01" /></div>
                 <div className="space-y-1.5"><Label htmlFor="restricoes">Restrições</Label><Textarea id="restricoes" name="restricoes" rows={3} placeholder="Horários permitidos, ruído, autorizações, etc." /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5"><Label htmlFor="responsavel_nome">Responsável pelo local</Label><Input id="responsavel_nome" name="responsavel_nome" placeholder="Nome do responsável" /></div>
+                  <div className="space-y-1.5"><Label htmlFor="responsavel_contato">Contato do responsável</Label><Input id="responsavel_contato" name="responsavel_contato" placeholder="Tel/email" /></div>
+                </div>
+                <div className="space-y-1.5"><Label htmlFor="comentarios">Comentários / regras internas</Label><Textarea id="comentarios" name="comentarios" rows={2} placeholder="Regras da locação, acordos, observações da produção..." /></div>
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
@@ -184,8 +192,10 @@ export default function Locations() {
                     <p className="text-xs text-muted-foreground">GPS: {Number(l.lat).toFixed(5)}, {Number(l.lng).toFixed(5)}</p>
                   )}
                   {l.contato_nome && <p className="text-xs">📞 {l.contato_nome} · {l.contato_telefone ?? "—"}</p>}
+                  {l.responsavel_nome && <p className="text-xs">Resp.: {l.responsavel_nome}{l.responsavel_contato ? ` · ${l.responsavel_contato}` : ""}</p>}
                   {l.valor_diaria && <p className="text-sm font-medium">Diária: {formatBRL(l.valor_diaria)}</p>}
                   {l.restricoes && <p className="text-xs text-muted-foreground">⚠️ {l.restricoes}</p>}
+                  {l.comentarios && <p className="text-xs text-muted-foreground italic">{l.comentarios}</p>}
                   {(mapsHref || wazeHref) && (
                     <div className="flex gap-2 pt-2">
                       {mapsHref && (

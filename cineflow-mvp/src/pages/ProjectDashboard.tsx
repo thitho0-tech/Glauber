@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Loading } from "@/components/ui/loading";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   CalendarDays, Send, Mic, Square, Trash2, MessageSquare,
-  CalendarClock, CheckCircle2, XCircle, MapPin, ChevronRight,
+  CalendarClock, CheckCircle2, XCircle, MapPin, ChevronRight, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,15 +30,22 @@ function formatDataHora(iso: string) {
   });
 }
 
-// Categoriza canal para os 3 tabs do Mural
 function getCanalCategoria(canal: any): "geral" | "departamento" | "privado" {
   if (canal.tipo === "privado") return "privado";
   if (canal.departamento === "geral" || canal.tipo === "geral") return "geral";
   return "departamento";
 }
 
-// ─── ChatPanel: totalmente auto-contido por categoria ────────────────────────
-function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefined }) {
+// ─── ChatPanel ────────────────────────────────────────────────────────────────
+function ChatPanel({
+  canais,
+  userId,
+  targetCanalId,
+}: {
+  canais: any[];
+  userId: string | undefined;
+  targetCanalId?: string | null;
+}) {
   const qc = useQueryClient();
   const [canalId, setCanalId] = useState<string | null>(canais[0]?.id ?? null);
   const [texto, setTexto] = useState("");
@@ -48,10 +56,16 @@ function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefin
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const listEndRef = useRef<HTMLDivElement>(null);
 
-  // Seleciona primeiro canal quando a lista muda
   useEffect(() => {
     if (!canalId && canais.length > 0) setCanalId(canais[0].id);
   }, [canais, canalId]);
+
+  // Navigate to a target canal when requested by parent (e.g., after DM creation)
+  useEffect(() => {
+    if (targetCanalId && canais.some((c) => c.id === targetCanalId)) {
+      setCanalId(targetCanalId);
+    }
+  }, [targetCanalId, canais]);
 
   const { data: mensagens } = useQuery({
     queryKey: ["mensagens", canalId],
@@ -145,7 +159,6 @@ function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefin
 
   return (
     <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-      {/* Lista de canais (só mostra se há mais de um) */}
       {canais.length > 1 && (
         <div className="w-40 shrink-0 border-r overflow-y-auto">
           <div className="p-2 space-y-0.5">
@@ -163,7 +176,6 @@ function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefin
         </div>
       )}
 
-      {/* Mensagens */}
       <div className="flex flex-col flex-1 overflow-hidden">
         <div className="border-b px-4 py-2 shrink-0">
           <p className="text-sm font-medium">{canalAtualNome}</p>
@@ -206,7 +218,6 @@ function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefin
           <div ref={listEndRef} />
         </div>
 
-        {/* Input */}
         <div className="border-t p-3 shrink-0">
           {gravando ? (
             <div className="flex items-center gap-3 rounded-md border border-rose-300 bg-rose-50 dark:bg-rose-950/20 px-3 py-2">
@@ -219,11 +230,7 @@ function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefin
             </div>
           ) : (
             <form onSubmit={(e) => { e.preventDefault(); enviar.mutate(); }} className="flex items-center gap-2">
-              <Input
-                placeholder="Escreva uma mensagem..."
-                value={texto}
-                onChange={(e) => setTexto(e.target.value)}
-              />
+              <Input placeholder="Escreva uma mensagem..." value={texto} onChange={(e) => setTexto(e.target.value)} />
               <Button type="button" variant="outline" size="icon" onClick={startGravacao} title="Gravar áudio">
                 <Mic className="h-4 w-4" />
               </Button>
@@ -242,6 +249,10 @@ function ChatPanel({ canais, userId }: { canais: any[]; userId: string | undefin
 export default function ProjectDashboard() {
   const { id: projetoId } = useParams<{ id: string }>();
   const { user } = useAuth();
+  const qc = useQueryClient();
+
+  const [openNovaDM, setOpenNovaDM] = useState(false);
+  const [privadoTarget, setPrivadoTarget] = useState<string | null>(null);
 
   const { data: proximosEventos, isLoading: lEventos } = useQuery({
     queryKey: ["mural-agenda", projetoId],
@@ -272,6 +283,85 @@ export default function ProjectDashboard() {
       if (error) throw error;
       return data ?? [];
     },
+  });
+
+  // Current user's pessoa_id (for DM creation)
+  const { data: myPessoa } = useQuery({
+    queryKey: ["my-pessoa", projetoId, user?.email],
+    enabled: !!projetoId && !!user?.email,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projeto_pessoas")
+        .select("pessoa:pessoas(id, nome)")
+        .eq("projeto_id", projetoId!)
+        .is("deleted_at", null)
+        .ilike("pessoa.email", user!.email!)
+        .maybeSingle();
+      return (data as any)?.pessoa ?? null;
+    },
+  });
+
+  // Project members list (for DM dialog)
+  const { data: pessoasDM } = useQuery({
+    queryKey: ["pessoas-dm-dialog", projetoId],
+    enabled: openNovaDM && !!projetoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("projeto_pessoas")
+        .select("pessoa:pessoas(id, nome, email)")
+        .eq("projeto_id", projetoId!)
+        .is("deleted_at", null)
+        .order("criado_em");
+      if (error) throw error;
+      return ((data ?? []) as any[]).map((r) => r.pessoa).filter(Boolean) as { id: string; nome: string; email: string }[];
+    },
+  });
+
+  const criarOuAbrirDM = useMutation({
+    mutationFn: async (targetPessoa: { id: string; nome: string }) => {
+      if (!myPessoa) throw new Error("Seu perfil não foi encontrado no projeto");
+
+      const canaisPrivado = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "privado");
+
+      // Check if DM already exists: find a canal where target is a member AND it's in our privado list
+      if (canaisPrivado.length > 0) {
+        const privadoIds = canaisPrivado.map((c: any) => c.id);
+        const { data: targetMembros } = await supabase
+          .from("canal_membros")
+          .select("canal_id")
+          .eq("pessoa_id", targetPessoa.id)
+          .in("canal_id", privadoIds);
+
+        if (targetMembros && targetMembros.length > 0) {
+          return { canalId: targetMembros[0].canal_id, isNew: false };
+        }
+      }
+
+      // Create new DM canal
+      const dmDept = "dm-" + crypto.randomUUID().slice(0, 8);
+      const { data: newCanal, error: e1 } = await supabase
+        .from("canais")
+        .insert({ projeto_id: projetoId!, tipo: "privado", departamento: dmDept, nome: targetPessoa.nome })
+        .select("id")
+        .single();
+      if (e1) throw e1;
+
+      const { error: e2 } = await supabase.from("canal_membros").insert([
+        { canal_id: newCanal.id, pessoa_id: myPessoa.id },
+        { canal_id: newCanal.id, pessoa_id: targetPessoa.id },
+      ]);
+      if (e2) throw e2;
+
+      return { canalId: newCanal.id, isNew: true };
+    },
+    onSuccess: ({ canalId, isNew }) => {
+      if (isNew) {
+        qc.invalidateQueries({ queryKey: ["canais", projetoId] });
+      }
+      setPrivadoTarget(canalId);
+      setOpenNovaDM(false);
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   if (lEventos || lCanais) return <Loading />;
@@ -360,11 +450,48 @@ export default function ProjectDashboard() {
               <ChatPanel canais={canaisDept} userId={user?.id} />
             </TabsContent>
             <TabsContent value="privado" className="flex-1 overflow-hidden m-0 mt-0 flex flex-col">
-              <ChatPanel canais={canaisPrivado} userId={user?.id} />
+              {/* "Nova conversa" button bar */}
+              <div className="border-b px-3 py-2 shrink-0 flex justify-end">
+                <Button size="sm" variant="outline" onClick={() => setOpenNovaDM(true)}>
+                  <Plus className="h-3.5 w-3.5" /> Nova conversa
+                </Button>
+              </div>
+              <ChatPanel canais={canaisPrivado} userId={user?.id} targetCanalId={privadoTarget} />
             </TabsContent>
           </Tabs>
         </Card>
       </div>
+
+      {/* Dialog: Nova conversa DM */}
+      <Dialog open={openNovaDM} onOpenChange={setOpenNovaDM}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova conversa privada</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground mb-3">Selecione um membro da equipe:</p>
+            {!pessoasDM ? (
+              <Loading />
+            ) : pessoasDM.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nenhuma pessoa na equipe.</p>
+            ) : (
+              pessoasDM
+                .filter((p) => p.email?.toLowerCase() !== user?.email?.toLowerCase())
+                .map((p) => (
+                  <button
+                    key={p.id}
+                    disabled={criarOuAbrirDM.isPending}
+                    onClick={() => criarOuAbrirDM.mutate(p)}
+                    className="w-full rounded-md border px-4 py-3 text-left text-sm hover:bg-accent transition-colors disabled:opacity-50"
+                  >
+                    <span className="font-medium">{p.nome}</span>
+                    {p.email && <span className="ml-2 text-xs text-muted-foreground">{p.email}</span>}
+                  </button>
+                ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

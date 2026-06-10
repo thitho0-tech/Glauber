@@ -1,26 +1,24 @@
 # Estado Glauber — SPRINT 4 em execução (10/06/2026)
 
-**Último commit:** 385b34e (4A+4B em origin/main; deploy confirmado em glauber.app.br)
-**Build:** Limpo. `npx tsc --noEmit` = 0 erros (verificado 10/06 após 4B).
+**Último commit:** ver `git log` (4A+4B+4C + hotfixes em origin/main; deploy em glauber.app.br)
+**Build:** Limpo. `npx tsc --noEmit` = 0 erros (verificado 11/06 após hotfixes 4C).
 **Deploy:** glauber.app.br (Vercel)
-**Migrations aplicadas em produção:** 39 (0001 → 0039).
+**Migrations aplicadas em produção:** 42 (0001 → 0042).
 
-> **FASE 4B CONCLUÍDA no Claude Code (10/06)** — L10–L12, F14, F15 implementados:
-> - **L10**: Sidebar nova completa (Mural, Agenda, OD, Roteiro & Decupagem + DEPARTAMENTOS:
->   Produção-hub, Roteiro-depto, Direção, Arte, Fotografia, Som, Elenco, Pós Produção,
->   Mapa de Transporte, Administrativo, Configurações).
-> - **L11**: Agenda absorve Cronograma (duas abas: Agenda + Planejamento).
->   `/cronograma` redireciona para `/agenda`.
-> - **L12**: Mural novo: coluna "Próximos eventos" (somente leitura) + chat com 3 tabs
->   (Geral | Departamento | Privado).
-> - **F14**: `useProjectDeptAccess` hook — RBAC por departamento (producao edita tudo;
->   direcao edita tudo menos Produção; arte/foto/som/elenco/pos editam o seu).
-> - **F15**: Tipos de agenda com restrição por departamento (Select substituiu chips livres).
-> - **Producao hub**: rota `/projetos/:id/producao` com sub-abas Equipe, Locações,
->   Financeiro, Fornecedores, Contrato, Prestação (rotas legadas mantidas).
-> - **Placeholders**: Direção, Fotografia, Som, PosProducao, MapaTransporte, Administrativo.
-> PENDENTE: commit + push + vercel --prod + smoke test da sidebar nova.
-> Próxima sessão: **FASE 4C** (OD completa + PDF OD + PDF decupagem + abas Roteiro/Decupagem).
+> **FASES 4A, 4B e 4C CONCLUÍDAS e smoke-testadas (11/06).**
+> 4A: bugs B1–B10 + layout L1–L9. 4B: sidebar nova, Mural (agenda+chat 3 tabs), Agenda
+> unificada, RBAC por depto (useProjectDeptAccess), hub Produção. 4C: OD completa (13
+> seções/6 abas no CallSheetEditor), PDF OD e decupagem, abas Roteiro/Decupagem,
+> decupagem→personagens (F7).
+> Hotfixes pós-4C: lista de ODs usava coluna `token` (correto: `token_publico`);
+> migração 0041 (unique personagens p/ upsert F7); 0040 (seed canais chat); 0042
+> (recursão de RLS canais↔canal_membros — Mural ficava sem canais).
+> ⚠️ Lições novas: (a) rodar `npx tsc --noEmit` no PowerShell ANTES de cada deploy —
+> arquivos .tsx podem chegar truncados no disco após sessões (recuperar com
+> `git show HEAD:caminho > arquivo`); (b) policies que se referenciam mutuamente
+> causam recursão de RLS — usar funções security definer.
+> Próxima sessão: **FASE 4D** (Mapa de Transporte + fichas Elenco/Arte/Locações/Docs
+> + DM "Nova conversa" no Mural). Depois: 4E (caça-bugs final + entrega às equipes, 20/06).
 
 ---
 
