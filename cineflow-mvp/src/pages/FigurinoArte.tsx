@@ -594,32 +594,34 @@ export default function FigurinoArte() {
           ) : (
             <div className="space-y-2">
               {figs.map((f) => (
-                <div key={f.id} className="flex items-center gap-3 rounded-md border p-3">
-                  {f.foto_url && (
-                    <FotoThumbnail path={f.foto_url} onView={setFotoViewer} />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{f.descricao}</p>
-                    <p className="text-xs text-muted-foreground">
+                <div key={f.id} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <p className="font-medium flex-1 min-w-0 truncate">{f.descricao}</p>
+                    <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
+                      {f.aprovacao_status && (
+                        <Badge variant={APROVACAO_VARIANT[f.aprovacao_status] ?? "outline"} className="text-xs">
+                          {APROVACAO_STATUS.find(a => a.value === f.aprovacao_status)?.label ?? f.aprovacao_status}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs">{f.status}</Badge>
+                      <Button size="icon" variant="ghost" onClick={() => setEditFig(f)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {canPropor && (
+                        <Button size="icon" variant="ghost" onClick={() => setConfirmDelFig(f.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {f.foto_url && (
+                      <FotoThumbnail path={f.foto_url} onView={setFotoViewer} />
+                    )}
+                    <p className="text-xs text-muted-foreground truncate">
                       {[f.tamanho, f.cor, f.fonte].filter(Boolean).join(" · ")}
                       {f.valor_estimado ? ` · ${formatBRL(f.valor_estimado)}` : ""}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {f.aprovacao_status && (
-                      <Badge variant={APROVACAO_VARIANT[f.aprovacao_status] ?? "outline"} className="text-xs">
-                        {APROVACAO_STATUS.find(a => a.value === f.aprovacao_status)?.label ?? f.aprovacao_status}
-                      </Badge>
-                    )}
-                    <Badge variant="outline">{f.status}</Badge>
-                    <Button size="icon" variant="ghost" onClick={() => setEditFig(f)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {canPropor && (
-                      <Button size="icon" variant="ghost" onClick={() => setConfirmDelFig(f.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
                   </div>
                 </div>
               ))}
@@ -640,33 +642,35 @@ export default function FigurinoArte() {
           ) : (
             <div className="space-y-2">
               {artes.map((a) => (
-                <div key={a.id} className="flex items-center gap-3 rounded-md border p-3">
-                  {a.foto_url && (
-                    <FotoThumbnail path={a.foto_url} onView={setFotoViewer} />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium">{a.descricao}</p>
-                    <p className="text-xs text-muted-foreground">
+                <div key={a.id} className="rounded-md border p-3 space-y-2">
+                  <div className="flex items-start gap-2">
+                    <p className="font-medium flex-1 min-w-0 truncate">{a.descricao}</p>
+                    <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
+                      {a.aprovacao_status && (
+                        <Badge variant={APROVACAO_VARIANT[a.aprovacao_status] ?? "outline"} className="text-xs">
+                          {APROVACAO_STATUS.find(ap => ap.value === a.aprovacao_status)?.label ?? a.aprovacao_status}
+                        </Badge>
+                      )}
+                      <Badge variant="outline" className="text-xs">{a.status}</Badge>
+                      <Button size="icon" variant="ghost" onClick={() => setEditArte(a)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      {canPropor && (
+                        <Button size="icon" variant="ghost" onClick={() => setConfirmDelArte(a.id)}>
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {a.foto_url && (
+                      <FotoThumbnail path={a.foto_url} onView={setFotoViewer} />
+                    )}
+                    <p className="text-xs text-muted-foreground truncate">
                       {[a.categoria, a.fonte, a.origem].filter(Boolean).join(" · ")}
                       {a.valor_estimado ? ` · ${formatBRL(a.valor_estimado)}` : ""}
                       {a.personagem_id ? ` · ${personagemNome(a.personagem_id)}` : ""}
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {a.aprovacao_status && (
-                      <Badge variant={APROVACAO_VARIANT[a.aprovacao_status] ?? "outline"} className="text-xs">
-                        {APROVACAO_STATUS.find(ap => ap.value === a.aprovacao_status)?.label ?? a.aprovacao_status}
-                      </Badge>
-                    )}
-                    <Badge variant="outline">{a.status}</Badge>
-                    <Button size="icon" variant="ghost" onClick={() => setEditArte(a)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    {canPropor && (
-                      <Button size="icon" variant="ghost" onClick={() => setConfirmDelArte(a.id)}>
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    )}
                   </div>
                 </div>
               ))}
