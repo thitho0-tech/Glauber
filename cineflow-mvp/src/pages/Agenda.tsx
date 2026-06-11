@@ -317,6 +317,7 @@ export default function Agenda() {
                   <form
                     onSubmit={(e) => { e.preventDefault(); salvarEvento.mutate(new FormData(e.currentTarget)); }}
                     className="space-y-4"
+                    autoComplete="off"
                   >
                     <DialogHeader>
                       <DialogTitle>{editando ? "Editar evento" : "Novo evento"}</DialogTitle>
@@ -518,6 +519,7 @@ export default function Agenda() {
                   <form
                     onSubmit={(e) => { e.preventDefault(); criarPlanejamento.mutate(new FormData(e.currentTarget)); }}
                     className="space-y-4"
+                    autoComplete="off"
                   >
                     <DialogHeader><DialogTitle>Novo planejamento</DialogTitle></DialogHeader>
                     <div className="space-y-3">

@@ -129,6 +129,7 @@ export default function CallSheets() {
             <form
               onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }}
               className="space-y-4"
+              autoComplete="off"
             >
               <DialogHeader><DialogTitle>Nova Ordem do Dia</DialogTitle></DialogHeader>
               <div className="space-y-3">

@@ -371,10 +371,10 @@ export default function ProjectDashboard() {
   const canaisPrivado = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "privado");
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Mural</h1>
+    <div className="flex flex-col overflow-hidden h-[calc(100vh-96px)] md:h-[calc(100vh-112px)]">
+      <h1 className="text-2xl font-bold shrink-0 mb-4">Mural</h1>
 
-      <div className="grid gap-4 md:grid-cols-[340px_1fr]" style={{ height: "calc(100vh - 140px)" }}>
+      <div className="flex-1 min-h-0 grid gap-4 md:grid-cols-[340px_1fr]">
 
         {/* ── Coluna: Próximos eventos ───────────────────────────────────── */}
         <Card className="flex flex-col overflow-hidden">

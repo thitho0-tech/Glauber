@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Loader2, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import personaLogo from "@/assets/persona-logo.jpeg";
+import novaLogo from "@/assets/nova-logo-glauber.jpeg";
 import { toast } from "sonner";
 
 // ── Validação de senha (mínimo 8 caracteres) ─────────────────
@@ -55,8 +56,9 @@ export default function Login() {
     <div className="grid min-h-screen place-items-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto">
-            <img src={personaLogo} alt="Glauber" className="h-16 w-auto object-contain mx-auto rounded-xl" />
+          <div className="flex items-center justify-center gap-3">
+            <img src={personaLogo} alt="" className="h-14 w-auto object-contain" />
+            <img src={novaLogo} alt="Glauber" className="h-14 w-auto object-contain" />
           </div>
           <CardTitle className="mt-3 text-2xl">Entrar no Glauber</CardTitle>
           <CardDescription>Gestão de produções audiovisuais</CardDescription>

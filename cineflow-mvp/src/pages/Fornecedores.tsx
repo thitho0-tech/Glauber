@@ -219,7 +219,7 @@ export default function Fornecedores() {
             <Button><Plus className="h-4 w-4" /> Novo fornecedor</Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
-            <form onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
               <DialogHeader><DialogTitle>Novo fornecedor</DialogTitle></DialogHeader>
               <FormFornecedor onSubmit={() => {}} isPending={criar.isPending} />
               <DialogFooter>
@@ -298,7 +298,7 @@ export default function Fornecedores() {
       <Dialog open={!!editando} onOpenChange={(v) => { if (!v) setEditando(null); }}>
         <DialogContent className="max-w-lg">
           {editando && (
-            <form onSubmit={(e) => { e.preventDefault(); atualizar.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); atualizar.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
               <DialogHeader><DialogTitle>Editar fornecedor</DialogTitle></DialogHeader>
               <FormFornecedor f={editando} onSubmit={() => {}} isPending={atualizar.isPending} />
               <DialogFooter>

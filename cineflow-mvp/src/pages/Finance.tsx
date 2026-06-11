@@ -253,7 +253,7 @@ export default function Finance() {
               <Dialog open={openLinha} onOpenChange={setOpenLinha}>
                 {canEdit && <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova rubrica</Button></DialogTrigger>}
                 <DialogContent>
-                  <form onSubmit={(e) => { e.preventDefault(); criarLinha.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+                  <form onSubmit={(e) => { e.preventDefault(); criarLinha.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
                     <DialogHeader><DialogTitle>Nova rubrica do orcamento</DialogTitle></DialogHeader>
                     <div className="space-y-3">
                       <div className="space-y-1.5">
@@ -322,7 +322,7 @@ export default function Finance() {
                 {canEdit && <DialogTrigger asChild><Button size="sm"><Plus className="h-4 w-4" /> Nova despesa</Button></DialogTrigger>}
                 <DialogContent className="max-w-lg">
                   {!novaDespesaId ? (
-                    <form onSubmit={(e) => { e.preventDefault(); criarDespesa.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+                    <form onSubmit={(e) => { e.preventDefault(); criarDespesa.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
                       <DialogHeader><DialogTitle>Nova despesa</DialogTitle></DialogHeader>
                       <div className="space-y-3">
                         <div className="space-y-1.5"><Label htmlFor="descricao">Descricao</Label><Input id="descricao" name="descricao" required /></div>

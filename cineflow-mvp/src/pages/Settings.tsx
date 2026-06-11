@@ -448,6 +448,7 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
           key={projeto.id}
           onSubmit={(e) => { e.preventDefault(); salvar.mutate(new FormData(e.currentTarget)); }}
           className="space-y-4"
+          autoComplete="off"
         >
           <div className="space-y-1.5">
             <Label htmlFor="proj_nome">Nome do projeto</Label>
@@ -549,7 +550,7 @@ function ProjetoDadosForm({ projetoId, canEdit }: { projetoId: string; canEdit: 
             <p className="font-medium text-destructive">Esta ação é irreversível.</p>
             <p className="text-muted-foreground">
               Serão apagados: cronograma, escalas, ordens do dia, equipe vinculada ao projeto, orçamentos e despesas.
-              O catálogo da produtora e locações continuam.
+              O catálogo da produtora continua; locações deste projeto também são apagadas.
             </p>
           </div>
           {!codigoEnviado ? (
@@ -757,6 +758,7 @@ export default function Settings() {
               <form
                 onSubmit={(e) => { e.preventDefault(); salvarPessoal.mutate(new FormData(e.currentTarget)); }}
                 className="space-y-4"
+                autoComplete="off"
               >
                 <div className="space-y-1.5">
                   <Label htmlFor="nome_completo">Nome completo</Label>
@@ -797,6 +799,7 @@ export default function Settings() {
               <form
                 onSubmit={(e) => { e.preventDefault(); trocarSenha.mutate(new FormData(e.currentTarget)); (e.target as HTMLFormElement).reset(); }}
                 className="space-y-3"
+                autoComplete="off"
               >
                 <div className="space-y-1.5">
                   <Label htmlFor="nova_senha">Nova senha</Label>
@@ -819,6 +822,7 @@ export default function Settings() {
               <form
                 onSubmit={(e) => { e.preventDefault(); salvarOrg.mutate(new FormData(e.currentTarget)); }}
                 className="space-y-4"
+                autoComplete="off"
               >
                 <div className="space-y-1.5">
                   <Label htmlFor="org_nome">Nome da produtora</Label>

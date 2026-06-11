@@ -26,6 +26,7 @@ type Roteiro = {
   texto: string;
   arquivo_nome: string | null;
   arquivo_tipo: string | null;
+  arquivo_path: string | null;
   paginas_estimadas: number | null;
   status: "cru" | "analisando" | "decupado" | "erro";
   mensagem_erro: string | null;
@@ -70,6 +71,7 @@ export default function Roteiro() {
   const [texto, setTexto] = useState("");
   const [arquivoNome, setArquivoNome] = useState<string>("");
   const [arquivoTipo, setArquivoTipo] = useState<string>("");
+  const [arquivoOriginal, setArquivoOriginal] = useState<File | null>(null);
   const [parsingArquivo, setParsingArquivo] = useState(false);
   const [abaAtiva, setAbaAtiva] = useState<string>("roteiro");
   const [pendingSave, setPendingSave] = useState<{ texto: string; nome?: string; tipo?: string } | null>(null);
@@ -122,11 +124,20 @@ export default function Roteiro() {
 
   const salvar = useMutation({
     mutationFn: async (input: { texto: string; nome?: string; tipo?: string }) => {
+      let arquivoPath: string | null = null;
+      if (arquivoOriginal && projetoId) {
+        const path = `roteiros/${projetoId}/${Date.now()}-${arquivoOriginal.name}`;
+        const { error: upErr } = await supabase.storage
+          .from("documentos")
+          .upload(path, arquivoOriginal, { upsert: true });
+        if (!upErr) arquivoPath = path;
+      }
       const payload: any = {
         projeto_id: projetoId!,
         texto: input.texto,
         arquivo_nome: input.nome ?? null,
         arquivo_tipo: input.tipo ?? null,
+        arquivo_path: arquivoPath,
         paginas_estimadas: paginasEstimadas(input.texto),
         status: "cru",
         mensagem_erro: null,
@@ -148,6 +159,7 @@ export default function Roteiro() {
       setTexto("");
       setArquivoNome("");
       setArquivoTipo("");
+      setArquivoOriginal(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -197,6 +209,7 @@ export default function Roteiro() {
 
   async function carregarArquivo(file: File) {
     setParsingArquivo(true);
+    setArquivoOriginal(file);
     try {
       const { texto: t, formato } = await extrairTextoDoArquivo(file);
       setTexto(t);
@@ -306,6 +319,8 @@ export default function Roteiro() {
               description="Faça upload (PDF, DOCX, FDX) ou cole o roteiro abaixo. Depois clique em Decupar com IA pra análise técnica completa."
             />
           )}
+
+          {roteiro && <RoteiroViewer roteiro={roteiro} />}
 
           <Card>
             <CardHeader>
@@ -459,6 +474,61 @@ export default function Roteiro() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function RoteiroViewer({ roteiro }: { roteiro: Roteiro }) {
+  const isPdf = !!(roteiro.arquivo_path?.toLowerCase().endsWith(".pdf"));
+
+  const { data: signedUrl } = useQuery({
+    queryKey: ["roteiro-signed-url", roteiro.arquivo_path],
+    enabled: isPdf && !!roteiro.arquivo_path,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage
+        .from("documentos")
+        .createSignedUrl(roteiro.arquivo_path!, 3600);
+      if (error) throw error;
+      return data.signedUrl;
+    },
+  });
+
+  if (isPdf) {
+    return (
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <FileText className="h-4 w-4" /> Visualização do roteiro
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          {signedUrl ? (
+            <iframe
+              src={signedUrl}
+              className="w-full rounded-b-lg border-0"
+              style={{ height: "70vh" }}
+              title="Roteiro PDF"
+            />
+          ) : (
+            <div className="p-4 text-sm text-muted-foreground">Carregando visualização...</div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <FileText className="h-4 w-4" /> Texto do roteiro
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <pre className="whitespace-pre-wrap text-sm font-mono leading-relaxed overflow-auto max-h-[70vh]">
+          {roteiro.texto}
+        </pre>
+      </CardContent>
+    </Card>
   );
 }
 

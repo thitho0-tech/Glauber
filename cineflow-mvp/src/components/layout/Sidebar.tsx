@@ -8,6 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Button } from "@/components/ui/button";
+import personaLogo from "@/assets/persona-logo.jpeg";
 import novaLogo from "@/assets/nova-logo-glauber.jpeg";
 
 const globalItems = [
@@ -29,9 +30,9 @@ function buildProjectItems(id: string) {
       { to: `${p}/producao`,     icon: Package2,    label: "Produção",        end: false },
       { to: `${p}/roteiro-depto`,icon: PenLine,     label: "Roteiro",         end: false },
       { to: `${p}/direcao`,      icon: Clapperboard,label: "Direção",         end: false },
-      { to: `${p}/figurino-arte`,icon: Shirt,       label: "Dep. de Arte",    end: false },
-      { to: `${p}/fotografia`,   icon: Camera,      label: "Dep. de Fotografia",end: false },
-      { to: `${p}/som`,          icon: Music,       label: "Dep. de Som",     end: false },
+      { to: `${p}/figurino-arte`,icon: Shirt,       label: "Arte",            end: false },
+      { to: `${p}/fotografia`,   icon: Camera,      label: "Fotografia",      end: false },
+      { to: `${p}/som`,          icon: Music,       label: "Som",             end: false },
       { to: `${p}/elenco`,       icon: Drama,       label: "Elenco",          end: false },
       { to: `${p}/pos-producao`, icon: Film,        label: "Pós Produção",    end: false },
     ],
@@ -121,7 +122,8 @@ function NavItems({ projetoId, onNavigate }: { projetoId?: string; onNavigate?: 
 function SidebarHeader() {
   return (
     <div className="flex h-16 items-center gap-2 border-b px-4">
-      <img src={novaLogo} alt="Glauber" className="h-10 w-auto object-contain rounded" />
+      <img src={personaLogo} alt="" className="h-9 w-auto object-contain" />
+      <img src={novaLogo} alt="Glauber" className="h-9 w-auto object-contain" />
     </div>
   );
 }
@@ -157,8 +159,11 @@ export function Sidebar() {
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b pr-4 pl-6">
-          <img src={novaLogo} alt="Glauber" className="h-9 w-auto object-contain rounded" />
+        <div className="flex h-16 items-center justify-between border-b pr-4 pl-4">
+          <div className="flex items-center gap-2">
+            <img src={personaLogo} alt="" className="h-9 w-auto object-contain" />
+            <img src={novaLogo} alt="Glauber" className="h-9 w-auto object-contain" />
+          </div>
           <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fechar menu">
             <X className="h-5 w-5" />
           </Button>

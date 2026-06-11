@@ -60,7 +60,7 @@ export default function Schedule() {
   const { data: locacoes } = useQuery({
     queryKey: ["locacoes-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("locacoes").select("*").order("nome");
+      const { data, error } = await supabase.from("locacoes").select("*").eq("projeto_id", id!).is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },

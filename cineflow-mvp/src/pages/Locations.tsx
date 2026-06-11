@@ -46,9 +46,10 @@ export default function Locations() {
   const qc = useQueryClient();
 
   const { data: locacoes, isLoading } = useQuery({
-    queryKey: ["locacoes"],
+    queryKey: ["locacoes", id],
+    enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from("locacoes").select("*").order("nome");
+      const { data, error } = await supabase.from("locacoes").select("*").eq("projeto_id", id!).is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },
@@ -61,6 +62,7 @@ export default function Locations() {
       const coords = extractLatLng(url);
       const payload: any = {
         org_id: orgId,
+        projeto_id: id,
         nome: form.get("nome"),
         endereco: form.get("endereco") || null,
         lat: coords?.lat ?? null,
@@ -80,7 +82,7 @@ export default function Locations() {
     },
     onSuccess: () => {
       toast.success("Locação adicionada");
-      qc.invalidateQueries({ queryKey: ["locacoes"] });
+      qc.invalidateQueries({ queryKey: ["locacoes", id] });
       setOpen(false);
       setMapsUrl("");
       setLatLng(null);
@@ -95,7 +97,7 @@ export default function Locations() {
     },
     onSuccess: () => {
       toast.success("Locação movida para a lixeira. Acesse Configurações → Lixeira para restaurar.");
-      qc.invalidateQueries({ queryKey: ["locacoes"] });
+      qc.invalidateQueries({ queryKey: ["locacoes", id] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -132,7 +134,7 @@ export default function Locations() {
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Nova locação</Button></DialogTrigger>
           <DialogContent>
-            <form onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
               <DialogHeader><DialogTitle>Nova locação</DialogTitle></DialogHeader>
               <div className="space-y-3">
                 <div className="space-y-1.5"><Label htmlFor="nome">Nome</Label><Input id="nome" name="nome" required /></div>

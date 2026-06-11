@@ -66,6 +66,59 @@ na fase 4E (caça-bugs/experimentação) antecipadamente — e ela já está ren
 
 ---
 
+## 📌 ADENDO (11/06, noite) — Preparação para DEMO + sessão de polimento
+
+Vamos apresentar o protótipo a uma pessoa importante. Novas demandas triadas:
+
+| Demanda | Solução | Via |
+|---|---|---|
+| Excluir projeto falha (FK projeto_kpis) | triggers de KPI reinserem linha durante a cascata; **migração 0044** guarda o refresh + descarta KPIs órfãos na origem | SQL Editor |
+| Locações aparecem em todos os projetos | 0044 adiciona `locacoes.projeto_id` (isolamento total) | SQL Editor |
+| "Memórias" de preenchimento entre projetos/produtoras | é o autofill do NAVEGADOR (o app não compartilha dados entre projetos após 0039/0044) → `autoComplete="off"` nos forms | sessão Code |
+| Logo: símbolo + logotipo fixos no topo | persona-logo + nova-logo lado a lado na sidebar | sessão Code |
+| Remover "Dep. de" (Arte, Fotografia, Som) | labels da sidebar | sessão Code |
+| Chat do Mural mal disposto (input solto no rodapé) | refazer layout: canal ativo ocupa toda a extensão visível da página, nos 3 tabs | sessão Code |
+| Visualizar roteiro completo em "Roteiro & Decupagem" | 0044 cria `roteiros.arquivo_path/arquivo_nome`; upload passa a guardar o arquivo no bucket e a aba exibe o PDF/texto (só visualização) | SQL + sessão Code |
+
+**Para zerar os projetos antes da demo** (depois de rodar a 0044): excluir pelo app
+(Configurações → Gestão do Projeto) ou, para limpar tudo de uma vez, no SQL Editor:
+`delete from public.projetos;` (cascata apaga tudo dos projetos; pessoas do catálogo
+e editais permanecem).
+
+### Prompt da sessão de polimento (Claude Code):
+
+```
+Leia SPRINT_STATE.md e STATUS_SPRINT4_11-06.md (seção ADENDO) na raiz do projeto.
+Execute a sessão de POLIMENTO pré-demo (a migração 0044 já está aplicada):
+1. LOGO: na Sidebar (e Login), exibir símbolo (src/assets/persona-logo.jpeg) +
+   logotipo (src/assets/nova-logo-glauber.jpeg) lado a lado no topo, fixos durante
+   a navegação; proporção equilibrada (símbolo ~32-40px de altura, logotipo na
+   mesma altura visual), fundo branco/transparente, sem distorção.
+2. SIDEBAR: renomear "Dep. de Arte"→"Arte", "Dep. de Fotografia"→"Fotografia",
+   "Dep. de Som"→"Som".
+3. MURAL/CHAT: refazer o layout — o card do chat deve ocupar TODA a extensão
+   visível restante da página (altura até o fim da viewport, sem input "vazando"
+   para fora do card, sem scroll da página). Vale igual para os 3 tabs
+   (Geral/Departamento/Privado): o canal ativo ocupa a página inteira. A coluna
+   "Próximos eventos" permanece à esquerda com largura fixa.
+4. AUTOFILL: adicionar autoComplete="off" nos <form> e inputs de todos os modais
+   de cadastro (Team, Cast, Finance, Locations, FigurinoArte, Fornecedores,
+   Contract, Agenda, CallSheets, MapaTransporte, Settings) para o navegador não
+   sugerir valores de outros projetos/produtoras.
+5. ROTEIRO VISÍVEL: em Roteiro.tsx, no upload, salvar o arquivo original no
+   bucket 'documentos' (path: roteiros/{projeto_id}/{timestamp}-{nome}) e gravar
+   roteiros.arquivo_path + arquivo_nome (colunas criadas na 0044). Na aba
+   "Roteiro" (visualização): se arquivo_path existir e for PDF, exibir embed
+   (iframe com signed URL, createSignedUrl 1h); caso contrário, exibir
+   roteiros.texto completo em <pre> com quebra de linha. Apenas visualização.
+6. Atualizar o texto do dialog de excluir projeto em Settings: locações agora
+   são apagadas junto (não dizem mais "continuam").
+Regras: PowerShell sem &&; nunca SelectItem com value=""; ao final npx tsc
+--noEmit e os comandos git/vercel --prod. Não mexer em mais nada.
+```
+
+---
+
 ## 🚀 COMANDO PARA INICIAR A PRÓXIMA TASK (depois dos testes)
 
 Abrir nova task no Claude Cowork (projeto Cineflow/Glauber) e colar:

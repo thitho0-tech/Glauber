@@ -417,6 +417,7 @@ export default function Team() {
             <form
               onSubmit={(e) => { e.preventDefault(); criarEVincular.mutate(new FormData(e.currentTarget)); }}
               className="flex flex-col flex-1 min-h-0"
+              autoComplete="off"
             >
               {/* campos roláveis */}
               <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
@@ -689,6 +690,7 @@ export default function Team() {
               <form
                 onSubmit={(e) => { e.preventDefault(); salvarRegime.mutate(new FormData(e.currentTarget)); }}
                 className="space-y-4"
+                autoComplete="off"
               >
                 <DialogHeader>
                   <DialogTitle>Regime de contratação — {pessoa?.nome}</DialogTitle>
