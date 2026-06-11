@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Badge } from "@/components/ui/badge";
 import { Loading } from "@/components/ui/loading";
 import { Empty } from "@/components/ui/empty";
-import { ChevronLeft, Plus, Shirt, Boxes, Trash2, Pencil, ImageIcon, Camera, MapPin, CheckCircle2, XCircle } from "lucide-react";
+import { ChevronLeft, Plus, Shirt, Boxes, Trash2, Pencil, Camera, MapPin, CheckCircle2, XCircle } from "lucide-react";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 import { useProjectDeptAccess } from "@/hooks/useProjectDeptAccess";
@@ -31,6 +31,7 @@ type Figurino = {
   status: string;
   aprovacao_status: string | null;
   aprovacao_comentarios: string | null;
+  foto_url: string | null;
 };
 
 type ArteObj = {
@@ -81,7 +82,6 @@ const APROVACAO_VARIANT: Record<string, "default" | "secondary" | "outline" | "d
   aprovado: "default",
   cancelado: "destructive",
 };
-
 const SCOUTING_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
   em_analise: "secondary",
   aprovada: "default",
@@ -156,6 +156,11 @@ export default function FigurinoArte() {
   const [editFig, setEditFig] = useState<Figurino | null>(null);
   const [editArte, setEditArte] = useState<ArteObj | null>(null);
 
+  // Confirmações de exclusão
+  const [confirmDelFig, setConfirmDelFig] = useState<string | null>(null);
+  const [confirmDelArte, setConfirmDelArte] = useState<string | null>(null);
+  const [confirmDelLoc, setConfirmDelLoc] = useState<string | null>(null);
+
   // Scouting state
   const [openPropor, setOpenPropor] = useState(false);
   const [nomeProposta, setNomeProposta] = useState("");
@@ -179,7 +184,7 @@ export default function FigurinoArte() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("figurinos")
-        .select("id, descricao, tamanho, cor, fonte, valor_estimado, status, aprovacao_status, aprovacao_comentarios")
+        .select("id, descricao, tamanho, cor, fonte, valor_estimado, status, aprovacao_status, aprovacao_comentarios, foto_url")
         .eq("projeto_id", projetoId!)
         .order("criado_em", { ascending: false });
       if (error) throw error;
@@ -304,6 +309,7 @@ export default function FigurinoArte() {
         valor_estimado: f.valor_estimado ? Number(f.valor_estimado) : null,
         aprovacao_status: f.aprovacao_status || null,
         aprovacao_comentarios: f.aprovacao_comentarios || null,
+        foto_url: f.foto_url || null,
       }).eq("id", f.id);
       if (error) throw error;
     },
@@ -345,7 +351,12 @@ export default function FigurinoArte() {
       const { error } = await supabase.from("figurinos").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["figurinos", projetoId] }),
+    onSuccess: () => {
+      toast.success("Figurino excluído");
+      setConfirmDelFig(null);
+      qc.invalidateQueries({ queryKey: ["figurinos", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   const delArte = useMutation({
@@ -353,8 +364,43 @@ export default function FigurinoArte() {
       const { error } = await supabase.from("arte_objetos").delete().eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] }),
+    onSuccess: () => {
+      toast.success("Objeto excluído");
+      setConfirmDelArte(null);
+      qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
   });
+
+  const delLocScouting = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("locacoes")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Proposta movida para a lixeira");
+      setConfirmDelLoc(null);
+      qc.invalidateQueries({ queryKey: ["locacoes-proposta", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  // ── Upload de fotos ────────────────────────────────────────────────────────
+
+  async function uploadFotoFig(figId: string, file: File) {
+    const ext = file.name.split(".").pop();
+    const path = `figurinos/${projetoId}/${Date.now()}.${ext}`;
+    const { error } = await supabase.storage.from("documentos").upload(path, file, { upsert: true });
+    if (error) throw error;
+    const { error: e2 } = await supabase.from("figurinos").update({ foto_url: path }).eq("id", figId);
+    if (e2) throw e2;
+    qc.invalidateQueries({ queryKey: ["figurinos", projetoId] });
+    if (editFig?.id === figId) setEditFig({ ...editFig, foto_url: path });
+    toast.success("Foto salva");
+  }
 
   async function uploadFotoArte(arteId: string, file: File) {
     const ext = file.name.split(".").pop();
@@ -366,12 +412,6 @@ export default function FigurinoArte() {
     qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
     if (editArte?.id === arteId) setEditArte({ ...editArte, foto_url: path });
     toast.success("Foto salva");
-  }
-
-  async function verFoto(path: string) {
-    const { data } = await supabase.storage.from("documentos").createSignedUrl(path, 3600);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
-    else toast.error("Não foi possível gerar link");
   }
 
   // ── Mutations: Scouting ────────────────────────────────────────────────────
@@ -520,7 +560,10 @@ export default function FigurinoArte() {
           ) : (
             <div className="space-y-2">
               {figs.map((f) => (
-                <div key={f.id} className="flex items-center justify-between rounded-md border p-3">
+                <div key={f.id} className="flex items-center gap-3 rounded-md border p-3">
+                  {f.foto_url && (
+                    <FotoThumbnail path={f.foto_url} onView={setFotoViewer} />
+                  )}
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{f.descricao}</p>
                     <p className="text-xs text-muted-foreground">
@@ -538,9 +581,11 @@ export default function FigurinoArte() {
                     <Button size="icon" variant="ghost" onClick={() => setEditFig(f)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => delFig.mutate(f.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {canPropor && (
+                      <Button size="icon" variant="ghost" onClick={() => setConfirmDelFig(f.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -561,16 +606,12 @@ export default function FigurinoArte() {
           ) : (
             <div className="space-y-2">
               {artes.map((a) => (
-                <div key={a.id} className="flex items-center justify-between rounded-md border p-3">
+                <div key={a.id} className="flex items-center gap-3 rounded-md border p-3">
+                  {a.foto_url && (
+                    <FotoThumbnail path={a.foto_url} onView={setFotoViewer} />
+                  )}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-medium">{a.descricao}</p>
-                      {a.foto_url && (
-                        <button onClick={() => verFoto(a.foto_url!)} title="Ver foto" className="text-muted-foreground hover:text-foreground">
-                          <ImageIcon className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                    </div>
+                    <p className="font-medium">{a.descricao}</p>
                     <p className="text-xs text-muted-foreground">
                       {[a.categoria, a.fonte, a.origem].filter(Boolean).join(" · ")}
                       {a.valor_estimado ? ` · ${formatBRL(a.valor_estimado)}` : ""}
@@ -587,9 +628,11 @@ export default function FigurinoArte() {
                     <Button size="icon" variant="ghost" onClick={() => setEditArte(a)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
-                    <Button size="icon" variant="ghost" onClick={() => delArte.mutate(a.id)}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    {canPropor && (
+                      <Button size="icon" variant="ghost" onClick={() => setConfirmDelArte(a.id)}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -625,7 +668,14 @@ export default function FigurinoArte() {
                             <p className="text-xs text-muted-foreground">Por: {loc.proposta_por}</p>
                           )}
                         </div>
-                        <Badge variant={bv}>{bl}</Badge>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge variant={bv}>{bl}</Badge>
+                          {canPropor && (
+                            <Button size="icon" variant="ghost" onClick={() => setConfirmDelLoc(loc.id)}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
 
                       {(loc.fotos_urls ?? []).length > 0 && (
@@ -814,6 +864,26 @@ export default function FigurinoArte() {
                 <Label>Comentários de aprovação</Label>
                 <Textarea rows={2} autoComplete="off" value={editFig.aprovacao_comentarios ?? ""} onChange={(e) => setEditFig({ ...editFig, aprovacao_comentarios: e.target.value })} />
               </div>
+              <div className="space-y-1.5">
+                <Label>Foto do figurino</Label>
+                <div className="flex items-center gap-3">
+                  {editFig.foto_url && (
+                    <FotoThumbnail path={editFig.foto_url} onView={setFotoViewer} />
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="text-sm"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file && editFig) {
+                        try { await uploadFotoFig(editFig.id, file); }
+                        catch (err: any) { toast.error(err.message); }
+                      }
+                    }}
+                  />
+                </div>
+              </div>
             </div>
           )}
           <DialogFooter>
@@ -905,7 +975,10 @@ export default function FigurinoArte() {
               </div>
               <div className="space-y-1.5">
                 <Label>Foto do objeto</Label>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  {editArte.foto_url && (
+                    <FotoThumbnail path={editArte.foto_url} onView={setFotoViewer} />
+                  )}
                   <input
                     type="file"
                     accept="image/*"
@@ -918,11 +991,6 @@ export default function FigurinoArte() {
                       }
                     }}
                   />
-                  {editArte.foto_url && (
-                    <Button size="sm" variant="outline" onClick={() => verFoto(editArte.foto_url!)}>
-                      <ImageIcon className="h-4 w-4 mr-1" /> Ver foto
-                    </Button>
-                  )}
                 </div>
               </div>
             </div>
@@ -1092,11 +1160,53 @@ export default function FigurinoArte() {
         </DialogContent>
       </Dialog>
 
+      {/* ── Dialog: Confirmar exclusão — Figurino ─────────────── */}
+      <Dialog open={!!confirmDelFig} onOpenChange={(o) => { if (!o) setConfirmDelFig(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Excluir figurino?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Esta ação é permanente e não pode ser desfeita.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelFig(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmDelFig && delFig.mutate(confirmDelFig)} disabled={delFig.isPending}>
+              {delFig.isPending ? "Excluindo..." : "Excluir definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Confirmar exclusão — Arte ─────────────────── */}
+      <Dialog open={!!confirmDelArte} onOpenChange={(o) => { if (!o) setConfirmDelArte(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Excluir objeto de arte?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">Esta ação é permanente e não pode ser desfeita.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelArte(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmDelArte && delArte.mutate(confirmDelArte)} disabled={delArte.isPending}>
+              {delArte.isPending ? "Excluindo..." : "Excluir definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Confirmar exclusão — Scouting ─────────────── */}
+      <Dialog open={!!confirmDelLoc} onOpenChange={(o) => { if (!o) setConfirmDelLoc(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Excluir proposta?</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground">A proposta será movida para a lixeira e poderá ser restaurada em Configurações.</p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmDelLoc(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => confirmDelLoc && delLocScouting.mutate(confirmDelLoc)} disabled={delLocScouting.isPending}>
+              {delLocScouting.isPending ? "Excluindo..." : "Excluir definitivamente"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* ── Dialog: Visualizador de foto ───────────────────────── */}
       <Dialog open={!!fotoViewer} onOpenChange={(o) => { if (!o) setFotoViewer(null); }}>
         <DialogContent className="max-w-3xl">
           <DialogHeader><DialogTitle>Foto</DialogTitle></DialogHeader>
-          {fotoViewer && <img src={fotoViewer} alt="Foto da locação" className="w-full rounded-md" />}
+          {fotoViewer && <img src={fotoViewer} alt="" className="w-full rounded-md" />}
         </DialogContent>
       </Dialog>
     </div>
