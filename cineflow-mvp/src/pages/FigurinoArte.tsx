@@ -155,6 +155,10 @@ export default function FigurinoArte() {
   const [novoArte, setNovoArte] = useState<Partial<ArteObj>>({ status: "previsto", fonte: "compra" });
   const [editFig, setEditFig] = useState<Figurino | null>(null);
   const [editArte, setEditArte] = useState<ArteObj | null>(null);
+  const [novoFigFile, setNovoFigFile] = useState<File | null>(null);
+  const [novoFigPreview, setNovoFigPreview] = useState<string | null>(null);
+  const [novoArteFile, setNovoArteFile] = useState<File | null>(null);
+  const [novoArtePreview, setNovoArtePreview] = useState<string | null>(null);
 
   // Confirmações de exclusão
   const [confirmDelFig, setConfirmDelFig] = useState<string | null>(null);
@@ -254,6 +258,18 @@ export default function FigurinoArte() {
   const addFig = useMutation({
     mutationFn: async () => {
       if (!novoFig.descricao) throw new Error("Descrição obrigatória");
+      let foto_url: string | null = null;
+      if (novoFigFile) {
+        try {
+          const ext = novoFigFile.name.split(".").pop();
+          const path = `figurinos/${projetoId}/${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from("documentos").upload(path, novoFigFile, { upsert: true });
+          if (upErr) throw upErr;
+          foto_url = path;
+        } catch {
+          toast.warning("Foto não foi salva, mas o figurino será criado.");
+        }
+      }
       const { error } = await supabase.from("figurinos").insert({
         projeto_id: projetoId!,
         descricao: novoFig.descricao,
@@ -263,6 +279,7 @@ export default function FigurinoArte() {
         valor_estimado: novoFig.valor_estimado ? Number(novoFig.valor_estimado) : null,
         status: novoFig.status ?? "previsto",
         aprovacao_status: "em_analise",
+        foto_url,
       });
       if (error) throw error;
     },
@@ -270,6 +287,8 @@ export default function FigurinoArte() {
       toast.success("Figurino adicionado");
       setOpenFig(false);
       setNovoFig({ status: "previsto", fonte: "compra" });
+      setNovoFigFile(null);
+      setNovoFigPreview(null);
       qc.invalidateQueries({ queryKey: ["figurinos", projetoId] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -278,6 +297,18 @@ export default function FigurinoArte() {
   const addArte = useMutation({
     mutationFn: async () => {
       if (!novoArte.descricao) throw new Error("Descrição obrigatória");
+      let foto_url: string | null = null;
+      if (novoArteFile) {
+        try {
+          const ext = novoArteFile.name.split(".").pop();
+          const path = `arte/${projetoId}/${Date.now()}.${ext}`;
+          const { error: upErr } = await supabase.storage.from("documentos").upload(path, novoArteFile, { upsert: true });
+          if (upErr) throw upErr;
+          foto_url = path;
+        } catch {
+          toast.warning("Foto não foi salva, mas o objeto será criado.");
+        }
+      }
       const { error } = await supabase.from("arte_objetos").insert({
         projeto_id: projetoId!,
         descricao: novoArte.descricao,
@@ -286,6 +317,7 @@ export default function FigurinoArte() {
         valor_estimado: novoArte.valor_estimado ? Number(novoArte.valor_estimado) : null,
         status: novoArte.status ?? "previsto",
         aprovacao_status: "em_analise",
+        foto_url,
       });
       if (error) throw error;
     },
@@ -293,6 +325,8 @@ export default function FigurinoArte() {
       toast.success("Objeto de arte adicionado");
       setOpenArte(false);
       setNovoArte({ status: "previsto", fonte: "compra" });
+      setNovoArteFile(null);
+      setNovoArtePreview(null);
       qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -719,7 +753,7 @@ export default function FigurinoArte() {
       </Card>
 
       {/* ── Dialog: Novo figurino ──────────────────────────────── */}
-      <Dialog open={openFig} onOpenChange={setOpenFig}>
+      <Dialog open={openFig} onOpenChange={(o) => { setOpenFig(o); if (!o) { setNovoFigFile(null); setNovoFigPreview(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Novo figurino</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -758,16 +792,34 @@ export default function FigurinoArte() {
                   onChange={(e) => setNovoFig({ ...novoFig, valor_estimado: e.target.value as unknown as number })} />
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Foto (opcional)</Label>
+              <input
+                type="file"
+                accept="image/*"
+                className="text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setNovoFigFile(file);
+                  setNovoFigPreview(file ? URL.createObjectURL(file) : null);
+                }}
+              />
+              {novoFigPreview && (
+                <img src={novoFigPreview} alt="Preview" className="h-20 w-20 rounded border object-cover mt-1" />
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenFig(false)}>Cancelar</Button>
-            <Button onClick={() => addFig.mutate()} disabled={addFig.isPending}>Adicionar</Button>
+            <Button onClick={() => addFig.mutate()} disabled={addFig.isPending}>
+              {addFig.isPending ? "Salvando..." : "Adicionar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* ── Dialog: Novo objeto de arte ───────────────────────── */}
-      <Dialog open={openArte} onOpenChange={setOpenArte}>
+      <Dialog open={openArte} onOpenChange={(o) => { setOpenArte(o); if (!o) { setNovoArteFile(null); setNovoArtePreview(null); } }}>
         <DialogContent>
           <DialogHeader><DialogTitle>Novo objeto de arte</DialogTitle></DialogHeader>
           <div className="space-y-3">
@@ -800,10 +852,28 @@ export default function FigurinoArte() {
                   onChange={(e) => setNovoArte({ ...novoArte, valor_estimado: e.target.value as unknown as number })} />
               </div>
             </div>
+            <div className="space-y-1.5">
+              <Label>Foto (opcional)</Label>
+              <input
+                type="file"
+                accept="image/*"
+                className="text-sm"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null;
+                  setNovoArteFile(file);
+                  setNovoArtePreview(file ? URL.createObjectURL(file) : null);
+                }}
+              />
+              {novoArtePreview && (
+                <img src={novoArtePreview} alt="Preview" className="h-20 w-20 rounded border object-cover mt-1" />
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpenArte(false)}>Cancelar</Button>
-            <Button onClick={() => addArte.mutate()} disabled={addArte.isPending}>Adicionar</Button>
+            <Button onClick={() => addArte.mutate()} disabled={addArte.isPending}>
+              {addArte.isPending ? "Salvando..." : "Adicionar"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
