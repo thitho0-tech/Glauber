@@ -193,7 +193,7 @@ export default function Team() {
         .from("projeto_pessoas")
         .select(`
           *,
-          pessoa:pessoas(id, nome, email, telefone, departamento, funcao, user_id, documentos, foto_url),
+          pessoa:pessoas(id, nome, email, telefone, departamento, funcao, documentos, foto_url),
           funcoes:projeto_pessoa_funcoes(id, principal, funcao_av:funcoes_av(id, nome, departamento))
         `)
         .eq("projeto_id", projetoId!)

@@ -292,7 +292,7 @@ export default function ProjectDashboard() {
     queryFn: async () => {
       const { data } = await supabase
         .from("projeto_pessoas")
-        .select("pessoa:pessoas(id, nome)")
+        .select("pessoa:pessoas!inner(id, nome, email)")
         .eq("projeto_id", projetoId!)
         .is("deleted_at", null)
         .ilike("pessoa.email", user!.email!)
