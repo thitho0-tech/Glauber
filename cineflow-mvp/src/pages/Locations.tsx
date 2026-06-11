@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -10,12 +10,28 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink } from "lucide-react";
+import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink, Camera } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
+
+function FotoThumb({ path, onView }: { path: string; onView: (url: string) => void }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    supabase.storage.from("documentos").createSignedUrl(path, 3600)
+      .then(({ data }) => { if (data?.signedUrl) setUrl(data.signedUrl); });
+  }, [path]);
+  return (
+    <button
+      onClick={() => url && onView(url)}
+      className="w-14 h-14 rounded border overflow-hidden bg-muted flex items-center justify-center shrink-0"
+    >
+      {url ? <img src={url} alt="" className="w-full h-full object-cover" /> : <Camera className="h-4 w-4 text-muted-foreground" />}
+    </button>
+  );
+}
 
 // Extrai lat/lng de uma URL do Google Maps no formato @-8.05,-34.88 ou ?q=-8.05,-34.88 etc.
 function extractLatLng(url: string): { lat: number; lng: number } | null {
@@ -40,6 +56,7 @@ export default function Locations() {
   const [open, setOpen] = useState(false);
   const [mapsUrl, setMapsUrl] = useState("");
   const [latLng, setLatLng] = useState<{ lat: number; lng: number } | null>(null);
+  const [fotoViewer, setFotoViewer] = useState<string | null>(null);
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -49,7 +66,7 @@ export default function Locations() {
     queryKey: ["locacoes", id],
     enabled: !!id,
     queryFn: async () => {
-      const { data, error } = await supabase.from("locacoes").select("*").eq("projeto_id", id!).is("deleted_at", null).order("nome");
+      const { data, error } = await supabase.from("locacoes").select("*").eq("projeto_id", id!).eq("etapa", "oficial").is("deleted_at", null).order("nome");
       if (error) throw error;
       return data;
     },
@@ -69,8 +86,6 @@ export default function Locations() {
         lng: coords?.lng ?? null,
         maps_url: url || null,
         waze_url: form.get("waze_url") || null,
-        contato_nome: form.get("contato_nome") || null,
-        contato_telefone: form.get("contato_telefone") || null,
         valor_diaria: form.get("valor_diaria") ? Number(form.get("valor_diaria")) : null,
         restricoes: form.get("restricoes") || null,
         responsavel_nome: form.get("responsavel_nome") || null,
@@ -133,7 +148,7 @@ export default function Locations() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button><Plus className="h-4 w-4" /> Nova locação</Button></DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <form onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
               <DialogHeader><DialogTitle>Nova locação</DialogTitle></DialogHeader>
               <div className="space-y-3">
@@ -149,10 +164,6 @@ export default function Locations() {
                 <div className="space-y-1.5">
                   <Label htmlFor="waze_url">Link do Waze (opcional)</Label>
                   <Input id="waze_url" name="waze_url" placeholder="https://waze.com/ul?..." />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1.5"><Label htmlFor="contato_nome">Responsável</Label><Input id="contato_nome" name="contato_nome" /></div>
-                  <div className="space-y-1.5"><Label htmlFor="contato_telefone">Telefone</Label><Input id="contato_telefone" name="contato_telefone" /></div>
                 </div>
                 <div className="space-y-1.5"><Label htmlFor="valor_diaria">Valor da diária (R$)</Label><Input id="valor_diaria" name="valor_diaria" type="number" step="0.01" /></div>
                 <div className="space-y-1.5"><Label htmlFor="restricoes">Restrições</Label><Textarea id="restricoes" name="restricoes" rows={3} placeholder="Horários permitidos, ruído, autorizações, etc." /></div>
@@ -193,11 +204,17 @@ export default function Locations() {
                   {l.lat && l.lng && (
                     <p className="text-xs text-muted-foreground">GPS: {Number(l.lat).toFixed(5)}, {Number(l.lng).toFixed(5)}</p>
                   )}
-                  {l.contato_nome && <p className="text-xs">📞 {l.contato_nome} · {l.contato_telefone ?? "—"}</p>}
                   {l.responsavel_nome && <p className="text-xs">Resp.: {l.responsavel_nome}{l.responsavel_contato ? ` · ${l.responsavel_contato}` : ""}</p>}
                   {l.valor_diaria && <p className="text-sm font-medium">Diária: {formatBRL(l.valor_diaria)}</p>}
                   {l.restricoes && <p className="text-xs text-muted-foreground">⚠️ {l.restricoes}</p>}
                   {l.comentarios && <p className="text-xs text-muted-foreground italic">{l.comentarios}</p>}
+                  {Array.isArray(l.fotos_urls) && l.fotos_urls.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {(l.fotos_urls as string[]).map((path: string, i: number) => (
+                        <FotoThumb key={i} path={path} onView={setFotoViewer} />
+                      ))}
+                    </div>
+                  )}
                   {(mapsHref || wazeHref) && (
                     <div className="flex gap-2 pt-2">
                       {mapsHref && (
@@ -222,6 +239,13 @@ export default function Locations() {
           })}
         </div>
       )}
+
+      <Dialog open={!!fotoViewer} onOpenChange={(o) => { if (!o) setFotoViewer(null); }}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader><DialogTitle>Foto</DialogTitle></DialogHeader>
+          {fotoViewer && <img src={fotoViewer} alt="Foto da locação" className="w-full rounded-md" />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
