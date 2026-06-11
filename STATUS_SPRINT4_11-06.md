@@ -1,7 +1,7 @@
 # STATUS SPRINT 4 — 11/06/2026
 
 **Deadline:** entrega às equipes de teste em **20/06/2026** (9 dias de folga).
-**Produção:** glauber.app.br · **Migrations:** 0001→0042 aplicadas; **0043 PENDENTE**.
+**Produção:** glauber.app.br · **Migrations:** 0001→**0043** todas aplicadas.
 **Decisão estratégica do dia:** código estrutural CONGELADO — agora é estabilizar (4E), depois 1 sessão única de polimento de layout.
 
 ---
@@ -28,16 +28,13 @@ na fase 4E (caça-bugs/experimentação) antecipadamente — e ela já está ren
 | Bug | Causa | Fix |
 |---|---|---|
 | Equipe aparece vazia / pessoa some | lista pedia coluna inexistente `pessoas.user_id` (400 silencioso) | Team.tsx corrigido ✅ |
-| Pessoa não salva (alguns departamentos) | check constraint antigo rejeita fotografia/pos_producao/etc. | **migração 0043 — RODAR NO SQL EDITOR** |
+| Pessoa não salva (alguns departamentos) | check constraint antigo rejeita fotografia/pos_producao/etc. | migração 0043 ✅ aplicada |
 | DM: "Seu perfil não foi encontrado" | filtro de email sem `!inner` no PostgREST nunca encontrava | ProjectDashboard.tsx corrigido ✅ |
 | 6 arquivos da 4D truncados no disco | falha de sincronização pós-sessão (2ª ocorrência) | restaurados do commit ✅ |
 
 ## ⏳ O QUE FALTA (em ordem)
 
-1. **AGORA (Thiago, ~10 min):**
-   - Colar `0043_departamentos_pessoas.sql` no SQL Editor.
-   - PowerShell: `npx tsc --noEmit` (deve dar zero) → `git add .` → `git add ../SPRINT_STATE.md ../STATUS_SPRINT4_11-06.md` → commit "hotfix 4D: lista equipe, DM, constraint departamentos" → `git push` → `vercel --prod`.
-   - Re-testar: equipe lista e salva em qualquer departamento; DM "Nova conversa" funciona.
+1. ~~**AGORA**~~ ✅ FEITO (11/06): migração 0043 aplicada + hotfixes commitados e deployados. Re-teste rápido: equipe lista e salva em qualquer departamento; DM "Nova conversa" funciona.
 2. **4E — experimentação máxima (11–13/06):** fluxo completo como equipe real
    (projeto novo → equipe → roteiro → decupagem → OD → publicar → financeiro →
    transporte → fichas). Anotar TODOS os tropeços numa lista única (tela + ação +
@@ -66,3 +63,34 @@ na fase 4E (caça-bugs/experimentação) antecipadamente — e ela já está ren
 3. Coluna que não existe em query do PostgREST = tela "vazia" sem erro visível
    (já pegou: `token`, `user_id`). Na dúvida, F12 → aba Network → resposta 400.
 4. Policies que se referenciam mutuamente = recursão de RLS → usar função security definer.
+
+---
+
+## 🚀 COMANDO PARA INICIAR A PRÓXIMA TASK (depois dos testes)
+
+Abrir nova task no Claude Cowork (projeto Cineflow/Glauber) e colar:
+
+```
+Leia, nesta ordem, na pasta Glauber: SPRINT_STATE.md, STATUS_SPRINT4_11-06.md e
+SPRINT_4_SPEC.md. Contexto: Sprint 4 (fases 4A–4D) concluída e em produção
+(glauber.app.br), migrations 0001–0043 aplicadas, código estrutural congelado.
+Estamos na fase 4E — caça-bugs antes da entrega às equipes em 20/06.
+
+Abaixo, minha lista de tropeços dos testes (para cada um: tela, o que fiz vs.
+o que esperava, e o vermelho do Console F12 quando houver) e, em separado,
+a lista de ajustes de layout:
+
+[BUGS]
+1. ...
+
+[LAYOUT]
+1. ...
+
+Faça a triagem em: (a) fix cirúrgico direto no Cowork, (b) sessão única no
+Claude Code (gerar o prompt pronto), (c) precisa de migração SQL (gerar o
+arquivo para eu colar no SQL Editor), (d) adiar para pós-entrega. Execute os
+fixes (a), gere os artefatos de (b) e (c), e atualize SPRINT_STATE.md e o
+STATUS ao final. Regras do protocolo: PowerShell sem &&; nunca SelectItem com
+value=""; tsc antes de deploy; arquivos truncados → restaurar com
+git show HEAD:caminho > arquivo.
+```

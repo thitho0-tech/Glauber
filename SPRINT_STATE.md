@@ -3,7 +3,11 @@
 **Último commit:** ver `git log` (4A+4B+4C + hotfixes em origin/main; deploy em glauber.app.br)
 **Build:** Limpo. `npx tsc --noEmit` = 0 erros (verificado 11/06 após hotfixes 4C).
 **Deploy:** glauber.app.br (Vercel)
-**Migrations aplicadas em produção:** 42 (0001 → 0042).
+**Migrations aplicadas em produção:** 43 (0001 → 0043).
+**Status do dia (11/06):** ver `STATUS_SPRINT4_11-06.md` — fases 4A–4D concluídas,
+hotfixes do smoke test aplicados (lista equipe `user_id`, DM `!inner`, constraint
+departamentos 0043), código congelado, fase 4E (testes) em andamento. O prompt
+para a próxima task está no fim do STATUS.
 
 > **FASES 4A, 4B e 4C CONCLUÍDAS e smoke-testadas (11/06).**
 > 4A: bugs B1–B10 + layout L1–L9. 4B: sidebar nova, Mural (agenda+chat 3 tabs), Agenda
