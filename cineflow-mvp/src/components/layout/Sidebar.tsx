@@ -122,8 +122,8 @@ function NavItems({ projetoId, onNavigate }: { projetoId?: string; onNavigate?: 
 function SidebarHeader() {
   return (
     <div className="flex h-16 items-center gap-2 border-b px-4">
-      <img src={personaLogo} alt="" className="h-9 w-auto object-contain" />
-      <img src={novaLogo} alt="Glauber" className="h-9 w-auto object-contain" />
+      <img src={personaLogo} alt="" className="h-14 w-auto object-contain" />
+      <img src={novaLogo} alt="Glauber" className="h-14 w-auto object-contain" />
     </div>
   );
 }
@@ -161,8 +161,8 @@ export function Sidebar() {
       >
         <div className="flex h-16 items-center justify-between border-b pr-4 pl-4">
           <div className="flex items-center gap-2">
-            <img src={personaLogo} alt="" className="h-9 w-auto object-contain" />
-            <img src={novaLogo} alt="Glauber" className="h-9 w-auto object-contain" />
+            <img src={personaLogo} alt="" className="h-14 w-auto object-contain" />
+            <img src={novaLogo} alt="Glauber" className="h-14 w-auto object-contain" />
           </div>
           <Button variant="ghost" size="icon" onClick={() => setOpen(false)} aria-label="Fechar menu">
             <X className="h-5 w-5" />
