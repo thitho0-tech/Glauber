@@ -41,10 +41,12 @@ function ChatPanel({
   canais,
   userId,
   targetCanalId,
+  emptyLabel = "Nenhum canal nesta categoria.",
 }: {
   canais: any[];
   userId: string | undefined;
   targetCanalId?: string | null;
+  emptyLabel?: string;
 }) {
   const qc = useQueryClient();
   const [canalId, setCanalId] = useState<string | null>(canais[0]?.id ?? null);
@@ -152,15 +154,17 @@ function ChatPanel({
     return (
       <div className="flex flex-col items-center justify-center flex-1 text-center text-muted-foreground p-6">
         <MessageSquare className="h-8 w-8 opacity-30 mb-2" />
-        <p className="text-sm">Nenhum canal nesta categoria.</p>
+        <p className="text-sm">{emptyLabel}</p>
       </div>
     );
   }
 
+  const showSidebar = canais.length > 1;
+
   return (
-    <div className="flex flex-1 overflow-hidden" style={{ minHeight: 0 }}>
-      {canais.length > 1 && (
-        <div className="w-40 shrink-0 border-r overflow-y-auto">
+    <div className="flex flex-1 min-h-0">
+      {showSidebar && (
+        <div className="w-44 shrink-0 border-r overflow-y-auto">
           <div className="p-2 space-y-0.5">
             {canais.map((c: any) => (
               <button
@@ -176,10 +180,12 @@ function ChatPanel({
         </div>
       )}
 
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="border-b px-4 py-2 shrink-0">
-          <p className="text-sm font-medium">{canalAtualNome}</p>
-        </div>
+      <div className="flex flex-col flex-1 min-h-0">
+        {showSidebar && (
+          <div className="border-b px-4 py-2 shrink-0">
+            <p className="text-sm font-medium">{canalAtualNome}</p>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-4 space-y-3">
           {!(mensagens?.length) ? (
@@ -424,7 +430,7 @@ export default function ProjectDashboard() {
 
         {/* ── Coluna: Chat ──────────────────────────────────────────────── */}
         <Card className="flex flex-col overflow-hidden">
-          <Tabs defaultValue="geral" className="flex flex-col flex-1 overflow-hidden">
+          <Tabs defaultValue="geral" className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <CardHeader className="shrink-0 pb-0 border-b">
               <TabsList className="w-full justify-start rounded-none bg-transparent border-0 p-0 h-auto gap-0">
                 {[
@@ -443,20 +449,19 @@ export default function ProjectDashboard() {
               </TabsList>
             </CardHeader>
 
-            <TabsContent value="geral" className="flex-1 overflow-hidden m-0 mt-0 flex flex-col">
+            <TabsContent value="geral" className="flex flex-col flex-1 min-h-0 m-0">
               <ChatPanel canais={canaisGeral} userId={user?.id} />
             </TabsContent>
-            <TabsContent value="departamento" className="flex-1 overflow-hidden m-0 mt-0 flex flex-col">
+            <TabsContent value="departamento" className="flex flex-col flex-1 min-h-0 m-0">
               <ChatPanel canais={canaisDept} userId={user?.id} />
             </TabsContent>
-            <TabsContent value="privado" className="flex-1 overflow-hidden m-0 mt-0 flex flex-col">
-              {/* "Nova conversa" button bar */}
+            <TabsContent value="privado" className="flex flex-col flex-1 min-h-0 m-0">
               <div className="border-b px-3 py-2 shrink-0 flex justify-end">
                 <Button size="sm" variant="outline" onClick={() => setOpenNovaDM(true)}>
                   <Plus className="h-3.5 w-3.5" /> Nova conversa
                 </Button>
               </div>
-              <ChatPanel canais={canaisPrivado} userId={user?.id} targetCanalId={privadoTarget} />
+              <ChatPanel canais={canaisPrivado} userId={user?.id} targetCanalId={privadoTarget} emptyLabel="Nenhuma conversa ainda." />
             </TabsContent>
           </Tabs>
         </Card>
