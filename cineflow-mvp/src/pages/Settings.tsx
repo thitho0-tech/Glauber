@@ -106,6 +106,17 @@ function AutorizacoesPanel({
     },
   });
 
+  // Email do criador do projeto — identifica a linha do owner para travá-la
+  const { data: ownerEmail } = useQuery({
+    queryKey: ["project-owner-email", projetoSel],
+    enabled: !!projetoSel,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("project_owner_email", { p_projeto: projetoSel });
+      return (data as string | null)?.toLowerCase() ?? null;
+    },
+  });
+
   const atualizarPapel = useMutation({
     mutationFn: async ({ ppId, papel }: { ppId: string; papel: string }) => {
       const { error } = await supabase
@@ -164,19 +175,27 @@ function AutorizacoesPanel({
                     {m.funcao_av && ` · ${m.funcao_av.nome} (${m.funcao_av.departamento})`}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    value={m.papel_projeto ?? ""}
-                    onChange={(e) => atualizarPapel.mutate({ ppId: m.id, papel: e.target.value })}
-                    className="h-9 rounded-md border bg-background px-2 text-xs"
-                  >
-                    <option value="">sem papel</option>
-                    {PAPEIS.filter((p) => p.value !== "owner").map((p) => (
-                      <option key={p.value} value={p.value}>{p.label}</option>
-                    ))}
-                  </select>
-                  {m.papel_projeto && <Badge variant="outline">{m.papel_projeto}</Badge>}
-                </div>
+                {/* Owner (criado_por) não pode ser rebaixado — linha travada */}
+                {ownerEmail && m.pessoa.email?.toLowerCase() === ownerEmail ? (
+                  <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-xs">Criador</Badge>
+                    <Lock className="h-3.5 w-3.5 text-muted-foreground" aria-label="Owner não pode ser rebaixado" />
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={m.papel_projeto ?? ""}
+                      onChange={(e) => atualizarPapel.mutate({ ppId: m.id, papel: e.target.value })}
+                      className="h-9 rounded-md border bg-background px-2 text-xs"
+                    >
+                      <option value="">sem papel</option>
+                      {PAPEIS.filter((p) => p.value !== "owner").map((p) => (
+                        <option key={p.value} value={p.value}>{p.label}</option>
+                      ))}
+                    </select>
+                    {m.papel_projeto && <Badge variant="outline">{m.papel_projeto}</Badge>}
+                  </div>
+                )}
               </div>
             ))
           )}

@@ -1,5 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
+import { usePermissions } from "./usePermissions";
 
 export type ProjectRole = "owner" | "admin" | "producao" | "departamento" | "leitor" | null;
 
@@ -11,19 +10,12 @@ const RANK: Record<Exclude<ProjectRole, null>, number> = {
   leitor: 5,
 };
 
+/** Adapter fino sobre usePermissions — mantém API idêntica à versão legada. */
 export function useProjectRole(projetoId?: string) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["project-role", projetoId],
-    enabled: !!projetoId,
-    staleTime: 60_000,
-    queryFn: async () => {
-      const { data, error } = await supabase.rpc("papel_no_projeto", { p_projeto_id: projetoId! });
-      if (error) throw error;
-      return (data ?? null) as ProjectRole;
-    },
-  });
+  const { role: rawRole, isLoading } = usePermissions(projetoId);
 
-  const role: ProjectRole = data ?? null;
+  const role: ProjectRole = (rawRole ?? null) as ProjectRole;
+
   const can = (min: Exclude<ProjectRole, null>) => {
     if (!role) return false;
     return RANK[role] <= RANK[min];

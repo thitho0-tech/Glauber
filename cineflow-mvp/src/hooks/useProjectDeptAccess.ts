@@ -1,5 +1,6 @@
-import { useProjectRole } from "./useProjectRole";
+import { usePermissions } from "./usePermissions";
 import { useProjectFunction } from "./useProjectFunction";
+import type { ProjectRole } from "./useProjectRole";
 
 export type Section =
   | "producao"
@@ -16,7 +17,7 @@ export type Section =
   | "administrativo";
 
 // Mapa: departamento → seções que o membro pode EDITAR
-// admin/owner/producao (isSuperUser) editam tudo independente deste mapa
+// isSuperUser (owner/admin/producao) edita tudo, independente deste mapa
 const DEPT_EDIT_MAP: Record<string, Section[]> = {
   producao:      ["producao", "roteiro", "direcao", "arte", "fotografia", "som", "elenco", "pos", "agenda", "od", "mapa_transporte", "administrativo"],
   direcao:       ["roteiro", "direcao", "arte", "fotografia", "som", "elenco", "pos", "agenda", "od"],
@@ -32,11 +33,11 @@ const DEPT_EDIT_MAP: Record<string, Section[]> = {
   outros:        [],
 };
 
+/** Adapter fino sobre usePermissions — mantém API idêntica à versão legada. */
 export function useProjectDeptAccess(projetoId?: string) {
-  const { role, isLoading: rLoading } = useProjectRole(projetoId);
+  const { isSuperUser, isLoading: pLoading, role } = usePermissions(projetoId);
   const { funcao, isLoading: fLoading } = useProjectFunction(projetoId);
 
-  const isSuperUser = role === "owner" || role === "admin" || role === "producao";
   const dept = funcao?.departamento ?? "";
 
   function canEditSection(section: Section): boolean {
@@ -46,10 +47,10 @@ export function useProjectDeptAccess(projetoId?: string) {
   }
 
   return {
-    isLoading: rLoading || fLoading,
+    isLoading: pLoading || fLoading,
     isSuperUser,
     canEditSection,
     dept,
-    role,
+    role: (role ?? null) as ProjectRole,
   };
 }
