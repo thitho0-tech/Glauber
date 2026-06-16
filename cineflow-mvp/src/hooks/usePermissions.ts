@@ -1,18 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 
-/**
- * Hook central de permissões (modelo composite, Sprint 5 Bloco A).
- *
- * can(recurso, acao):
- *   - Enquanto perm_funcao_grants estiver vazio (Bloco B pendente),
- *     cai no comportamento legado: isSuperUser (owner/admin/producao).
- *   - Após Bloco B seedar os grants, substituir pelo resolver pode().
- *
- * OWNER = projetos.criado_por — permanente, não delegável.
- */
 export function usePermissions(projetoId?: string) {
-  // Papel RBAC do usuário no projeto (mesmo cache key de useProjectRole)
   const { data: role, isLoading: roleLoading } = useQuery({
     queryKey: ["project-role", projetoId],
     enabled: !!projetoId,
@@ -26,48 +15,34 @@ export function usePermissions(projetoId?: string) {
     },
   });
 
-  // Detecta se o seed do Bloco B já foi aplicado.
-  // Em caso de erro (tabela ainda não existe), retorna false → fallback legado.
-  const { data: grantsSeeded, isLoading: grantsLoading } = useQuery({
-    queryKey: ["perm-grants-seeded"],
-    staleTime: 10 * 60_000,
-    retry: false,
+  const { data: permSet, isLoading: permsLoading } = useQuery({
+    queryKey: ["minhas-permissoes", projetoId],
+    enabled: !!projetoId,
+    staleTime: 60_000,
     queryFn: async () => {
-      try {
-        const { count, error } = await supabase
-          .from("perm_funcao_grants")
-          .select("*", { count: "exact", head: true });
-        if (error) return false;
-        return (count ?? 0) > 0;
-      } catch {
-        return false;
+      const { data, error } = await supabase.rpc("minhas_permissoes", {
+        p_projeto: projetoId!,
+      });
+      if (error) throw error;
+      const set = new Set<string>();
+      for (const row of (data ?? []) as Array<{ recurso: string; acao: string }>) {
+        set.add(`${row.recurso}|${row.acao}`);
       }
+      return set;
     },
   });
 
-  const isSuperUser = role === "owner" || role === "admin" || role === "producao";
   const isOwner = role === "owner";
+  const isSuperUser = role === "owner" || role === "admin" || role === "producao";
+  const isLoading = roleLoading || permsLoading;
 
-  /**
-   * Verifica se o usuário pode executar `acao` sobre `recurso` no projeto.
-   *
-   * Bloco A (grants vazios): delega ao check legado de papel.
-   * Bloco B (grants seedados): TODO — substituir por cache de pode() RPC.
-   */
   function can(recurso: string, acao: string): boolean {
     if (!projetoId) return false;
-    // Fallback: grants não seedados → comportamento legado
-    if (!grantsSeeded) return isSuperUser;
-    // TODO (Bloco B): buscar resultado de pode() do cache React Query
-    // e acionar prefetch se ausente. Por ora mesmo fallback.
-    return isSuperUser;
+    if (isLoading) return false;
+    if (isOwner) return true;
+    if (!permSet) return false;
+    return permSet.has(`${recurso}|${acao}`);
   }
 
-  return {
-    can,
-    isOwner,
-    isSuperUser,
-    isLoading: roleLoading || grantsLoading,
-    role,
-  };
+  return { can, isOwner, isSuperUser, isLoading, role };
 }

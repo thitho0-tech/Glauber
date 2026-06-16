@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Shield, Users, Bell, Trash2, FolderKanban, User, Lock, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { Link, useNavigate } from "react-router-dom";
@@ -73,6 +74,7 @@ function AutorizacoesPanel({
   const qc = useQueryClient();
   const [localProjetoId, setLocalProjetoId] = useState<string>("");
   const projetoSel = externalProjetoId ?? localProjetoId;
+  const { can } = usePermissions(projetoSel || undefined);
 
   const { data: projetos, isLoading: lp } = useQuery({
     queryKey: ["projetos-min-rbac", orgId],
@@ -95,7 +97,8 @@ function AutorizacoesPanel({
       const { data, error } = await supabase
         .from("projeto_pessoas")
         .select("id, papel_projeto, pessoa:pessoas(nome, email), funcao_av:funcoes_av(nome, departamento)")
-        .eq("projeto_id", projetoSel);
+        .eq("projeto_id", projetoSel)
+        .is("deleted_at", null);
       if (error) throw error;
       return ((data ?? []) as any[]).map((r) => ({
         id: r.id,
@@ -127,6 +130,18 @@ function AutorizacoesPanel({
     },
     onSuccess: () => {
       toast.success("Papel atualizado");
+      qc.invalidateQueries({ queryKey: ["membros-rbac", projetoSel] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const removerMembro = useMutation({
+    mutationFn: async (ppId: string) => {
+      const { error } = await supabase.rpc("soft_delete_item", { p_tabela: "projeto_pessoas", p_id: ppId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Membro removido do projeto");
       qc.invalidateQueries({ queryKey: ["membros-rbac", projetoSel] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -194,6 +209,20 @@ function AutorizacoesPanel({
                       ))}
                     </select>
                     {m.papel_projeto && <Badge variant="outline">{m.papel_projeto}</Badge>}
+                    {can("equipe", "remover") && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => {
+                          if (confirm(`Remover "${m.pessoa.nome}" do projeto?`)) {
+                            removerMembro.mutate(m.id);
+                          }
+                        }}
+                        title="Remover membro"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
