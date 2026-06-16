@@ -15,7 +15,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil, FolderOpen } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
-import { useProjectRole } from "@/hooks/useProjectRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 import { InviteButton } from "@/components/InviteButton";
@@ -146,7 +146,9 @@ function getPrincipalDept(v: any): string | null {
 
 export default function Team() {
   const { id: projetoId } = useParams();
-  const { canEdit } = useProjectRole(projetoId);
+  const { can } = usePermissions(projetoId);
+  const canEditEquipe = can('equipe', 'editar');
+  const canRemoverEquipe = can('equipe', 'remover');
   const [open, setOpen] = useState(false);
   const [openRegime, setOpenRegime] = useState<string | null>(null);
   const [openDocs, setOpenDocs] = useState<string | null>(null);
@@ -230,6 +232,17 @@ export default function Team() {
         throw error;
       }
       return data;
+    },
+  });
+
+  // Email do criador do projeto — identifica linha do owner para bloquear remoção
+  const { data: ownerEmail } = useQuery({
+    queryKey: ["project-owner-email", projetoId],
+    enabled: !!projetoId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await supabase.rpc("project_owner_email", { p_projeto: projetoId });
+      return (data as string | null)?.toLowerCase() ?? null;
     },
   });
 
@@ -403,11 +416,11 @@ export default function Team() {
         <Dialog
           open={open}
           onOpenChange={(v) => {
-            if (canEdit) { setOpen(v); if (!v) resetNovaForm(); }
+            if (canEditEquipe) { setOpen(v); if (!v) resetNovaForm(); }
           }}
         >
-          <DialogTrigger asChild disabled={!canEdit}>
-            <Button disabled={!canEdit}><Plus className="h-4 w-4" /> Adicionar ao projeto</Button>
+          <DialogTrigger asChild disabled={!canEditEquipe}>
+            <Button disabled={!canEditEquipe}><Plus className="h-4 w-4" /> Adicionar ao projeto</Button>
           </DialogTrigger>
           <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0">
             <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
@@ -482,7 +495,7 @@ export default function Team() {
           title="Sem pessoas neste projeto"
           description="Adicione pessoas à equipe deste projeto."
           action={
-            canEdit ? (
+            canEditEquipe ? (
               <Button onClick={() => setOpen(true)}>
                 <UserPlus className="h-4 w-4" /> Adicionar ao projeto
               </Button>
@@ -499,6 +512,7 @@ export default function Team() {
                 const funcaoNome = getPrincipalFuncao(v);
                 const todasFuncoes: any[] = v.funcoes ?? [];
                 const regime = (regimes ?? []).find((r: any) => r.pessoa_id === v.pessoa?.id);
+                const isOwnerRow = ownerEmail ? v.pessoa?.email?.toLowerCase() === ownerEmail : false;
                 return (
                   <div key={v.id} className="p-4 space-y-2">
                     <div className="flex items-start justify-between gap-2">
@@ -520,7 +534,7 @@ export default function Team() {
                           <FolderOpen className="h-4 w-4" />
                         </Button>
                         <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
-                        {canEdit && (
+                        {canRemoverEquipe && !isOwnerRow && (
                           <Button size="icon" variant="ghost" onClick={() => desvincular.mutate(v.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -560,6 +574,7 @@ export default function Team() {
                   const funcaoNome = getPrincipalFuncao(v);
                   const todasFuncoes: any[] = v.funcoes ?? [];
                   const regime = (regimes ?? []).find((r: any) => r.pessoa_id === v.pessoa?.id);
+                  const isOwnerRow = ownerEmail ? v.pessoa?.email?.toLowerCase() === ownerEmail : false;
                   return (
                     <TableRow key={v.id}>
                       <TableCell className="font-medium">{v.pessoa?.nome ?? "—"}</TableCell>
@@ -608,15 +623,16 @@ export default function Team() {
                             <FolderOpen className="h-3.5 w-3.5" />
                           </Button>
                           <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => desvincular.mutate(v.id)}
-                            disabled={!canEdit}
-                            title={canEdit ? "Remover do projeto (mantém no catálogo)" : "Sem permissão"}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
+                          {canRemoverEquipe && !isOwnerRow && (
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => desvincular.mutate(v.id)}
+                              title="Remover do projeto (mantém no catálogo)"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

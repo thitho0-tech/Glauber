@@ -18,6 +18,7 @@ import {
   AlertTriangle, Printer,
 } from "lucide-react";
 import { extrairTextoDoArquivo, paginasEstimadas } from "@/lib/parseRoteiro";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
 type Roteiro = {
@@ -67,6 +68,8 @@ type Plano = {
 
 export default function Roteiro() {
   const { id: projetoId } = useParams<{ id: string }>();
+  const { can } = usePermissions(projetoId);
+  const canEditRoteiro = can('roteiro', 'editar');
   const qc = useQueryClient();
   const [texto, setTexto] = useState("");
   const [arquivoNome, setArquivoNome] = useState<string>("");
@@ -279,17 +282,19 @@ export default function Roteiro() {
                     {roteiro.status === "cru" && <Badge variant="outline">não analisado</Badge>}
                     {roteiro.status === "erro" && <Badge variant="destructive">erro</Badge>}
                   </span>
-                  <Button
-                    size="sm"
-                    onClick={() => decupar.mutate()}
-                    disabled={decupar.isPending || roteiro.status === "analisando"}
-                  >
-                    {roteiro.status === "decupado" ? (
-                      <><RefreshCw className="h-4 w-4" /> Re-decupar</>
-                    ) : (
-                      <><Sparkles className="h-4 w-4" /> Decupar com IA</>
-                    )}
-                  </Button>
+                  {canEditRoteiro && (
+                    <Button
+                      size="sm"
+                      onClick={() => decupar.mutate()}
+                      disabled={decupar.isPending || roteiro.status === "analisando"}
+                    >
+                      {roteiro.status === "decupado" ? (
+                        <><RefreshCw className="h-4 w-4" /> Re-decupar</>
+                      ) : (
+                        <><Sparkles className="h-4 w-4" /> Decupar com IA</>
+                      )}
+                    </Button>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
@@ -322,7 +327,7 @@ export default function Roteiro() {
 
           {roteiro && <RoteiroViewer roteiro={roteiro} />}
 
-          <Card>
+          {canEditRoteiro && <Card>
             <CardHeader>
               <CardTitle className="text-base">{roteiro ? "Substituir roteiro" : "Inserir roteiro"}</CardTitle>
             </CardHeader>
@@ -393,7 +398,7 @@ export default function Roteiro() {
                 </Button>
               </div>
             </CardContent>
-          </Card>
+          </Card>}
         </TabsContent>
 
         {/* ── ABA DECUPAGEM ───────────────────────────────────── */}
@@ -404,11 +409,23 @@ export default function Roteiro() {
                 ? `Decupado em ${new Date(roteiro.decupado_em).toLocaleString("pt-BR")} · modelo: ${roteiro.modelo_ia ?? "—"}`
                 : "Rode a decupagem para ver a análise de cenas."}
             </p>
-            {cenas && cenas.length > 0 && (
-              <Button variant="outline" size="sm" onClick={() => window.print()}>
-                <Printer className="h-4 w-4" /> Exportar PDF
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {canEditRoteiro && roteiro?.id && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => decupar.mutate()}
+                  disabled={decupar.isPending || roteiro.status === "analisando"}
+                >
+                  <RefreshCw className="h-4 w-4" /> Re-decupar
+                </Button>
+              )}
+              {cenas && cenas.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => window.print()}>
+                  <Printer className="h-4 w-4" /> Exportar PDF
+                </Button>
+              )}
+            </div>
           </div>
 
           {!roteiro || roteiro.status === "cru" ? (

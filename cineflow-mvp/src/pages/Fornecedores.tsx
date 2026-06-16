@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Plus, Building2, ChevronLeft, Pencil, Trash2 } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -34,6 +35,7 @@ const TIPO_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
 
 export default function Fornecedores() {
   const { id } = useParams();
+  const { can } = usePermissions(id);
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -214,9 +216,9 @@ export default function Fornecedores() {
           <p className="text-sm text-muted-foreground">Cadastro de fornecedores e prestadores de serviço da produtora</p>
         </div>
 
-        <Dialog open={openCriar} onOpenChange={setOpenCriar}>
-          <DialogTrigger asChild>
-            <Button><Plus className="h-4 w-4" /> Novo fornecedor</Button>
+        <Dialog open={openCriar} onOpenChange={(v) => { if (can('fornecedores', 'editar')) setOpenCriar(v); }}>
+          <DialogTrigger asChild disabled={!can('fornecedores', 'editar')}>
+            <Button disabled={!can('fornecedores', 'editar')}><Plus className="h-4 w-4" /> Novo fornecedor</Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
             <form onSubmit={(e) => { e.preventDefault(); criar.mutate(new FormData(e.currentTarget)); }} className="space-y-4" autoComplete="off">
@@ -246,7 +248,7 @@ export default function Fornecedores() {
           icon={<Building2 className="h-5 w-5" />}
           title="Sem fornecedores cadastrados"
           description="Cadastre empresas e prestadores para vincular às despesas."
-          action={<Button onClick={() => setOpenCriar(true)}><Plus className="h-4 w-4" /> Novo fornecedor</Button>}
+          action={can('fornecedores', 'editar') ? <Button onClick={() => setOpenCriar(true)}><Plus className="h-4 w-4" /> Novo fornecedor</Button> : undefined}
         />
       ) : (
         <Card>
@@ -273,17 +275,21 @@ export default function Fornecedores() {
                     <TableCell className="text-sm">{f.dados_bancarios?.chave_pix ?? "—"}</TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-1">
-                        <Button size="icon" variant="ghost" onClick={() => setEditando(f)} title="Editar">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => { if (confirm(`Remover "${f.nome}"?`)) desativar.mutate(f.id); }}
-                          title="Remover"
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {can('fornecedores', 'editar') && (
+                          <Button size="icon" variant="ghost" onClick={() => setEditando(f)} title="Editar">
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {can('fornecedores', 'editar') && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={() => { if (confirm(`Remover "${f.nome}"?`)) desativar.mutate(f.id); }}
+                            title="Remover"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

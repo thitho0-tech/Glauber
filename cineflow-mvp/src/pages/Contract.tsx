@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loading } from "@/components/ui/loading";
 import { ChevronLeft, FileSignature, ExternalLink } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
 type Contrato = {
@@ -32,6 +33,9 @@ export default function Contract() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const [form, setForm] = useState<Partial<Contrato>>({});
+
+  const { can } = usePermissions(projetoId);
+  const canEdit = can('contratos', 'editar');
 
   const { data: projeto } = useQuery({
     queryKey: ["projeto-min", projetoId],
@@ -116,10 +120,13 @@ export default function Contract() {
           <CardTitle>Dados do contrato</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {!canEdit && (
+            <p className="text-xs text-muted-foreground">Somente leitura — você não tem permissão para editar este contrato.</p>
+          )}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="numero">Número</Label>
-              <Input id="numero" value={form.numero ?? ""} onChange={(e) => setForm({ ...form, numero: e.target.value })} />
+              <Input id="numero" value={form.numero ?? ""} onChange={(e) => setForm({ ...form, numero: e.target.value })} disabled={!canEdit} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="status">Status</Label>
@@ -127,7 +134,8 @@ export default function Contract() {
                 id="status"
                 value={form.status ?? "rascunho"}
                 onChange={(e) => setForm({ ...form, status: e.target.value as Contrato["status"] })}
-                className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                className="h-10 w-full rounded-md border bg-background px-3 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={!canEdit}
               >
                 {STATUS_OPTS.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -138,28 +146,28 @@ export default function Contract() {
 
           <div className="space-y-1.5">
             <Label htmlFor="objeto">Objeto</Label>
-            <Textarea id="objeto" value={form.objeto ?? ""} onChange={(e) => setForm({ ...form, objeto: e.target.value })} rows={2} />
+            <Textarea id="objeto" value={form.objeto ?? ""} onChange={(e) => setForm({ ...form, objeto: e.target.value })} rows={2} disabled={!canEdit} />
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-1.5">
               <Label htmlFor="valor">Valor (R$)</Label>
-              <Input id="valor" type="number" step="0.01" value={form.valor ?? ""} onChange={(e) => setForm({ ...form, valor: e.target.value as unknown as number })} />
+              <Input id="valor" type="number" step="0.01" value={form.valor ?? ""} onChange={(e) => setForm({ ...form, valor: e.target.value as unknown as number })} disabled={!canEdit} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="dataAss">Data de assinatura</Label>
-              <Input id="dataAss" type="date" value={form.data_assinatura ?? ""} onChange={(e) => setForm({ ...form, data_assinatura: e.target.value })} />
+              <Input id="dataAss" type="date" value={form.data_assinatura ?? ""} onChange={(e) => setForm({ ...form, data_assinatura: e.target.value })} disabled={!canEdit} />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="vigFim">Vigência até</Label>
-              <Input id="vigFim" type="date" value={form.vigencia_fim ?? ""} onChange={(e) => setForm({ ...form, vigencia_fim: e.target.value })} />
+              <Input id="vigFim" type="date" value={form.vigencia_fim ?? ""} onChange={(e) => setForm({ ...form, vigencia_fim: e.target.value })} disabled={!canEdit} />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="arq">URL do arquivo PDF</Label>
             <div className="flex gap-2">
-              <Input id="arq" placeholder="https://..." value={form.arquivo_url ?? ""} onChange={(e) => setForm({ ...form, arquivo_url: e.target.value })} />
+              <Input id="arq" placeholder="https://..." value={form.arquivo_url ?? ""} onChange={(e) => setForm({ ...form, arquivo_url: e.target.value })} disabled={!canEdit} />
               {form.arquivo_url ? (
                 <a href={form.arquivo_url} target="_blank" rel="noreferrer">
                   <Button type="button" variant="outline" size="icon"><ExternalLink className="h-4 w-4" /></Button>
@@ -170,12 +178,14 @@ export default function Contract() {
 
           <div className="space-y-1.5">
             <Label htmlFor="obs">Observações</Label>
-            <Textarea id="obs" value={form.observacoes ?? ""} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} />
+            <Textarea id="obs" value={form.observacoes ?? ""} onChange={(e) => setForm({ ...form, observacoes: e.target.value })} rows={3} disabled={!canEdit} />
           </div>
 
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Salvando..." : contrato ? "Atualizar contrato" : "Criar contrato"}
-          </Button>
+          {canEdit && (
+            <Button onClick={() => save.mutate()} disabled={save.isPending}>
+              {save.isPending ? "Salvando..." : contrato ? "Atualizar contrato" : "Criar contrato"}
+            </Button>
+          )}
         </CardContent>
       </Card>
     </div>

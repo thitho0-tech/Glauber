@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink, Camera } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
-import { useProjectRole } from "@/hooks/useProjectRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -52,7 +52,8 @@ function extractLatLng(url: string): { lat: number; lng: number } | null {
 
 export default function Locations() {
   const { id } = useParams();
-  const { canEdit } = useProjectRole(id);
+  const { can } = usePermissions(id);
+  const canEdit = can('locacoes', 'editar');
   const [open, setOpen] = useState(false);
   const [mapsUrl, setMapsUrl] = useState("");
   const [latLng, setLatLng] = useState<{ lat: number; lng: number } | null>(null);
