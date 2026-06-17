@@ -13,12 +13,13 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Wallet, ChevronLeft, CheckCircle2, AlertCircle, XCircle, AlertTriangle, FileText, Search, X } from "lucide-react";
+import { Plus, Wallet, ChevronLeft, CheckCircle2, AlertCircle, XCircle, AlertTriangle, FileText, Search, X, Lock } from "lucide-react";
 import { formatBRL, formatDate, cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { useProjectRole } from "@/hooks/useProjectRole";
+import { usePermissions } from "@/hooks/usePermissions";
 import { FornecedorSelect } from "@/components/finance/FornecedorSelect";
 import { UploadComprovante } from "@/components/finance/UploadComprovante";
 
@@ -39,6 +40,8 @@ const STATUS_CLASS: Record<string, string> = {
 export default function Finance() {
   const { id } = useParams<{ id: string }>();
   const { canEdit } = useProjectRole(id);
+  const { can, isLoading: permsLoading } = usePermissions(id);
+  const canVer = can('financeiro', 'ver');
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -57,7 +60,7 @@ export default function Finance() {
 
   const { data: projeto } = useQuery({
     queryKey: ["projeto-fin", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projetos")
@@ -70,7 +73,7 @@ export default function Finance() {
 
   const { data: tetoCheck } = useQuery({
     queryKey: ["teto-check", id, projeto?.orcamento_total],
-    enabled: !!id && !!projeto?.edital_id,
+    enabled: !!id && canVer && !!projeto?.edital_id,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("check_orcamento_dentro_teto", { p_projeto_id: id! });
       if (error) throw error;
@@ -80,7 +83,7 @@ export default function Finance() {
 
   const { data: orcamento } = useQuery({
     queryKey: ["orcamento", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       let { data } = await supabase.from("orcamentos").select("*").eq("projeto_id", id!).maybeSingle();
       if (!data) {
@@ -103,7 +106,7 @@ export default function Finance() {
 
   const { data: despesas, isLoading: l3 } = useQuery({
     queryKey: ["despesas", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("despesas")
@@ -203,6 +206,13 @@ export default function Finance() {
 
   const temFiltro = busca || filtroStatus !== "todos" || filtroRubrica !== "todas";
 
+  if (permsLoading) return <Loading />;
+  if (!canVer) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+      <Lock className="h-10 w-10" />
+      <p className="text-sm">Conteúdo restrito. Você não tem permissão para visualizar esta seção.</p>
+    </div>
+  );
   if (l3) return <Loading />;
 
   const totalRealizado = (despesas ?? []).reduce((s: number, d: any) => s + Number(d.valor), 0);

@@ -8,18 +8,21 @@ import { Loading } from "@/components/ui/loading";
 import { Empty } from "@/components/ui/empty";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ChevronLeft, Receipt, CheckCircle2, AlertCircle, XCircle, History, PlusCircle, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronLeft, Receipt, CheckCircle2, AlertCircle, XCircle, History, PlusCircle, RefreshCw, Trash2, Lock } from "lucide-react";
 import { formatBRL, formatDate } from "@/lib/utils";
 import { toast } from "sonner";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function Accountability() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
   const [revalidando, setRevalidando] = useState(false);
+  const { can, isLoading: permsLoading } = usePermissions(id);
+  const canVer = can('prestacao', 'ver');
 
   const { data: auditLog } = useQuery({
     queryKey: ["audit-despesas", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("audit_log")
@@ -38,7 +41,7 @@ export default function Accountability() {
 
   const { data: projeto } = useQuery({
     queryKey: ["projeto-prest", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projetos")
@@ -51,7 +54,7 @@ export default function Accountability() {
 
   const { data: despesas, isLoading } = useQuery({
     queryKey: ["despesas-prest", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("despesas")
@@ -80,9 +83,16 @@ export default function Accountability() {
     }
   }
 
+  if (permsLoading) return <Loading />;
+  if (!canVer) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+      <Lock className="h-10 w-10" />
+      <p className="text-sm">Conteúdo restrito. Você não tem permissão para visualizar esta seção.</p>
+    </div>
+  );
   if (isLoading) return <Loading />;
 
-  const oks = (despesas ?? []).filter((d: any) => d.validacao?.[0]?.status === "ok");
+  const oks =(despesas ?? []).filter((d: any) => d.validacao?.[0]?.status === "ok");
   const warns = (despesas ?? []).filter((d: any) => d.validacao?.[0]?.status === "warn");
   const fails = (despesas ?? []).filter((d: any) => d.validacao?.[0]?.status === "fail");
 

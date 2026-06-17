@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Building2, ChevronLeft, Pencil, Trash2 } from "lucide-react";
+import { Plus, Building2, ChevronLeft, Pencil, Trash2, Lock } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -35,7 +35,8 @@ const TIPO_VARIANT: Record<string, "default" | "secondary" | "outline"> = {
 
 export default function Fornecedores() {
   const { id } = useParams();
-  const { can } = usePermissions(id);
+  const { can, isLoading: permsLoading } = usePermissions(id);
+  const canVer = can('fornecedores', 'ver');
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -46,7 +47,7 @@ export default function Fornecedores() {
 
   const { data: fornecedores, isLoading } = useQuery({
     queryKey: ["fornecedores", orgId],
-    enabled: !!orgId,
+    enabled: !!orgId && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("fornecedores")
@@ -134,6 +135,13 @@ export default function Fornecedores() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  if (permsLoading) return <Loading />;
+  if (!canVer) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+      <Lock className="h-10 w-10" />
+      <p className="text-sm">Conteúdo restrito. Você não tem permissão para visualizar esta seção.</p>
+    </div>
+  );
   if (isLoading) return <Loading />;
 
   const lista = (fornecedores ?? []).filter((f) =>

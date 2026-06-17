@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink, Camera } from "lucide-react";
+import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink, Camera, Lock } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -52,7 +52,8 @@ function extractLatLng(url: string): { lat: number; lng: number } | null {
 
 export default function Locations() {
   const { id } = useParams();
-  const { can } = usePermissions(id);
+  const { can, isLoading: permsLoading } = usePermissions(id);
+  const canVer = can('locacoes', 'ver');
   const canEdit = can('locacoes', 'editar');
   const [open, setOpen] = useState(false);
   const [mapsUrl, setMapsUrl] = useState("");
@@ -65,7 +66,7 @@ export default function Locations() {
 
   const { data: locacoes, isLoading } = useQuery({
     queryKey: ["locacoes", id],
-    enabled: !!id,
+    enabled: !!id && canVer,
     queryFn: async () => {
       const { data, error } = await supabase.from("locacoes").select("*").eq("projeto_id", id!).eq("etapa", "oficial").is("deleted_at", null).order("nome");
       if (error) throw error;
@@ -118,6 +119,13 @@ export default function Locations() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  if (permsLoading) return <Loading />;
+  if (!canVer) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+      <Lock className="h-10 w-10" />
+      <p className="text-sm">Conteúdo restrito. Você não tem permissão para visualizar esta seção.</p>
+    </div>
+  );
   if (isLoading) return <Loading />;
 
   function onMapsUrlChange(v: string) {

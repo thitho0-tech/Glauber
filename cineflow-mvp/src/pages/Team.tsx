@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil, FolderOpen } from "lucide-react";
+import { Plus, Users, ChevronLeft, Trash2, UserPlus, Pencil, FolderOpen, Lock } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -54,18 +54,14 @@ const REGIME_VARIANT: Record<string, "default" | "secondary" | "outline" | "dest
 };
 
 const DEPARTAMENTOS_AV = [
-  { value: "desenvolvimento", label: "Desenvolvimento" },
-  { value: "direcao",         label: "Direção" },
   { value: "producao",        label: "Produção" },
-  { value: "fotografia",      label: "Fotografia" },
+  { value: "desenvolvimento", label: "Roteiro" },
+  { value: "direcao",         label: "Direção" },
   { value: "arte",            label: "Arte" },
+  { value: "fotografia",      label: "Fotografia" },
   { value: "som",             label: "Som" },
   { value: "elenco",          label: "Elenco" },
-  { value: "logistica",       label: "Logística" },
   { value: "pos_producao",    label: "Pós-produção" },
-  { value: "figurino",        label: "Figurino" },
-  { value: "maquiagem",       label: "Maquiagem" },
-  { value: "outros",          label: "Outros" },
 ];
 
 function FuncoesProjetoSelect({
@@ -146,7 +142,8 @@ function getPrincipalDept(v: any): string | null {
 
 export default function Team() {
   const { id: projetoId } = useParams();
-  const { can } = usePermissions(projetoId);
+  const { can, isLoading: permsLoading } = usePermissions(projetoId);
+  const canVer = can('equipe', 'ver');
   const canEditEquipe = can('equipe', 'editar');
   const canRemoverEquipe = can('equipe', 'remover');
   const [open, setOpen] = useState(false);
@@ -189,7 +186,7 @@ export default function Team() {
 
   const { data: vinculos, isLoading } = useQuery({
     queryKey: ["projeto-pessoas", projetoId],
-    enabled: !!projetoId,
+    enabled: !!projetoId && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projeto_pessoas")
@@ -208,6 +205,7 @@ export default function Team() {
 
   const { data: funcoesAv } = useQuery({
     queryKey: ["funcoes-av"],
+    enabled: canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("funcoes_av")
@@ -221,7 +219,7 @@ export default function Team() {
 
   const { data: regimes } = useQuery({
     queryKey: ["regimes-contratacao", projetoId],
-    enabled: !!projetoId,
+    enabled: !!projetoId && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("regimes_contratacao")
@@ -238,7 +236,7 @@ export default function Team() {
   // Email do criador do projeto — identifica linha do owner para bloquear remoção
   const { data: ownerEmail } = useQuery({
     queryKey: ["project-owner-email", projetoId],
-    enabled: !!projetoId,
+    enabled: !!projetoId && canVer,
     staleTime: 60_000,
     queryFn: async () => {
       const { data } = await supabase.rpc("project_owner_email", { p_projeto: projetoId });
@@ -395,6 +393,13 @@ export default function Team() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  if (permsLoading) return <Loading />;
+  if (!canVer) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+      <Lock className="h-10 w-10" />
+      <p className="text-sm">Conteúdo restrito. Você não tem permissão para visualizar esta seção.</p>
+    </div>
+  );
   if (isLoading) return <Loading />;
 
   return (

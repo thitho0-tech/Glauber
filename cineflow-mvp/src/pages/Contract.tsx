@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loading } from "@/components/ui/loading";
-import { ChevronLeft, FileSignature, ExternalLink } from "lucide-react";
+import { ChevronLeft, FileSignature, ExternalLink, Lock } from "lucide-react";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
 
@@ -34,12 +34,13 @@ export default function Contract() {
   const navigate = useNavigate();
   const [form, setForm] = useState<Partial<Contrato>>({});
 
-  const { can } = usePermissions(projetoId);
+  const { can, isLoading: permsLoading } = usePermissions(projetoId);
+  const canVer = can('contratos', 'ver');
   const canEdit = can('contratos', 'editar');
 
   const { data: projeto } = useQuery({
     queryKey: ["projeto-min", projetoId],
-    enabled: !!projetoId,
+    enabled: !!projetoId && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projetos")
@@ -53,7 +54,7 @@ export default function Contract() {
 
   const { data: contrato, isLoading } = useQuery({
     queryKey: ["contrato", projetoId],
-    enabled: !!projetoId,
+    enabled: !!projetoId && canVer,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contratos")
@@ -100,6 +101,13 @@ export default function Contract() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  if (permsLoading) return <Loading />;
+  if (!canVer) return (
+    <div className="flex flex-col items-center justify-center py-20 gap-4 text-muted-foreground">
+      <Lock className="h-10 w-10" />
+      <p className="text-sm">Conteúdo restrito. Você não tem permissão para visualizar esta seção.</p>
+    </div>
+  );
   if (isLoading) return <Loading />;
 
   return (
