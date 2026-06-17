@@ -1,13 +1,37 @@
-# Estado Glauber — SPRINT 4 em execução (10/06/2026)
+# Estado Glauber — SPRINT 5 em execução (16/06/2026)
+
+> **SPRINT 5 — Permissões Composite + features OD/Agenda.** Spec: `SPRINT_5_SPEC_PERMISSOES_OD.md`.
+> **APLICADO EM PRODUÇÃO (via conector Supabase):** Bloco A (tabelas perm_recursos/perm_funcao_grants/
+> perm_overrides + `pode()` + `project_owner_email()` — repo `0050_perm_composite.sql`); Bloco B seed
+> (18 recursos, 829 grants, 48 funções, `od/aprovar` p/ direção — repo `0051_perm_seed.sql`);
+> função `minhas_permissoes(projeto)`; trigger `protege_owner_pp` (criador não removível da equipe);
+> correção de segurança (revoke anon em _get_secret/_set_secret/_send_email + rotação EDGE_SHARED_SECRET).
+> **FRONT (deployado):** páginas migradas para `can(recurso,acao)` (Locations/Fornecedores/Contract/
+> Roteiro+Decupagem/Team); `usePermissions` religado a `minhas_permissoes`; Settings filtra deleted_at +
+> botão remover (nunca no criador).
+> **PRÓXIMO PASSO:** revalidar na tela → aplicar **CUTOVER** `0052_cutover_rls.sql` (PRONTO no repo, NÃO
+> aplicado — liga o RLS por `pode()` em 19 tabelas; pedir confirmação). Depois: get_advisors p/ verificar.
+> **NÃO APLICAR AINDA:** `0049_agenda_prep.sql` (renomeia dia_filmagem→dia_gravacao + departamento em
+> agenda_eventos) — só junto do Bloco C4 (fusão Agenda).
+> **Bloco C pendente:** C1 aprovação OD, C2 editar OD publicada (+selo ATUALIZADA), C3 Mural "Próximos
+> eventos" por usuário/depto, C4 fusão Agenda+Planejamento (calendário Dia/Semana/Mês).
+> Migrações em prod: 0001–0048 (Sprint 4) + os objetos da Sprint 5 acima (0049/0052 ainda não aplicados).
+
+---
+
+# Estado Glauber — SPRINT 4 (concluída, 10–12/06/2026)
 
 **Último commit:** ver `git log` (4A+4B+4C + hotfixes em origin/main; deploy em glauber.app.br)
 **Build:** Limpo. `npx tsc --noEmit` = 0 erros (verificado 11/06 após hotfixes 4C).
 **Deploy:** glauber.app.br (Vercel)
-**Migrations aplicadas em produção:** 43 (0001 → 0043).
-**Status do dia (11/06):** ver `STATUS_SPRINT4_11-06.md` — fases 4A–4D concluídas,
-hotfixes do smoke test aplicados (lista equipe `user_id`, DM `!inner`, constraint
-departamentos 0043), código congelado, fase 4E (testes) em andamento. O prompt
-para a próxima task está no fim do STATUS.
+**Migrations aplicadas em produção:** 48 (0001 → 0048).
+**Status (12/06, fechamento):** ver `STATUS_SPRINT4_11-06.md` (Adendos 1 e 2) —
+fases 4A–4D + polimento pré-demo concluídos e em produção (último commit relevante:
+848b29c, fix raiz do chat). App zerado e demo ensaiada. ZERO pendências de
+código (layout mobile dos cards fechado em 5a280fc). Próximos marcos:
+demo → fase 4E (testes pelas equipes, preparar convites/logins + guia de 1 página +
+VITE_EDGE_SHARED_SECRET no .env) → entrega 20/06. O prompt para retomar em nova
+task está no fim do STATUS.
 
 > **FASES 4A, 4B e 4C CONCLUÍDAS e smoke-testadas (11/06).**
 > 4A: bugs B1–B10 + layout L1–L9. 4B: sidebar nova, Mural (agenda+chat 3 tabs), Agenda

@@ -119,6 +119,37 @@ Regras: PowerShell sem &&; nunca SelectItem com value=""; ao final npx tsc
 
 ---
 
+## 📌 ADENDO 2 (12/06) — Pré-demo concluído
+
+Sessões e fixes do dia (tudo commitado e em produção):
+
+| Entrega | Detalhe |
+|---|---|
+| Migração 0045 | unique (projeto_id, pessoa_id) restaurada em projeto_pessoas |
+| Migração 0046 | **fix criar projeto**: removido trigger antigo de canais (0009) cujo ON CONFLICT ficou sem árbitro após a 0039 |
+| Migrações 0047/0048 | Scouting de locações (etapa proposta→oficial, aprovação do diretor) + fotos_urls |
+| Scouting completo | Arte propõe com fotos → Diretor aprova/rejeita c/ comentário → Produção efetiva (commit 2e5d8b2) |
+| Arte: fotos + exclusão | foto em Figurinos e Objetos (card + edição), exclusão com confirmação nos 3 blocos (37fcee4); PENDENTE: foto também nos modais de CRIAÇÃO (micro-prompt já redigido) |
+| Locations | rolagem no modal Nova locação; campos duplicados de responsável removidos |
+| Logo +150% | feito pelo Thiago de forma autônoma no VS Code ✅ |
+| **Chat do Mural — fix raiz** | painéis inativos do Radix Tabs ocupavam espaço (classe `flex` vencia o atributo `hidden`); corrigido no ui/tabs.tsx base com `data-[state=inactive]:hidden`. Diagnóstico feito inspecionando o DOM ao vivo no Chrome |
+
+Lições novas do protocolo: (5) classe `display` em TabsContent derrota o `hidden` do Radix —
+sempre manter `data-[state=inactive]:hidden` no componente base; (6) quando o código parecer
+certo e a tela discordar, inspecionar o DOM real (computed styles) antes de reescrever CSS;
+(7) vídeo de bug → extrair frames com ffmpeg e analisar.
+
+~~Foto nos modais de criação~~ ✅ feito (f6fe45c, confirmado em produção 12/06).
+
+~~Layout mobile dos cards Figurinos/Objetos~~ ✅ feito (5a280fc, verificado no
+código em 12/06: cards em 2 linhas com truncate, padrão Scouting).
+
+**ZERO pendências de código.** Sprint 4 + polimento 100% concluídos.
+Restam apenas os preparativos manuais da entrega (convites/logins das equipes,
+VITE_EDGE_SHARED_SECRET no .env, mini-guia de teste) e a fase 4E com as equipes.
+
+---
+
 ## 🚀 COMANDO PARA INICIAR A PRÓXIMA TASK (depois dos testes)
 
 Abrir nova task no Claude Cowork (projeto Cineflow/Glauber) e colar:
