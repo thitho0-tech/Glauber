@@ -59,7 +59,7 @@ export default function CallSheets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_do_dia")
-        .select("id, titulo, tipo, data, versao, publicada_em, token_publico, aprovacao_status, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
+        .select("id, titulo, tipo, data, versao, publicada_em, atualizada_em, token_publico, aprovacao_status, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
         .eq("projeto_id", projetoId!)
         .order("data", { ascending: false, nullsFirst: false })
         .order("criado_em", { ascending: false });
@@ -220,13 +220,18 @@ export default function CallSheets() {
                         <p className="text-xs text-muted-foreground">Locacao: {od.dia.locacao.nome}</p>
                       )}
                       <div className="flex items-center justify-between border-t pt-3">
-                        <span className="text-xs">
-                          {od.publicada_em ? (
-                            <span className="text-emerald-600">Publicada v{od.versao} · {formatDateTime(od.publicada_em)}</span>
-                          ) : (
-                            <span className="text-amber-600">Rascunho v{od.versao}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs">
+                            {od.publicada_em ? (
+                              <span className="text-emerald-600">Publicada v{od.versao} · {formatDateTime(od.publicada_em)}</span>
+                            ) : (
+                              <span className="text-amber-600">Rascunho v{od.versao}</span>
+                            )}
+                          </span>
+                          {od.atualizada_em && (
+                            <Badge variant="outline" className="text-xs border-amber-400 text-amber-700 bg-amber-50">ATUALIZADA</Badge>
                           )}
-                        </span>
+                        </div>
                         {publicLink && (
                           <Button
                             size="sm"

@@ -14,7 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Send, Save, Plus, Trash2, ExternalLink,
   MapPin, Utensils, ShieldAlert, Sparkles, Car, FileText,
-  Printer, Clock, Sun, Bell, Users, Radio, CheckCircle2, XCircle,
+  Printer, Clock, Sun, Bell, Users, Radio, CheckCircle2, XCircle, RefreshCw,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDate, formatDateTime } from "@/lib/utils";
@@ -304,6 +304,24 @@ export default function CallSheetEditor() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const republicar = useMutation({
+    mutationFn: async () => {
+      if (!od) throw new Error("OD não carregada");
+      const { error: eSalvar } = await supabase.from("ordens_do_dia")
+        .update({ dados_json: dados }).eq("id", od.id);
+      if (eSalvar) throw eSalvar;
+      const { error } = await supabase.from("ordens_do_dia")
+        .update({ versao: (od.versao ?? 1) + 1, atualizada_em: new Date().toISOString() })
+        .eq("id", od.id);
+      if (error) throw error;
+      await supabase.rpc("notificar_od_atualizada", {
+        p_od_id: od.id, p_projeto_id: od.projeto_id, p_titulo_od: od.titulo ?? "Sem título",
+      });
+    },
+    onSuccess: () => { toast.success("OD atualizada! Equipe notificada."); qc.invalidateQueries({ queryKey: ["od-edit", od?.id] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const publicar = useMutation({
     mutationFn: async () => {
       if (!od) throw new Error("Salve antes de publicar");
@@ -394,6 +412,11 @@ export default function CallSheetEditor() {
                 Publicada v{od.versao} em {formatDateTime(od.publicada_em)}
               </p>
             )}
+            {od.atualizada_em && (
+              <p className="mt-0.5 text-xs font-semibold text-amber-700">
+                ★ ORDEM DO DIA ATUALIZADA · {formatDateTime(od.atualizada_em)}
+              </p>
+            )}
           </div>
           <div className="no-print flex flex-wrap gap-2">
             {can("od", "aprovar") && od.aprovacao_status === "pendente" && (
@@ -407,6 +430,12 @@ export default function CallSheetEditor() {
                   <XCircle className="h-4 w-4" /> Rejeitar
                 </Button>
               </>
+            )}
+            {od.publicada_em && can("od", "editar") && (
+              <Button variant="outline" className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                onClick={() => republicar.mutate()} disabled={republicar.isPending}>
+                <RefreshCw className="h-4 w-4" /> {republicar.isPending ? "Atualizando..." : "Salvar e republicar"}
+              </Button>
             )}
             <Button variant="outline" onClick={() => salvar.mutate()} disabled={salvar.isPending}>
               <Save className="h-4 w-4" /> Salvar

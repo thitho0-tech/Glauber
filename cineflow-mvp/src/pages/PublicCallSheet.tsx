@@ -43,6 +43,12 @@ export default function PublicCallSheet() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Clapperboard className="h-4 w-4" /> Glauber · Ordem do Dia
         </div>
+        {data.atualizada_em && (
+          <div className="rounded-md border-2 border-amber-400 bg-amber-50 px-4 py-3 text-center">
+            <p className="text-sm font-bold text-amber-800">★ ORDEM DO DIA ATUALIZADA</p>
+            <p className="text-xs text-amber-700">Versão {data.versao} · atualizada em {formatDate(data.atualizada_em)}</p>
+          </div>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Ordem do Dia</CardTitle>
