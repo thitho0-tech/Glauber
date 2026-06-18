@@ -3,9 +3,10 @@ import { useAuth } from "@/hooks/useAuth";
 import { Loading } from "@/components/ui/loading";
 
 export function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading, recoveryMode } = useAuth();
   const location = useLocation();
   if (loading) return <Loading className="min-h-screen" />;
   if (!user) return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+  if (recoveryMode) return <Navigate to="/update-password" replace />;
   return <>{children}</>;
 }
