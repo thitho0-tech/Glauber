@@ -183,6 +183,8 @@ export default function FigurinoArte() {
   const [propostaFiles, setPropostaFiles] = useState<File[]>([]);
   const [addFotosLocId, setAddFotosLocId] = useState<string | null>(null);
   const [addFotosFiles, setAddFotosFiles] = useState<File[]>([]);
+  const [avaliarFig, setAvaliarFig] = useState<Figurino | null>(null);
+  const [avaliarArte, setAvaliarArte] = useState<ArteObj | null>(null);
   const [avaliarLoc, setAvaliarLoc] = useState<LocacaoScouting | null>(null);
   const [avaliarComentario, setAvaliarComentario] = useState("");
   const [efetivando, setEfetivando] = useState<LocacaoScouting | null>(null);
@@ -379,34 +381,44 @@ export default function FigurinoArte() {
   });
 
   const aprovarItemFig = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "aprovado" | "nao_aprovado" }) => {
+    mutationFn: async ({ id, status, comentario }: { id: string; status: "aprovado" | "nao_aprovado"; comentario: string }) => {
       const { data: u } = await supabase.auth.getUser();
       const updates: Record<string, any> = {
         aprovacao_status: status,
         aprovado_por: u.user?.id,
         aprovado_em: new Date().toISOString(),
+        aprovacao_comentarios: comentario || null,
       };
       if (status === "aprovado") updates.status = "pendente";
       const { error } = await supabase.from("figurinos").update(updates).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Aprovação salva"); qc.invalidateQueries({ queryKey: ["figurinos", projetoId] }); },
+    onSuccess: () => {
+      toast.success("Aprovação salva");
+      setAvaliarFig(null);
+      qc.invalidateQueries({ queryKey: ["figurinos", projetoId] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
   const aprovarItemArte = useMutation({
-    mutationFn: async ({ id, status }: { id: string; status: "aprovado" | "nao_aprovado" }) => {
+    mutationFn: async ({ id, status, comentario }: { id: string; status: "aprovado" | "nao_aprovado"; comentario: string }) => {
       const { data: u } = await supabase.auth.getUser();
       const updates: Record<string, any> = {
         aprovacao_status: status,
         aprovado_por: u.user?.id,
         aprovado_em: new Date().toISOString(),
+        aprovacao_comentarios: comentario || null,
       };
       if (status === "aprovado") updates.status = "pendente";
       const { error } = await supabase.from("arte_objetos").update(updates).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Aprovação salva"); qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] }); },
+    onSuccess: () => {
+      toast.success("Aprovação salva");
+      setAvaliarArte(null);
+      qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -692,15 +704,9 @@ export default function FigurinoArte() {
                   </div>
                   {canAprovarArte && (
                     <div className="flex gap-2 pt-1">
-                      <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                        disabled={f.aprovacao_status === "aprovado" || aprovarItemFig.isPending}
-                        onClick={() => aprovarItemFig.mutate({ id: f.id, status: "aprovado" })}>
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs border-destructive text-destructive hover:bg-destructive/10"
-                        disabled={f.aprovacao_status === "nao_aprovado" || aprovarItemFig.isPending}
-                        onClick={() => aprovarItemFig.mutate({ id: f.id, status: "nao_aprovado" })}>
-                        <XCircle className="h-3 w-3 mr-1" /> Não aprovar
+                      <Button size="sm" variant="outline" className="h-7 text-xs"
+                        onClick={() => { setAvaliarFig(f); setAvaliarComentario(f.aprovacao_comentarios ?? ""); }}>
+                        Avaliar
                       </Button>
                     </div>
                   )}
@@ -774,15 +780,9 @@ export default function FigurinoArte() {
                   </div>
                   {canAprovarArte && (
                     <div className="flex gap-2 pt-1">
-                      <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50"
-                        disabled={a.aprovacao_status === "aprovado" || aprovarItemArte.isPending}
-                        onClick={() => aprovarItemArte.mutate({ id: a.id, status: "aprovado" })}>
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
-                      </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs border-destructive text-destructive hover:bg-destructive/10"
-                        disabled={a.aprovacao_status === "nao_aprovado" || aprovarItemArte.isPending}
-                        onClick={() => aprovarItemArte.mutate({ id: a.id, status: "nao_aprovado" })}>
-                        <XCircle className="h-3 w-3 mr-1" /> Não aprovar
+                      <Button size="sm" variant="outline" className="h-7 text-xs"
+                        onClick={() => { setAvaliarArte(a); setAvaliarComentario(a.aprovacao_comentarios ?? ""); }}>
+                        Avaliar
                       </Button>
                     </div>
                   )}
@@ -1180,6 +1180,58 @@ export default function FigurinoArte() {
             <Button variant="outline" onClick={() => { setAddFotosLocId(null); setAddFotosFiles([]); }}>Cancelar</Button>
             <Button onClick={() => appendFotos.mutate()} disabled={appendFotos.isPending || addFotosFiles.length === 0}>
               {appendFotos.isPending ? "Enviando..." : "Adicionar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Avaliar figurino ──────────────────────────── */}
+      <Dialog open={!!avaliarFig} onOpenChange={(o) => { if (!o) setAvaliarFig(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Avaliar: {avaliarFig?.descricao}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Comentário (opcional)</Label>
+              <Textarea rows={3} autoComplete="off" value={avaliarComentario} onChange={(e) => setAvaliarComentario(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAvaliarFig(null)}>Cancelar</Button>
+            <Button variant="destructive"
+              onClick={() => avaliarFig && aprovarItemFig.mutate({ id: avaliarFig.id, status: "nao_aprovado", comentario: avaliarComentario })}
+              disabled={aprovarItemFig.isPending}>
+              <XCircle className="h-4 w-4 mr-1" /> Rejeitar
+            </Button>
+            <Button
+              onClick={() => avaliarFig && aprovarItemFig.mutate({ id: avaliarFig.id, status: "aprovado", comentario: avaliarComentario })}
+              disabled={aprovarItemFig.isPending}>
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Aprovar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Dialog: Avaliar objeto de arte ────────────────────── */}
+      <Dialog open={!!avaliarArte} onOpenChange={(o) => { if (!o) setAvaliarArte(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Avaliar: {avaliarArte?.descricao}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5">
+              <Label>Comentário (opcional)</Label>
+              <Textarea rows={3} autoComplete="off" value={avaliarComentario} onChange={(e) => setAvaliarComentario(e.target.value)} />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setAvaliarArte(null)}>Cancelar</Button>
+            <Button variant="destructive"
+              onClick={() => avaliarArte && aprovarItemArte.mutate({ id: avaliarArte.id, status: "nao_aprovado", comentario: avaliarComentario })}
+              disabled={aprovarItemArte.isPending}>
+              <XCircle className="h-4 w-4 mr-1" /> Rejeitar
+            </Button>
+            <Button
+              onClick={() => avaliarArte && aprovarItemArte.mutate({ id: avaliarArte.id, status: "aprovado", comentario: avaliarComentario })}
+              disabled={aprovarItemArte.isPending}>
+              <CheckCircle2 className="h-4 w-4 mr-1" /> Aprovar
             </Button>
           </DialogFooter>
         </DialogContent>

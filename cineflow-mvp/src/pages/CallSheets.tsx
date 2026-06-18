@@ -62,6 +62,7 @@ export default function CallSheets() {
         .from("ordens_do_dia")
         .select("id, titulo, tipo, data, versao, publicada_em, atualizada_em, token_publico, aprovacao_status, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
         .eq("projeto_id", projetoId!)
+        .is("deleted_at", null)
         .order("data", { ascending: false, nullsFirst: false })
         .order("criado_em", { ascending: false });
       if (error) throw error;
