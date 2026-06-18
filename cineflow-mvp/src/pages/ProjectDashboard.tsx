@@ -3,6 +3,8 @@ import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useProjectFunction } from "@/hooks/useProjectFunction";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -256,6 +258,8 @@ export default function ProjectDashboard() {
   const { id: projetoId } = useParams<{ id: string }>();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { isSuperUser } = usePermissions(projetoId);
+  const { funcao } = useProjectFunction(projetoId);
 
   const [openNovaDM, setOpenNovaDM] = useState(false);
   const [privadoTarget, setPrivadoTarget] = useState<string | null>(null);
@@ -266,7 +270,7 @@ export default function ProjectDashboard() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agenda_eventos")
-        .select("id, tipo, titulo, data_inicio, local, status")
+        .select("id, tipo, titulo, data_inicio, local, status, departamento")
         .eq("projeto_id", projetoId!)
         .is("deleted_at", null)
         .gte("data_inicio", new Date().toISOString())
@@ -304,6 +308,37 @@ export default function ProjectDashboard() {
         .ilike("pessoa.email", user!.email!)
         .maybeSingle();
       return (data as any)?.pessoa ?? null;
+    },
+  });
+
+  // Current user's projeto_pessoas.id — needed to look up event participations
+  const { data: myPpId } = useQuery({
+    queryKey: ["my-pp-id", projetoId, user?.email],
+    enabled: !!projetoId && !!user?.email && !isSuperUser,
+    queryFn: async () => {
+      const { data: pps } = await supabase
+        .from("projeto_pessoas")
+        .select("id, pessoa:pessoas!inner(email)")
+        .eq("projeto_id", projetoId!)
+        .is("deleted_at", null);
+      const meu = ((pps ?? []) as any[]).find(
+        (p: any) => p.pessoa?.email?.toLowerCase() === user!.email!.toLowerCase()
+      );
+      return (meu?.id ?? null) as string | null;
+    },
+  });
+
+  // Events the current user is explicitly listed as participant
+  const { data: minhasParticipacoes } = useQuery({
+    queryKey: ["minhas-participacoes-mural", myPpId],
+    enabled: !!myPpId && !isSuperUser,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("agenda_participantes")
+        .select("evento_id")
+        .eq("projeto_pessoa_id", myPpId!);
+      if (error) throw error;
+      return new Set((data ?? []).map((r: any) => r.evento_id as string));
     },
   });
 
@@ -372,6 +407,15 @@ export default function ProjectDashboard() {
 
   if (lEventos || lCanais) return <Loading />;
 
+  const eventosFiltrados = isSuperUser
+    ? (proximosEventos ?? [])
+    : (proximosEventos ?? []).filter((ev: any) =>
+        ev.tipo === "ordem_do_dia" ||
+        ev.departamento == null ||
+        ev.departamento === (funcao?.departamento ?? null) ||
+        (minhasParticipacoes?.has(ev.id) ?? false)
+      );
+
   const canaisGeral   = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "geral");
   const canaisDept    = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "departamento");
   const canaisPrivado = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "privado");
@@ -395,7 +439,7 @@ export default function ProjectDashboard() {
             </Button>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto space-y-2 pb-4">
-            {(proximosEventos ?? []).length === 0 ? (
+            {eventosFiltrados.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center gap-2 text-muted-foreground">
                 <CalendarDays className="h-8 w-8 opacity-30" />
                 <p className="text-sm">Nenhum evento próximo.</p>
@@ -404,7 +448,7 @@ export default function ProjectDashboard() {
                 </Button>
               </div>
             ) : (
-              (proximosEventos ?? []).map((ev: any) => {
+              eventosFiltrados.map((ev: any) => {
                 const Icon = STATUS_ICON[ev.status] ?? CalendarClock;
                 return (
                   <div key={ev.id} className="rounded-lg border p-3 space-y-1 hover:bg-muted/40 transition-colors">
