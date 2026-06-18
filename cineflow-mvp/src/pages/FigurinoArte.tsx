@@ -62,8 +62,11 @@ type LocacaoScouting = {
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
-const STATUS_FIG = ["previsto", "adquirido", "retirado", "devolvido"];
-const STATUS_ARTE = ["previsto", "adquirido", "em_set", "devolvido"];
+const STATUS_AQUISICAO = [
+  { value: "pendente",  label: "Pendente" },
+  { value: "adquirido", label: "Adquirido" },
+  { value: "devolvido", label: "Devolvido" },
+];
 const FONTES = ["compra", "aluguel", "emprestimo", "producao"];
 const ORIGENS_ARTE = [
   { value: "acervo", label: "Acervo" },
@@ -158,8 +161,8 @@ export default function FigurinoArte() {
   // Figurino / Arte state
   const [openFig, setOpenFig] = useState(false);
   const [openArte, setOpenArte] = useState(false);
-  const [novoFig, setNovoFig] = useState<Partial<Figurino>>({ status: "previsto", fonte: "compra" });
-  const [novoArte, setNovoArte] = useState<Partial<ArteObj>>({ status: "previsto", fonte: "compra" });
+  const [novoFig, setNovoFig] = useState<Partial<Figurino>>({ fonte: "compra" });
+  const [novoArte, setNovoArte] = useState<Partial<ArteObj>>({ fonte: "compra" });
   const [editFig, setEditFig] = useState<Figurino | null>(null);
   const [editArte, setEditArte] = useState<ArteObj | null>(null);
   const [novoFigFile, setNovoFigFile] = useState<File | null>(null);
@@ -281,10 +284,8 @@ export default function FigurinoArte() {
         projeto_id: projetoId!,
         descricao: novoFig.descricao,
         tamanho: novoFig.tamanho || null,
-        cor: novoFig.cor || null,
         fonte: novoFig.fonte ?? "compra",
         valor_estimado: novoFig.valor_estimado ? Number(novoFig.valor_estimado) : null,
-        status: novoFig.status ?? "previsto",
         foto_url,
       });
       if (error) throw error;
@@ -292,7 +293,7 @@ export default function FigurinoArte() {
     onSuccess: () => {
       toast.success("Figurino adicionado");
       setOpenFig(false);
-      setNovoFig({ status: "previsto", fonte: "compra" });
+      setNovoFig({ fonte: "compra" });
       setNovoFigFile(null);
       setNovoFigPreview(null);
       qc.invalidateQueries({ queryKey: ["figurinos", projetoId] });
@@ -321,7 +322,6 @@ export default function FigurinoArte() {
         categoria: novoArte.categoria || null,
         fonte: novoArte.fonte ?? "compra",
         valor_estimado: novoArte.valor_estimado ? Number(novoArte.valor_estimado) : null,
-        status: novoArte.status ?? "previsto",
         foto_url,
       });
       if (error) throw error;
@@ -329,7 +329,7 @@ export default function FigurinoArte() {
     onSuccess: () => {
       toast.success("Objeto de arte adicionado");
       setOpenArte(false);
-      setNovoArte({ status: "previsto", fonte: "compra" });
+      setNovoArte({ fonte: "compra" });
       setNovoArteFile(null);
       setNovoArtePreview(null);
       qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
@@ -342,9 +342,7 @@ export default function FigurinoArte() {
       const { error } = await supabase.from("figurinos").update({
         descricao: f.descricao,
         tamanho: f.tamanho || null,
-        cor: f.cor || null,
         fonte: f.fonte,
-        status: f.status,
         valor_estimado: f.valor_estimado ? Number(f.valor_estimado) : null,
         foto_url: f.foto_url || null,
       }).eq("id", f.id);
@@ -364,7 +362,6 @@ export default function FigurinoArte() {
         descricao: a.descricao,
         categoria: a.categoria || null,
         fonte: a.fonte,
-        status: a.status,
         valor_estimado: a.valor_estimado ? Number(a.valor_estimado) : null,
         origem: a.origem || null,
         origem_detalhe: a.origem_detalhe || null,
@@ -384,11 +381,13 @@ export default function FigurinoArte() {
   const aprovarItemFig = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "aprovado" | "nao_aprovado" }) => {
       const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("figurinos").update({
+      const updates: Record<string, any> = {
         aprovacao_status: status,
         aprovado_por: u.user?.id,
         aprovado_em: new Date().toISOString(),
-      }).eq("id", id);
+      };
+      if (status === "aprovado") updates.status = "pendente";
+      const { error } = await supabase.from("figurinos").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Aprovação salva"); qc.invalidateQueries({ queryKey: ["figurinos", projetoId] }); },
@@ -398,11 +397,13 @@ export default function FigurinoArte() {
   const aprovarItemArte = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: "aprovado" | "nao_aprovado" }) => {
       const { data: u } = await supabase.auth.getUser();
-      const { error } = await supabase.from("arte_objetos").update({
+      const updates: Record<string, any> = {
         aprovacao_status: status,
         aprovado_por: u.user?.id,
         aprovado_em: new Date().toISOString(),
-      }).eq("id", id);
+      };
+      if (status === "aprovado") updates.status = "pendente";
+      const { error } = await supabase.from("arte_objetos").update(updates).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Aprovação salva"); qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] }); },
@@ -432,6 +433,24 @@ export default function FigurinoArte() {
       setConfirmDelArte(null);
       qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateStatusFig = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("figurinos").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["figurinos", projetoId] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const updateStatusArte = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("arte_objetos").update({ status }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] }),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -632,7 +651,24 @@ export default function FigurinoArte() {
                           {ARTE_APROV_LABEL[f.aprovacao_status] ?? f.aprovacao_status}
                         </Badge>
                       )}
-                      <Badge variant="outline" className="text-xs">{f.status}</Badge>
+                      {f.aprovacao_status !== "aprovado" ? (
+                        <Badge variant="secondary" className="text-xs">Sugestão</Badge>
+                      ) : can("figurino_arte", "editar") ? (
+                        <Select value={f.status} onValueChange={(v) => updateStatusFig.mutate({ id: f.id, status: v })}>
+                          <SelectTrigger className="h-7 w-[120px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_AQUISICAO.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          {STATUS_AQUISICAO.find((s) => s.value === f.status)?.label ?? f.status}
+                        </Badge>
+                      )}
                       {canPropor && (
                         <Button size="icon" variant="ghost" onClick={() => setEditFig(f)}>
                           <Pencil className="h-4 w-4" />
@@ -650,7 +686,7 @@ export default function FigurinoArte() {
                       <FotoThumbnail path={f.foto_url} onView={setFotoViewer} />
                     )}
                     <p className="text-xs text-muted-foreground truncate">
-                      {[f.tamanho, f.cor, f.fonte].filter(Boolean).join(" · ")}
+                      {[f.tamanho, f.fonte].filter(Boolean).join(" · ")}
                       {f.valor_estimado ? ` · ${formatBRL(f.valor_estimado)}` : ""}
                     </p>
                   </div>
@@ -696,7 +732,24 @@ export default function FigurinoArte() {
                           {ARTE_APROV_LABEL[a.aprovacao_status] ?? a.aprovacao_status}
                         </Badge>
                       )}
-                      <Badge variant="outline" className="text-xs">{a.status}</Badge>
+                      {a.aprovacao_status !== "aprovado" ? (
+                        <Badge variant="secondary" className="text-xs">Sugestão</Badge>
+                      ) : can("figurino_arte", "editar") ? (
+                        <Select value={a.status} onValueChange={(v) => updateStatusArte.mutate({ id: a.id, status: v })}>
+                          <SelectTrigger className="h-7 w-[120px] text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {STATUS_AQUISICAO.map((s) => (
+                              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          {STATUS_AQUISICAO.find((s) => s.value === a.status)?.label ?? a.status}
+                        </Badge>
+                      )}
                       {canPropor && (
                         <Button size="icon" variant="ghost" onClick={() => setEditArte(a)}>
                           <Pencil className="h-4 w-4" />
@@ -826,29 +879,16 @@ export default function FigurinoArte() {
               <Label htmlFor="fdesc">Descrição</Label>
               <Input id="fdesc" autoComplete="off" value={novoFig.descricao ?? ""} onChange={(e) => setNovoFig({ ...novoFig, descricao: e.target.value })} />
             </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="ftam">Tamanho</Label>
-                <Input id="ftam" autoComplete="off" value={novoFig.tamanho ?? ""} onChange={(e) => setNovoFig({ ...novoFig, tamanho: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="fcor">Cor</Label>
-                <Input id="fcor" autoComplete="off" value={novoFig.cor ?? ""} onChange={(e) => setNovoFig({ ...novoFig, cor: e.target.value })} />
-              </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ftam">Tamanho</Label>
+              <Input id="ftam" autoComplete="off" value={novoFig.tamanho ?? ""} onChange={(e) => setNovoFig({ ...novoFig, tamanho: e.target.value })} />
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Fonte</Label>
                 <select value={novoFig.fonte} onChange={(e) => setNovoFig({ ...novoFig, fonte: e.target.value })}
                   className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                   {FONTES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <select value={novoFig.status} onChange={(e) => setNovoFig({ ...novoFig, status: e.target.value })}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-                  {STATUS_FIG.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -896,19 +936,12 @@ export default function FigurinoArte() {
               <Label htmlFor="acat">Categoria</Label>
               <Input id="acat" autoComplete="off" placeholder="setdec, props, especiais..." value={novoArte.categoria ?? ""} onChange={(e) => setNovoArte({ ...novoArte, categoria: e.target.value })} />
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Fonte</Label>
                 <select value={novoArte.fonte} onChange={(e) => setNovoArte({ ...novoArte, fonte: e.target.value })}
                   className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                   {FONTES.map((s) => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Status</Label>
-                <select value={novoArte.status} onChange={(e) => setNovoArte({ ...novoArte, status: e.target.value })}
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-                  {STATUS_ARTE.map((s) => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="space-y-1.5">
@@ -953,29 +986,16 @@ export default function FigurinoArte() {
                 <Label>Descrição</Label>
                 <Input autoComplete="off" value={editFig.descricao} onChange={(e) => setEditFig({ ...editFig, descricao: e.target.value })} />
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Tamanho</Label>
-                  <Input autoComplete="off" value={editFig.tamanho ?? ""} onChange={(e) => setEditFig({ ...editFig, tamanho: e.target.value })} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Cor</Label>
-                  <Input autoComplete="off" value={editFig.cor ?? ""} onChange={(e) => setEditFig({ ...editFig, cor: e.target.value })} />
-                </div>
+              <div className="space-y-1.5">
+                <Label>Tamanho</Label>
+                <Input autoComplete="off" value={editFig.tamanho ?? ""} onChange={(e) => setEditFig({ ...editFig, tamanho: e.target.value })} />
               </div>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Fonte</Label>
                   <select value={editFig.fonte} onChange={(e) => setEditFig({ ...editFig, fonte: e.target.value })}
                     className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                     {FONTES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <select value={editFig.status} onChange={(e) => setEditFig({ ...editFig, status: e.target.value })}
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-                    {STATUS_FIG.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">
@@ -1027,19 +1047,12 @@ export default function FigurinoArte() {
                 <Label>Categoria</Label>
                 <Input autoComplete="off" placeholder="setdec, props, especiais..." value={editArte.categoria ?? ""} onChange={(e) => setEditArte({ ...editArte, categoria: e.target.value })} />
               </div>
-              <div className="grid gap-3 md:grid-cols-3">
+              <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Fonte</Label>
                   <select value={editArte.fonte} onChange={(e) => setEditArte({ ...editArte, fonte: e.target.value })}
                     className="h-10 w-full rounded-md border bg-background px-3 text-sm">
                     {FONTES.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label>Status</Label>
-                  <select value={editArte.status} onChange={(e) => setEditArte({ ...editArte, status: e.target.value })}
-                    className="h-10 w-full rounded-md border bg-background px-3 text-sm">
-                    {STATUS_ARTE.map((s) => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
                 <div className="space-y-1.5">

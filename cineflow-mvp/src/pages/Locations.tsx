@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, MapPin, ChevronLeft, Trash2, ExternalLink, Camera, Lock } from "lucide-react";
 import { useOrgs } from "@/hooks/useOrg";
 import { useAuth } from "@/hooks/useAuth";
@@ -104,6 +106,15 @@ export default function Locations() {
       setMapsUrl("");
       setLatLng(null);
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const atualizarContatoStatus = useMutation({
+    mutationFn: async ({ lid, status }: { lid: string; status: string }) => {
+      const { error } = await supabase.from("locacoes").update({ contato_status: status }).eq("id", lid);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["locacoes", id] }),
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -222,6 +233,28 @@ export default function Locations() {
                       {(l.fotos_urls as string[]).map((path: string, i: number) => (
                         <FotoThumb key={i} path={path} onView={setFotoViewer} />
                       ))}
+                    </div>
+                  )}
+                  {l.aprovacao_status === "aprovada" && (
+                    <div className="pt-1">
+                      {canEdit ? (
+                        <Select
+                          value={l.contato_status ?? "contato_pendente"}
+                          onValueChange={(v) => atualizarContatoStatus.mutate({ lid: l.id, status: v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="contato_pendente">Contato pendente</SelectItem>
+                            <SelectItem value="contrato_ok">Contrato OK</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Badge variant={l.contato_status === "contrato_ok" ? "default" : "outline"} className="text-xs">
+                          {l.contato_status === "contrato_ok" ? "Contrato OK" : "Contato pendente"}
+                        </Badge>
+                      )}
                     </div>
                   )}
                   {(mapsHref || wazeHref) && (
