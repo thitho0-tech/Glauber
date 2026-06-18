@@ -14,10 +14,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ChevronLeft, Send, Save, Plus, Trash2, ExternalLink,
   MapPin, Utensils, ShieldAlert, Sparkles, Car, FileText,
-  Printer, Clock, Sun, Bell, Users, Radio,
+  Printer, Clock, Sun, Bell, Users, Radio, CheckCircle2, XCircle,
 } from "lucide-react";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Contato { nome: string; funcao: string; telefone: string; }
 interface HoraHora { inicio: string; fim: string; atividade: string; }
@@ -105,11 +107,24 @@ const TIPO_LABEL: Record<string, string> = {
   filmagem: "Filmagem", ensaio: "Ensaio", reuniao: "Reunião",
   pesquisa: "Pesquisa", outro: "Outro",
 };
+const APROVACAO_OD_LABEL: Record<string, string> = {
+  pendente: "Aguardando aprovação",
+  aprovada: "Aprovada",
+  rejeitada: "Rejeitada",
+};
+const APROVACAO_OD_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pendente: "secondary",
+  aprovada: "default",
+  rejeitada: "destructive",
+};
 
 export default function CallSheetEditor() {
   const { id: projetoId, odId, diaId } = useParams<{ id: string; odId?: string; diaId?: string }>();
   const qc = useQueryClient();
+  const { can } = usePermissions(projetoId);
   const [dados, setDados] = useState<ODData>({ refeicoes: [{ tipo: "Almoço", horario: "13:00" }] });
+  const [showRejeitarDialog, setShowRejeitarDialog] = useState(false);
+  const [rejeitarComment, setRejeitarComment] = useState("");
 
   const { data: od, isLoading: lOd } = useQuery({
     queryKey: ["od-edit", odId ?? diaId],
@@ -242,6 +257,43 @@ export default function CallSheetEditor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["od-cenas", od?.id] }),
   });
 
+  const aprovarOD = useMutation({
+    mutationFn: async () => {
+      if (!od) throw new Error("OD não carregada");
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("ordens_do_dia").update({
+        aprovacao_status: "aprovada",
+        aprovado_por: u.user?.id,
+        aprovado_em: new Date().toISOString(),
+        aprovacao_comentarios: null,
+      }).eq("id", od.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("OD aprovada!"); qc.invalidateQueries({ queryKey: ["od-edit", od?.id] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const rejeitarOD = useMutation({
+    mutationFn: async (comentario: string) => {
+      if (!od) throw new Error("OD não carregada");
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("ordens_do_dia").update({
+        aprovacao_status: "rejeitada",
+        aprovado_por: u.user?.id,
+        aprovado_em: new Date().toISOString(),
+        aprovacao_comentarios: comentario.trim() || null,
+      }).eq("id", od.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("OD rejeitada.");
+      setShowRejeitarDialog(false);
+      setRejeitarComment("");
+      qc.invalidateQueries({ queryKey: ["od-edit", od?.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const salvar = useMutation({
     mutationFn: async () => {
       if (!od) throw new Error("OD não carregada");
@@ -326,6 +378,11 @@ export default function CallSheetEditor() {
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-bold">{od.titulo ?? "Ordem do Dia"}</h1>
               <Badge variant="outline">{TIPO_LABEL[od.tipo ?? "filmagem"]}</Badge>
+              {od.aprovacao_status && (
+                <Badge variant={APROVACAO_OD_VARIANT[od.aprovacao_status] ?? "outline"}>
+                  {APROVACAO_OD_LABEL[od.aprovacao_status] ?? od.aprovacao_status}
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground">
               {dataExibicao ? formatDate(dataExibicao) : "Sem data"}
@@ -338,14 +395,30 @@ export default function CallSheetEditor() {
               </p>
             )}
           </div>
-          <div className="no-print flex gap-2">
+          <div className="no-print flex flex-wrap gap-2">
+            {can("od", "aprovar") && od.aprovacao_status === "pendente" && (
+              <>
+                <Button variant="outline" className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => aprovarOD.mutate()} disabled={aprovarOD.isPending}>
+                  <CheckCircle2 className="h-4 w-4" /> Aprovar
+                </Button>
+                <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10"
+                  onClick={() => setShowRejeitarDialog(true)}>
+                  <XCircle className="h-4 w-4" /> Rejeitar
+                </Button>
+              </>
+            )}
             <Button variant="outline" onClick={() => salvar.mutate()} disabled={salvar.isPending}>
               <Save className="h-4 w-4" /> Salvar
             </Button>
             <Button variant="outline" onClick={() => window.print()} title="Exportar como PDF">
               <Printer className="h-4 w-4" /> PDF
             </Button>
-            <Button onClick={() => publicar.mutate()} disabled={publicar.isPending}>
+            <Button
+              onClick={() => publicar.mutate()}
+              disabled={publicar.isPending || od.aprovacao_status !== "aprovada"}
+              title={od.aprovacao_status !== "aprovada" ? "Requer aprovação da Direção" : undefined}
+            >
               <Send className="h-4 w-4" /> Publicar
             </Button>
           </div>
@@ -951,6 +1024,32 @@ export default function CallSheetEditor() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* ── Dialog: Rejeitar OD ──────────────────────────────── */}
+      <Dialog open={showRejeitarDialog} onOpenChange={(o) => { if (!o) { setShowRejeitarDialog(false); setRejeitarComment(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Rejeitar Ordem do Dia</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <p className="text-sm text-muted-foreground">Informe o motivo da rejeição (opcional). O criador da OD será notificado.</p>
+            <div className="space-y-1.5">
+              <Label htmlFor="rejeitar_comment">Comentário</Label>
+              <Textarea
+                id="rejeitar_comment"
+                rows={3}
+                value={rejeitarComment}
+                onChange={(e) => setRejeitarComment(e.target.value)}
+                placeholder="Faltam informações sobre locação, chamada da figuração..."
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => { setShowRejeitarDialog(false); setRejeitarComment(""); }}>Cancelar</Button>
+            <Button variant="destructive" onClick={() => rejeitarOD.mutate(rejeitarComment)} disabled={rejeitarOD.isPending}>
+              <XCircle className="h-4 w-4 mr-1" /> {rejeitarOD.isPending ? "Rejeitando..." : "Rejeitar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

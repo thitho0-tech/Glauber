@@ -32,6 +32,17 @@ const TIPO_VARIANT: Record<string, "default" | "outline" | "secondary"> = {
   outro: "outline",
 };
 
+const APROVACAO_OD_LABEL: Record<string, string> = {
+  pendente: "Aguardando aprovação",
+  aprovada: "Aprovada",
+  rejeitada: "Rejeitada",
+};
+const APROVACAO_OD_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  pendente: "secondary",
+  aprovada: "default",
+  rejeitada: "destructive",
+};
+
 export default function CallSheets() {
   const { id: projetoId } = useParams<{ id: string }>();
   const { canEditSection } = useProjectDeptAccess(projetoId);
@@ -48,7 +59,7 @@ export default function CallSheets() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_do_dia")
-        .select("id, titulo, tipo, data, versao, publicada_em, token_publico, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
+        .select("id, titulo, tipo, data, versao, publicada_em, token_publico, aprovacao_status, dia:dias_filmagem(data, chamada_geral, locacao:locacoes(nome))")
         .eq("projeto_id", projetoId!)
         .order("data", { ascending: false, nullsFirst: false })
         .order("criado_em", { ascending: false });
@@ -189,9 +200,16 @@ export default function CallSheets() {
                 <Link to={`/projetos/${projetoId}/ordens-do-dia/od/${od.id}`}>
                   <Card className="transition-shadow hover:shadow-md">
                     <CardContent className="space-y-2 p-5">
-                      <div className="flex items-center justify-between">
-                        <p className="text-lg font-semibold">{od.titulo ?? "Sem titulo"}</p>
-                        <Badge variant={TIPO_VARIANT[tipoOd]}>{TIPO_LABEL[tipoOd] ?? tipoOd}</Badge>
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-lg font-semibold truncate">{od.titulo ?? "Sem titulo"}</p>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {od.aprovacao_status && (
+                            <Badge variant={APROVACAO_OD_VARIANT[od.aprovacao_status] ?? "outline"} className="text-xs">
+                              {APROVACAO_OD_LABEL[od.aprovacao_status] ?? od.aprovacao_status}
+                            </Badge>
+                          )}
+                          <Badge variant={TIPO_VARIANT[tipoOd]}>{TIPO_LABEL[tipoOd] ?? tipoOd}</Badge>
+                        </div>
                       </div>
                       {dataOd && (
                         <p className="flex items-center gap-1 text-sm text-muted-foreground">

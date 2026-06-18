@@ -16,6 +16,7 @@ import { ChevronLeft, Plus, Shirt, Boxes, Trash2, Pencil, Camera, MapPin, CheckC
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 import { useProjectDeptAccess } from "@/hooks/useProjectDeptAccess";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrgs } from "@/hooks/useOrg";
 
@@ -70,16 +71,20 @@ const ORIGENS_ARTE = [
   { value: "compra", label: "Compra" },
   { value: "emprestimo", label: "Empréstimo" },
 ];
-const APROVACAO_STATUS = [
-  { value: "em_analise", label: "Em análise" },
-  { value: "visto_pelo_diretor", label: "Visto p/ Diretor" },
-  { value: "aprovado", label: "Aprovado" },
-  { value: "cancelado", label: "Cancelado" },
-];
-const APROVACAO_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
-  em_analise: "outline",
-  visto_pelo_diretor: "secondary",
+const ARTE_APROV_LABEL: Record<string, string> = {
+  pendente: "Aprovação pendente",
+  aprovado: "Aprovado",
+  nao_aprovado: "Não aprovado",
+  em_analise: "Em análise",
+  visto_pelo_diretor: "Visto p/ Diretor",
+  cancelado: "Cancelado",
+};
+const ARTE_APROV_VARIANT: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  pendente: "outline",
   aprovado: "default",
+  nao_aprovado: "destructive",
+  em_analise: "secondary",
+  visto_pelo_diretor: "secondary",
   cancelado: "destructive",
 };
 const SCOUTING_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive"> = {
@@ -140,6 +145,7 @@ export default function FigurinoArte() {
 
   // Auth & RBAC
   const { canEditSection, isSuperUser } = useProjectDeptAccess(projetoId);
+  const { can } = usePermissions(projetoId);
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
   const orgId = orgs?.[0]?.org.id;
@@ -147,6 +153,7 @@ export default function FigurinoArte() {
   const canPropor = canEditSection("arte");
   const canAvaliar = canEditSection("direcao");
   const canEfetivar = isSuperUser;
+  const canAprovarArte = can("figurino_arte", "aprovar");
 
   // Figurino / Arte state
   const [openFig, setOpenFig] = useState(false);
@@ -278,7 +285,6 @@ export default function FigurinoArte() {
         fonte: novoFig.fonte ?? "compra",
         valor_estimado: novoFig.valor_estimado ? Number(novoFig.valor_estimado) : null,
         status: novoFig.status ?? "previsto",
-        aprovacao_status: "em_analise",
         foto_url,
       });
       if (error) throw error;
@@ -316,7 +322,6 @@ export default function FigurinoArte() {
         fonte: novoArte.fonte ?? "compra",
         valor_estimado: novoArte.valor_estimado ? Number(novoArte.valor_estimado) : null,
         status: novoArte.status ?? "previsto",
-        aprovacao_status: "em_analise",
         foto_url,
       });
       if (error) throw error;
@@ -341,8 +346,6 @@ export default function FigurinoArte() {
         fonte: f.fonte,
         status: f.status,
         valor_estimado: f.valor_estimado ? Number(f.valor_estimado) : null,
-        aprovacao_status: f.aprovacao_status || null,
-        aprovacao_comentarios: f.aprovacao_comentarios || null,
         foto_url: f.foto_url || null,
       }).eq("id", f.id);
       if (error) throw error;
@@ -363,8 +366,6 @@ export default function FigurinoArte() {
         fonte: a.fonte,
         status: a.status,
         valor_estimado: a.valor_estimado ? Number(a.valor_estimado) : null,
-        aprovacao_status: a.aprovacao_status || null,
-        aprovacao_comentarios: a.aprovacao_comentarios || null,
         origem: a.origem || null,
         origem_detalhe: a.origem_detalhe || null,
         personagem_id: a.personagem_id === "__none__" ? null : (a.personagem_id || null),
@@ -377,6 +378,34 @@ export default function FigurinoArte() {
       setEditArte(null);
       qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] });
     },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const aprovarItemFig = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "aprovado" | "nao_aprovado" }) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("figurinos").update({
+        aprovacao_status: status,
+        aprovado_por: u.user?.id,
+        aprovado_em: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Aprovação salva"); qc.invalidateQueries({ queryKey: ["figurinos", projetoId] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const aprovarItemArte = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: "aprovado" | "nao_aprovado" }) => {
+      const { data: u } = await supabase.auth.getUser();
+      const { error } = await supabase.from("arte_objetos").update({
+        aprovacao_status: status,
+        aprovado_por: u.user?.id,
+        aprovado_em: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Aprovação salva"); qc.invalidateQueries({ queryKey: ["arte-objetos", projetoId] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -586,7 +615,7 @@ export default function FigurinoArte() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2"><Shirt className="h-5 w-5" /> Figurinos</CardTitle>
-          <Button onClick={() => setOpenFig(true)}><Plus className="h-4 w-4" /> Adicionar</Button>
+          {canPropor && <Button onClick={() => setOpenFig(true)}><Plus className="h-4 w-4" /> Adicionar</Button>}
         </CardHeader>
         <CardContent>
           {(!figs || figs.length === 0) ? (
@@ -599,14 +628,16 @@ export default function FigurinoArte() {
                     <p className="font-medium flex-1 min-w-0 truncate">{f.descricao}</p>
                     <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
                       {f.aprovacao_status && (
-                        <Badge variant={APROVACAO_VARIANT[f.aprovacao_status] ?? "outline"} className="text-xs">
-                          {APROVACAO_STATUS.find(a => a.value === f.aprovacao_status)?.label ?? f.aprovacao_status}
+                        <Badge variant={ARTE_APROV_VARIANT[f.aprovacao_status] ?? "outline"} className="text-xs">
+                          {ARTE_APROV_LABEL[f.aprovacao_status] ?? f.aprovacao_status}
                         </Badge>
                       )}
                       <Badge variant="outline" className="text-xs">{f.status}</Badge>
-                      <Button size="icon" variant="ghost" onClick={() => setEditFig(f)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      {canPropor && (
+                        <Button size="icon" variant="ghost" onClick={() => setEditFig(f)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                       {canPropor && (
                         <Button size="icon" variant="ghost" onClick={() => setConfirmDelFig(f.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -623,6 +654,20 @@ export default function FigurinoArte() {
                       {f.valor_estimado ? ` · ${formatBRL(f.valor_estimado)}` : ""}
                     </p>
                   </div>
+                  {canAprovarArte && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                        disabled={f.aprovacao_status === "aprovado" || aprovarItemFig.isPending}
+                        onClick={() => aprovarItemFig.mutate({ id: f.id, status: "aprovado" })}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs border-destructive text-destructive hover:bg-destructive/10"
+                        disabled={f.aprovacao_status === "nao_aprovado" || aprovarItemFig.isPending}
+                        onClick={() => aprovarItemFig.mutate({ id: f.id, status: "nao_aprovado" })}>
+                        <XCircle className="h-3 w-3 mr-1" /> Não aprovar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -634,7 +679,7 @@ export default function FigurinoArte() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2"><Boxes className="h-5 w-5" /> Objetos de arte</CardTitle>
-          <Button onClick={() => setOpenArte(true)}><Plus className="h-4 w-4" /> Adicionar</Button>
+          {canPropor && <Button onClick={() => setOpenArte(true)}><Plus className="h-4 w-4" /> Adicionar</Button>}
         </CardHeader>
         <CardContent>
           {(!artes || artes.length === 0) ? (
@@ -647,14 +692,16 @@ export default function FigurinoArte() {
                     <p className="font-medium flex-1 min-w-0 truncate">{a.descricao}</p>
                     <div className="flex items-center gap-1 flex-wrap justify-end shrink-0">
                       {a.aprovacao_status && (
-                        <Badge variant={APROVACAO_VARIANT[a.aprovacao_status] ?? "outline"} className="text-xs">
-                          {APROVACAO_STATUS.find(ap => ap.value === a.aprovacao_status)?.label ?? a.aprovacao_status}
+                        <Badge variant={ARTE_APROV_VARIANT[a.aprovacao_status] ?? "outline"} className="text-xs">
+                          {ARTE_APROV_LABEL[a.aprovacao_status] ?? a.aprovacao_status}
                         </Badge>
                       )}
                       <Badge variant="outline" className="text-xs">{a.status}</Badge>
-                      <Button size="icon" variant="ghost" onClick={() => setEditArte(a)}>
-                        <Pencil className="h-4 w-4" />
-                      </Button>
+                      {canPropor && (
+                        <Button size="icon" variant="ghost" onClick={() => setEditArte(a)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                      )}
                       {canPropor && (
                         <Button size="icon" variant="ghost" onClick={() => setConfirmDelArte(a.id)}>
                           <Trash2 className="h-4 w-4 text-destructive" />
@@ -672,6 +719,20 @@ export default function FigurinoArte() {
                       {a.personagem_id ? ` · ${personagemNome(a.personagem_id)}` : ""}
                     </p>
                   </div>
+                  {canAprovarArte && (
+                    <div className="flex gap-2 pt-1">
+                      <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                        disabled={a.aprovacao_status === "aprovado" || aprovarItemArte.isPending}
+                        onClick={() => aprovarItemArte.mutate({ id: a.id, status: "aprovado" })}>
+                        <CheckCircle2 className="h-3 w-3 mr-1" /> Aprovar
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs border-destructive text-destructive hover:bg-destructive/10"
+                        disabled={a.aprovacao_status === "nao_aprovado" || aprovarItemArte.isPending}
+                        onClick={() => aprovarItemArte.mutate({ id: a.id, status: "nao_aprovado" })}>
+                        <XCircle className="h-3 w-3 mr-1" /> Não aprovar
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -924,21 +985,6 @@ export default function FigurinoArte() {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label>Aprovação do Diretor</Label>
-                <Select value={editFig.aprovacao_status ?? "em_analise"} onValueChange={(v) => setEditFig({ ...editFig, aprovacao_status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {APROVACAO_STATUS.map((a) => (
-                      <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Comentários de aprovação</Label>
-                <Textarea rows={2} autoComplete="off" value={editFig.aprovacao_comentarios ?? ""} onChange={(e) => setEditFig({ ...editFig, aprovacao_comentarios: e.target.value })} />
-              </div>
-              <div className="space-y-1.5">
                 <Label>Foto do figurino</Label>
                 <div className="flex items-center gap-3">
                   {editFig.foto_url && (
@@ -1031,21 +1077,6 @@ export default function FigurinoArte() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Aprovação do Diretor</Label>
-                <Select value={editArte.aprovacao_status ?? "em_analise"} onValueChange={(v) => setEditArte({ ...editArte, aprovacao_status: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {APROVACAO_STATUS.map((a) => (
-                      <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Comentários de aprovação</Label>
-                <Textarea rows={2} autoComplete="off" value={editArte.aprovacao_comentarios ?? ""} onChange={(e) => setEditArte({ ...editArte, aprovacao_comentarios: e.target.value })} />
               </div>
               <div className="space-y-1.5">
                 <Label>Foto do objeto</Label>
