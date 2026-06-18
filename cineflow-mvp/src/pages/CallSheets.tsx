@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, ChevronLeft, Plus, Calendar, ExternalLink, Copy, Check } from "lucide-react";
+import { FileText, ChevronLeft, Plus, Calendar, ExternalLink, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 import { useProjectDeptAccess } from "@/hooks/useProjectDeptAccess";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { toast } from "sonner";
@@ -48,6 +48,7 @@ export default function CallSheets() {
   const { canEditSection } = useProjectDeptAccess(projetoId);
   const canEdit = canEditSection("od");
   const [open, setOpen] = useState(false);
+  const [confirmarExcluir, setConfirmarExcluir] = useState<string | null>(null);
   const [linkOdId, setLinkOdId] = useState<string | null>(null);
   const [linkToken, setLinkToken] = useState<string | null>(null);
   const [copiado, setCopiado] = useState(false);
@@ -112,6 +113,19 @@ export default function CallSheets() {
       qc.invalidateQueries({ queryKey: ["ods", projetoId] });
       setOpen(false);
       window.location.href = `/projetos/${projetoId}/ordens-do-dia/od/${od.id}`;
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deletar = useMutation({
+    mutationFn: async (odId: string) => {
+      const { error } = await supabase.rpc("soft_delete_item", { p_tabela: "ordens_do_dia", p_id: odId });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("OD movida para a lixeira");
+      qc.invalidateQueries({ queryKey: ["ods", projetoId] });
+      setConfirmarExcluir(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -197,6 +211,15 @@ export default function CallSheets() {
             const publicLink = od.token_publico ? `${window.location.origin}/od/${od.token_publico}` : null;
             return (
               <div key={od.id} className="relative">
+                {canEdit && (
+                  <button
+                    className="absolute right-2 top-2 z-10 rounded p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    onClick={() => setConfirmarExcluir(od.id)}
+                    title="Excluir OD"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <Link to={`/projetos/${projetoId}/ordens-do-dia/od/${od.id}`}>
                   <Card className="transition-shadow hover:shadow-md">
                     <CardContent className="space-y-2 p-5">
@@ -257,6 +280,30 @@ export default function CallSheets() {
           })}
         </div>
       )}
+
+      {/* Dialog: confirmar exclusão da OD */}
+      <Dialog open={!!confirmarExcluir} onOpenChange={(v) => { if (!v) setConfirmarExcluir(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" /> Excluir Ordem do Dia?
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            A OD será movida para a lixeira e pode ser restaurada em até 30 dias.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmarExcluir(null)}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmarExcluir && deletar.mutate(confirmarExcluir)}
+              disabled={deletar.isPending}
+            >
+              {deletar.isPending ? "Excluindo..." : "Sim, excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* C7 — Dialog link publico da OD */}
       <Dialog open={!!linkOdId} onOpenChange={(v) => { if (!v) { setLinkOdId(null); setLinkToken(null); } }}>

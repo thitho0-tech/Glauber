@@ -12,6 +12,11 @@ export function formatBRL(value: number | null | undefined) {
 
 export function formatDate(iso: string | Date | null | undefined) {
   if (!iso) return "—";
+  // Date-only strings (YYYY-MM-DD) must be parsed as local to avoid UTC-shift
+  if (typeof iso === "string" && /^\d{4}-\d{2}-\d{2}$/.test(iso)) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("pt-BR");
+  }
   const d = typeof iso === "string" ? new Date(iso) : iso;
   return d.toLocaleDateString("pt-BR");
 }

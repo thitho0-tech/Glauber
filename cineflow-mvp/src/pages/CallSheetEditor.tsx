@@ -294,6 +294,22 @@ export default function CallSheetEditor() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const reenviarParaAprovacao = useMutation({
+    mutationFn: async () => {
+      if (!od) throw new Error("OD não carregada");
+      const { error } = await supabase.from("ordens_do_dia")
+        .update({ aprovacao_status: "pendente" })
+        .eq("id", od.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("OD reenviada para aprovação! Aprovadores notificados.");
+      qc.invalidateQueries({ queryKey: ["od-edit", od?.id] });
+      qc.invalidateQueries({ queryKey: ["ods", projetoId] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const salvar = useMutation({
     mutationFn: async () => {
       if (!od) throw new Error("OD não carregada");
@@ -437,6 +453,13 @@ export default function CallSheetEditor() {
                 <RefreshCw className="h-4 w-4" /> {republicar.isPending ? "Atualizando..." : "Salvar e republicar"}
               </Button>
             )}
+            {od.aprovacao_status === "rejeitada" && can("od", "editar") && (
+              <Button variant="outline" className="border-amber-400 text-amber-700 hover:bg-amber-50"
+                onClick={() => reenviarParaAprovacao.mutate()} disabled={reenviarParaAprovacao.isPending}>
+                <RefreshCw className="h-4 w-4" />
+                {reenviarParaAprovacao.isPending ? "Reenviando..." : "Reenviar para aprovação"}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => salvar.mutate()} disabled={salvar.isPending}>
               <Save className="h-4 w-4" /> Salvar
             </Button>
@@ -453,6 +476,25 @@ export default function CallSheetEditor() {
           </div>
         </div>
       </div>
+
+      {od.aprovacao_status === "rejeitada" && (
+        <Card className="border-destructive/50 bg-destructive/5 no-print">
+          <CardContent className="flex items-start gap-3 p-4">
+            <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-destructive">OD Rejeitada</p>
+              {od.aprovacao_comentarios && (
+                <p className="mt-1 text-sm text-muted-foreground">Motivo: {od.aprovacao_comentarios}</p>
+              )}
+              {can("od", "editar") && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Corrija o necessário, salve e clique em "Reenviar para aprovação".
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {linkPublico && (
         <Card className="no-print">
