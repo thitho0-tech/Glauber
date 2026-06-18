@@ -1,21 +1,25 @@
-# Estado Glauber — SPRINT 5 em execução (16/06/2026)
+# Estado Glauber — SPRINT 5 (17/06/2026)
 
-> **SPRINT 5 — Permissões Composite + features OD/Agenda.** Spec: `SPRINT_5_SPEC_PERMISSOES_OD.md`.
-> **APLICADO EM PRODUÇÃO (via conector Supabase):** Bloco A (tabelas perm_recursos/perm_funcao_grants/
-> perm_overrides + `pode()` + `project_owner_email()` — repo `0050_perm_composite.sql`); Bloco B seed
-> (18 recursos, 829 grants, 48 funções, `od/aprovar` p/ direção — repo `0051_perm_seed.sql`);
-> função `minhas_permissoes(projeto)`; trigger `protege_owner_pp` (criador não removível da equipe);
-> correção de segurança (revoke anon em _get_secret/_set_secret/_send_email + rotação EDGE_SHARED_SECRET).
-> **FRONT (deployado):** páginas migradas para `can(recurso,acao)` (Locations/Fornecedores/Contract/
-> Roteiro+Decupagem/Team); `usePermissions` religado a `minhas_permissoes`; Settings filtra deleted_at +
-> botão remover (nunca no criador).
-> **PRÓXIMO PASSO:** revalidar na tela → aplicar **CUTOVER** `0052_cutover_rls.sql` (PRONTO no repo, NÃO
-> aplicado — liga o RLS por `pode()` em 19 tabelas; pedir confirmação). Depois: get_advisors p/ verificar.
-> **NÃO APLICAR AINDA:** `0049_agenda_prep.sql` (renomeia dia_filmagem→dia_gravacao + departamento em
-> agenda_eventos) — só junto do Bloco C4 (fusão Agenda).
-> **Bloco C pendente:** C1 aprovação OD, C2 editar OD publicada (+selo ATUALIZADA), C3 Mural "Próximos
-> eventos" por usuário/depto, C4 fusão Agenda+Planejamento (calendário Dia/Semana/Mês).
-> Migrações em prod: 0001–0048 (Sprint 4) + os objetos da Sprint 5 acima (0049/0052 ainda não aplicados).
+> **SPRINT 5 — Permissões Composite + features OD/Arte.** Spec: `SPRINT_5_SPEC_PERMISSOES_OD.md`.
+>
+> **SEGURANÇA — CONCLUÍDA e em produção:**
+> - Bloco A: tabelas perm_recursos/perm_funcao_grants/perm_overrides + `pode()` + `project_owner_email()` (`0050`).
+> - Bloco B seed: 18 recursos, grants por função, `od/aprovar` p/ Direção (`0051`).
+> - Função `minhas_permissoes(projeto)` (o front usa via hook `usePermissions.can(recurso,acao)`).
+> - Trigger `protege_owner_pp` (criador não removível da equipe).
+> - **CUTOVER aplicado** (`0052`): RLS de escrita por `pode()` em 19 tabelas; leitura preservada; fornecedores fora (org-scoped).
+> - Aba Produção (`0053`): Equipe/Locações com listas fixas de acesso; demais sub-abas pela matriz; conteúdo travado por `can(...,'ver')` (modelo vitrine).
+> - `0054`: removidas as 3 funções de Logística do catálogo. Form "Adicionar pessoa": 8 deptos (Desenvolvimento→"Roteiro"; sem Logística/Figurino/Maquiagem/Outros).
+> - Hardening anon: `_get_secret/_set_secret/_send_email` revogados + EDGE_SHARED_SECRET rotacionado; `0055` fechou ~40 RPCs/triggers a anon (só `aceitar_convite`/`validar_convite` seguem anon, pré-login); funções novas (pode/minhas_permissoes/etc.) anon-revogadas.
+>
+> **FEATURES — DEPLOYADAS, aguardando teste ponta a ponta do Thiago:**
+> - **C1 Aprovação de OD** (`0056`, commit 17e3837): OD nasce 'pendente' → Direção aprova/rejeita (alerta no sino via trigger `od_pendente_notifica`) → publicar só após aprovada.
+> - **Aprovação em Arte** (`0056`, commit 17e3837): Figurinos/Objetos nascem 'pendente' → Aprovado/Não aprovado; aprovadores Diretor/Produtor Geral/Asst Direção/Produtor Executivo (`figurino_arte/aprovar`).
+> - **C2 Editar OD publicada** (`0057`, commit 54fd739): re-publica direto (sem nova aprovação) → versão++, `atualizada_em`, selo "ORDEM DO DIA ATUALIZADA" (editor+lista+link público) + re-notifica via `notificar_od_atualizada`.
+>
+> **Migrações em prod:** 0001–0048 (Sprint 4) + 0050–0057 (Sprint 5; todas aplicadas e commitadas, commit 54ac0a6). **`0049_agenda_prep.sql` NÃO aplicada** — só entra junto do C4 (fusão Agenda).
+>
+> **RESTA (não iniciado):** **C3 Mural "Próximos eventos"** personalizado por usuário/depto; **C4 fusão Agenda+Planejamento** (calendário Dia/Semana/Mês; depende da 0049 + 11 campos do form a confirmar). Hardening fino opcional: guards de dono nas RPCs destrutivas, view `ordens_do_dia_publico`, `search_path` x11, bucket de áudio, proteção de senha vazada.
 
 ---
 
