@@ -16,6 +16,7 @@ import { toast } from "sonner";
 const FASE_LABEL: Record<string, string> = {
   pre_producao: "Pré-produção",
   producao: "Produção",
+  dia_gravacao: "Filmagem",
   dia_filmagem: "Filmagem",
   pos_producao: "Pós-produção",
 };
@@ -275,7 +276,7 @@ export default function PlanejamentoDetalhe() {
   if (lDia) return <Loading />;
   if (!dia) return <div>Planejamento não encontrado</div>;
 
-  const fase = FASE_LABEL[dia.tipo ?? "dia_filmagem"];
+  const fase = FASE_LABEL[dia.tipo ?? "dia_gravacao"];
 
   // Agrupa check-ins por projeto_pessoa
   const checkInsPorPessoa = (checkIns ?? []).reduce((acc: Record<string, any[]>, c: any) => {
@@ -317,7 +318,7 @@ export default function PlanejamentoDetalhe() {
             </p>
             {dia.observacoes && <p className="mt-1 text-xs text-muted-foreground">{dia.observacoes}</p>}
           </div>
-          {dia.tipo === "dia_filmagem" && (
+          {(dia.tipo === "dia_gravacao" || dia.tipo === "dia_filmagem") && (
             <Button asChild variant="outline">
               <Link to={`/projetos/${projetoId}/ordens-do-dia/${dia.id}`}>
                 <FileText className="h-4 w-4" /> Ordem do Dia

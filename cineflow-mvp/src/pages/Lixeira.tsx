@@ -85,7 +85,7 @@ export default function Lixeira() {
       (dias ?? []).forEach((d: any) =>
         result.push({
           id: d.id, tabela: "dias_filmagem",
-          nome: `${d.tipo ?? "dia_filmagem"} — ${formatDate(d.data)}`,
+          nome: `${d.tipo ?? "dia_gravacao"} — ${formatDate(d.data)}`,
           subtitulo: d.projeto?.nome ?? "",
           deleted_at: d.deleted_at,
         })

@@ -78,7 +78,7 @@ export default function CallSheets() {
         .from("dias_filmagem")
         .select("id, data, tipo, locacao:locacoes(nome)")
         .eq("projeto_id", projetoId!)
-        .eq("tipo", "dia_filmagem")
+        .eq("tipo", "dia_gravacao")
         .order("data");
       if (error) throw error;
       return data;

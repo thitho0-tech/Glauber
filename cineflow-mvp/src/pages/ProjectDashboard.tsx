@@ -14,17 +14,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   CalendarDays, Send, Mic, Square, Trash2, MessageSquare,
-  CalendarClock, CheckCircle2, XCircle, MapPin, ChevronRight, Plus,
+  ChevronRight, Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const BUCKET = "mensagens-audio";
-
-const STATUS_ICON: Record<string, React.ElementType> = {
-  agendado:  CalendarClock,
-  realizado: CheckCircle2,
-  cancelado: XCircle,
-};
 
 function formatDataHora(iso: string) {
   return new Date(iso).toLocaleString("pt-BR", {
@@ -448,26 +442,15 @@ export default function ProjectDashboard() {
                 </Button>
               </div>
             ) : (
-              eventosFiltrados.map((ev: any) => {
-                const Icon = STATUS_ICON[ev.status] ?? CalendarClock;
-                return (
-                  <div key={ev.id} className="rounded-lg border p-3 space-y-1 hover:bg-muted/40 transition-colors">
-                    <div className="flex items-start gap-2">
-                      <Icon className="h-4 w-4 mt-0.5 shrink-0 text-muted-foreground" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{ev.titulo}</p>
-                        <p className="text-xs text-muted-foreground">{formatDataHora(ev.data_inicio)}</p>
-                        {ev.local && (
-                          <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
-                            <MapPin className="h-2.5 w-2.5" /> {ev.local}
-                          </p>
-                        )}
-                      </div>
-                      <Badge variant="outline" className="text-[10px] shrink-0">{ev.tipo}</Badge>
-                    </div>
-                  </div>
-                );
-              })
+              eventosFiltrados.map((ev: any) => (
+                <div key={ev.id} className="rounded-lg border p-3 space-y-1 hover:bg-muted/40 transition-colors">
+                  <p className="text-sm font-medium truncate">{ev.titulo}</p>
+                  <p className="text-xs text-muted-foreground">{formatDataHora(ev.data_inicio)}</p>
+                  {ev.descricao && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">{ev.descricao}</p>
+                  )}
+                </div>
+              ))
             )}
           </CardContent>
         </Card>

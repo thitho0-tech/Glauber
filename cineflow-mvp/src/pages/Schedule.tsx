@@ -19,7 +19,7 @@ import { toast } from "sonner";
 const FASES = [
   { value: "pre_producao", label: "Pré-produção", icon: Lightbulb, color: "text-amber-600", bg: "bg-amber-50 dark:bg-amber-950/20", border: "border-amber-200" },
   { value: "producao",     label: "Produção",      icon: Wrench,    color: "text-sky-600",   bg: "bg-sky-50 dark:bg-sky-950/20",     border: "border-sky-200" },
-  { value: "dia_filmagem", label: "Filmagem",      icon: Clapperboard, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/20", border: "border-rose-200" },
+  { value: "dia_gravacao", label: "Filmagem",      icon: Clapperboard, color: "text-rose-600", bg: "bg-rose-50 dark:bg-rose-950/20", border: "border-rose-200" },
   { value: "pos_producao", label: "Pós-produção",  icon: Scissors,  color: "text-violet-600", bg: "bg-violet-50 dark:bg-violet-950/20", border: "border-violet-200" },
 ];
 
@@ -96,7 +96,7 @@ export default function Schedule() {
   const maxData = projeto?.periodo_fim ?? undefined;
 
   const porFase = FASES.reduce((acc: Record<string, any[]>, f) => {
-    acc[f.value] = (dias ?? []).filter((d: any) => (d.tipo ?? "dia_filmagem") === f.value);
+    acc[f.value] = (dias ?? []).filter((d: any) => (d.tipo ?? "dia_gravacao") === f.value);
     return acc;
   }, {});
 
@@ -125,7 +125,7 @@ export default function Schedule() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="tipo">Fase</Label>
-                    <Select name="tipo" defaultValue="dia_filmagem">
+                    <Select name="tipo" defaultValue="dia_gravacao">
                       <SelectTrigger id="tipo"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {FASES.map((f) => (
@@ -269,7 +269,7 @@ export default function Schedule() {
                                     <Users className="h-4 w-4" /> Escala
                                   </Link>
                                 </Button>
-                                {d.tipo === "dia_filmagem" && (
+                                {(d.tipo === "dia_gravacao" || d.tipo === "dia_filmagem") && (
                                   <Button asChild size="sm" variant="ghost">
                                     <Link to={`/projetos/${id}/ordens-do-dia/${d.id}`}>
                                       <FileText className="h-4 w-4" /> Ordem do Dia
