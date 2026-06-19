@@ -20,18 +20,14 @@ import { EquipePrincipalImport } from "@/components/EquipePrincipalImport";
 import type { TeamRow } from "@/lib/parseTeamCsv";
 
 const DEPARTAMENTOS_AV = [
-  { value: "desenvolvimento", label: "Desenvolvimento" },
-  { value: "direcao",         label: "Direção" },
   { value: "producao",        label: "Produção" },
+  { value: "desenvolvimento", label: "Roteiro" },
+  { value: "direcao",         label: "Direção" },
   { value: "fotografia",      label: "Fotografia" },
   { value: "arte",            label: "Arte" },
   { value: "som",             label: "Som" },
   { value: "elenco",          label: "Elenco" },
-  { value: "logistica",       label: "Logística" },
   { value: "pos_producao",    label: "Pós-produção" },
-  { value: "figurino",        label: "Figurino" },
-  { value: "maquiagem",       label: "Maquiagem" },
-  { value: "outros",          label: "Outros" },
 ];
 
 export default function Projects() {
