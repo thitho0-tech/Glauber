@@ -94,8 +94,17 @@ Planejamento atual até o front do C4 entrar**, por isso só roda junto; (b) adi
 
 ## 7. RELATÓRIO DO THIAGO — módulos da Agenda (a preencher)
 
-> Cole aqui o detalhamento dos módulos/visualizações da Agenda que você está elaborando.
-> A partir dele eu fecho: campos finais do formulário único, comportamento de cada
-> visualização (Dia/Semana/Mês), e como cada categoria/fase aparece no calendário.
+1- Categoria — "Evento" ou "Período de Produção" (define onde grava e quais campos aparecem).
+2- Tipo / Fase — se Evento: reunião, ensaio, visita de locação, TESTE DE ELENCO, MONTAGEM, FOLGA, (tipos atuais, restritos por depto); se Período de Produção: Pré-produção, Produção, Dia de Gravação (SE DIA DE GRAVAÇÃO, AO SALVAR NA AGENDA, GERA BOTÃO DE CRIAR OD), Pós-produção.
+3- Título.
+4- Início e Fim (OBRIGATÓRIO) — data/hora.
+5- Chamada geral (horário) — aparece quando for "Dia de Gravação".
+6- Local / Locação — seleção das locações cadastradas, com opção de texto livre.
+7- Departamento (OPCIONAL)— usado pelo filtro de visibilidade; default = departamento de quem cria. (Itens de "Período de Produção" são visíveis a todos, independente disso.)
+8- Participantes — multiseleção da equipe (OBRIGATÓRIO O PREENCHIMENTO DE, AO MENOS, MAIS UMA PESSOA; ADIONAR OPÇÃO DE MARCAR TODOS).
+9- Status — agendado / realizado / cancelado.
+10- Descrição
+11- Observações
 
-(— aguardando —)
+O que foi fundido/removido por ser redundante: "Descrição" e "Observações" viraram um campo só (não fundir, manter os dois campos); "data_fim" único; e o seletor Dia/Semana/Mês saiu do formulário — passa a ser o controle de visualização do calendário, não um campo da atividade. ADICIONAR BOTÃO PARA CONFIRMAÇÃO DE VISUALIZAÇÃO DO EVENTO; QUANDO CONFIRMADO A VIZUALIZAÇÃO, O NOME DE QUEM CONFIRMOU FICA REGISTRADO NOS DETALHES DO EVENTO MARCADO NA AGENDA. QUANDO O EVENTO FOR PARA O "MURAL" COMO VISUALIZAÇÃO RÁPIDA, DESTACAR APENAS "TÍTULO", "DATA" E "DESCRIÇÃO". aS INFORMAÇÕES DETALHADAS DO EVENTO MARCADO EM AGENDA SÃO VISIVEIS APENAS NA ABA "AGENDA" 
+
