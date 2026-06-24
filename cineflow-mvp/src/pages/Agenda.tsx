@@ -928,7 +928,7 @@ export default function Agenda() {
 
         <div className="ml-auto">
           {canEdit && (
-            <Button onClick={() => abrirNovo()} size="sm" className="gap-1">
+            <Button onClick={() => abrirNovo(dataAtual)} size="sm" className="gap-1">
               <Plus className="h-4 w-4" /> Nova atividade
             </Button>
           )}

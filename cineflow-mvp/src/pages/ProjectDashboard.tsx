@@ -21,9 +21,13 @@ import { toast } from "sonner";
 const BUCKET = "mensagens-audio";
 
 function formatDataHora(iso: string) {
-  return new Date(iso).toLocaleString("pt-BR", {
-    day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit",
-  });
+  // Formata a hora "de parede" direto da string ISO, SEM converter fuso,
+  // para casar com a Agenda (que usa data_inicio.slice). Evita o -3h do Mural.
+  const [data, horaRaw] = (iso ?? "").split("T");
+  const [, mes, dia] = (data ?? "").split("-");
+  const hhmm = (horaRaw ?? "").slice(0, 5);
+  if (!dia || !mes) return iso;
+  return `${dia}/${mes}${hhmm ? ` ${hhmm}` : ""}`;
 }
 
 function getCanalCategoria(canal: any): "geral" | "departamento" | "privado" {

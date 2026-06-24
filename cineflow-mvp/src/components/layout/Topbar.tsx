@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { LogOut, Menu } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrgs } from "@/hooks/useOrg";
@@ -12,6 +14,21 @@ export function Topbar() {
   const orgNome = orgs?.[0]?.org.nome ?? "Sua Produtora";
   const toggle = useSidebar((s) => s.toggle);
 
+  // Nome do projeto ativo (quando navegando dentro de um projeto)
+  const { id: projetoId } = useParams();
+  const { data: projeto } = useQuery({
+    queryKey: ["topbar-projeto-nome", projetoId],
+    enabled: !!projetoId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projetos")
+        .select("nome")
+        .eq("id", projetoId)
+        .maybeSingle();
+      return data;
+    },
+  });
+
   return (
     <header className="flex h-16 items-center justify-between gap-3 border-b bg-card px-4 md:px-6">
       <div className="flex items-center gap-2 min-w-0">
@@ -20,7 +37,15 @@ export function Topbar() {
         </Button>
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Produtora</p>
-          <p className="truncate text-sm font-semibold">{orgNome}</p>
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="truncate text-sm font-semibold">{orgNome}</p>
+            {projeto?.nome && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <p className="truncate text-sm font-semibold text-primary">{projeto.nome}</p>
+              </>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex items-center gap-2">
