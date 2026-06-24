@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -250,6 +250,28 @@ function AutorizacoesPanel({
 // NotificacoesPanel
 // ─────────────────────────────────────────────
 
+function SomNotificacaoToggle() {
+  const [som, setSom] = useState(() => localStorage.getItem("glauber_notif_som") !== "false");
+  const toggle = useCallback((checked: boolean) => {
+    setSom(checked);
+    localStorage.setItem("glauber_notif_som", String(checked));
+  }, []);
+  return (
+    <div className="flex items-center justify-between rounded-lg border p-4">
+      <div>
+        <p className="font-medium">Som ao receber notificação</p>
+        <p className="text-xs text-muted-foreground">Toca um bip curto quando chegar nova notificação.</p>
+      </div>
+      <input
+        type="checkbox"
+        className="h-5 w-5 cursor-pointer accent-primary"
+        checked={som}
+        onChange={(e: React.ChangeEvent<HTMLInputElement>) => toggle(e.target.checked)}
+      />
+    </div>
+  );
+}
+
 function NotificacoesPanel({ userId }: { userId: string }) {
   const qc = useQueryClient();
   const [projetoSel, setProjetoSel] = useState<string>("");
@@ -331,6 +353,8 @@ function NotificacoesPanel({ userId }: { userId: string }) {
         {projetoSel && !meuVinculo && (
           <p className="text-sm text-muted-foreground">Você não é membro deste projeto.</p>
         )}
+
+        <SomNotificacaoToggle />
 
         {projetoSel && meuVinculo && (
           <div className="space-y-3">

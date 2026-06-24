@@ -12,6 +12,7 @@
 export interface TeamRow {
   nome: string;
   funcao: string;
+  funcao_av_id?: string;
   email: string;
   convidar: boolean;
 }

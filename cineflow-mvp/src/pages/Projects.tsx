@@ -94,6 +94,7 @@ export default function Projects() {
           nome: r.nome.trim(),
           email: (r.email ?? "").trim().toLowerCase(),
           funcao: (r.funcao ?? "").trim(),
+          funcao_av_id: r.funcao_av_id ?? null,
           convidar: !!r.convidar,
         }))
         .filter((r) => r.nome);
@@ -243,7 +244,7 @@ export default function Projects() {
                   </div>
                 </div>
 
-                <EquipePrincipalImport rows={equipe} onChange={setEquipe} />
+                <EquipePrincipalImport rows={equipe} onChange={setEquipe} funcoes={funcoesAv ?? []} />
               </div>
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>

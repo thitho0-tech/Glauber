@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
@@ -506,6 +506,7 @@ export default function Agenda() {
   const qc = useQueryClient();
   const { isSuperUser } = usePermissions(projetoId);
   const { funcao } = useProjectFunction(projetoId);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Vista ──────────────────────────────────────────────────────────────────
   const [vista, setVista] = useState<Vista>("mes");
@@ -607,6 +608,17 @@ export default function Agenda() {
       return data;
     },
   });
+
+  // Abre detalhe via ?evento=<id> (vindo do Mural)
+  useEffect(() => {
+    const param = searchParams.get("evento");
+    if (!param || !eventos) return;
+    const ev = (eventos as any[]).find((e: any) => e.id === param);
+    if (ev) {
+      setDetalhe(eventoToCalItem(ev));
+      setSearchParams({}, { replace: true });
+    }
+  }, [eventos, searchParams]);
 
   // meu projeto_pessoa_id (para confirmação)
   const meuPPId: string | null = useMemo(() => {

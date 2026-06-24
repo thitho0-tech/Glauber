@@ -89,7 +89,10 @@ function ChatPanel({
   }, [canalId, qc]);
 
   useEffect(() => {
-    listEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Rola apenas o container de mensagens (não a página inteira).
+    // scrollIntoView arrastava todos os ancestrais → puxava o Mural para baixo.
+    const c = listEndRef.current?.parentElement;
+    if (c) c.scrollTop = c.scrollHeight;
   }, [mensagens]);
 
   const enviar = useMutation({
@@ -447,13 +450,17 @@ export default function ProjectDashboard() {
               </div>
             ) : (
               eventosFiltrados.map((ev: any) => (
-                <div key={ev.id} className="rounded-lg border p-3 space-y-1 hover:bg-muted/40 transition-colors">
+                <Link
+                  key={ev.id}
+                  to={`/projetos/${projetoId}/agenda?evento=${ev.id}`}
+                  className="block rounded-lg border p-3 space-y-1 hover:bg-muted/40 transition-colors cursor-pointer"
+                >
                   <p className="text-sm font-medium truncate">{ev.titulo}</p>
                   <p className="text-xs text-muted-foreground">{formatDataHora(ev.data_inicio)}</p>
                   {ev.descricao && (
                     <p className="text-xs text-muted-foreground line-clamp-2">{ev.descricao}</p>
                   )}
-                </div>
+                </Link>
               ))
             )}
           </CardContent>

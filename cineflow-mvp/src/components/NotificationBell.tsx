@@ -1,10 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Bell, ExternalLink } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+
+function playBeep() {
+  if (localStorage.getItem("glauber_notif_som") === "false") return;
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.value = 880;
+    gain.gain.value = 0.1;
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+    osc.onended = () => ctx.close();
+  } catch {}
+}
 
 export function NotificationBell() {
   const { user } = useAuth();
@@ -45,6 +62,27 @@ export function NotificationBell() {
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["notificacoes-inapp", user?.id] }),
   });
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const channel = supabase
+      .channel(`notif:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notificacoes_inapp",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          qc.invalidateQueries({ queryKey: ["notificacoes-inapp", user.id] });
+          playBeep();
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id]);
 
   const naoLidas = (notifs ?? []).filter((n: any) => !n.lida).length;
 

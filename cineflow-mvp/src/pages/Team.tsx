@@ -131,13 +131,13 @@ function FuncoesProjetoSelect({
 function getPrincipalFuncao(v: any): string | null {
   const lista: any[] = v.funcoes ?? [];
   const p = lista.find((f: any) => f.principal) ?? lista[0];
-  return p?.funcao_av?.nome ?? v.pessoa?.funcao ?? null;
+  return p?.funcao_av?.nome ?? v.papel_descricao ?? null;
 }
 
 function getPrincipalDept(v: any): string | null {
   const lista: any[] = v.funcoes ?? [];
   const p = lista.find((f: any) => f.principal) ?? lista[0];
-  return p?.funcao_av?.departamento ?? v.pessoa?.departamento ?? null;
+  return p?.funcao_av?.departamento ?? null;
 }
 
 export default function Team() {

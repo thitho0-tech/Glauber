@@ -5,19 +5,32 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Upload, ScanText, X, Trash2 } from "lucide-react";
 import { parseTeamCsv, templateCsv, validarEmail, type TeamRow } from "@/lib/parseTeamCsv";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
+type FuncaoAv = { id: string; nome: string; departamento: string };
+
 interface Props {
   rows: TeamRow[];
   onChange: (rows: TeamRow[]) => void;
+  funcoes?: FuncaoAv[];
 }
 
-export function EquipePrincipalImport({ rows, onChange }: Props) {
+export function EquipePrincipalImport({ rows, onChange, funcoes = [] }: Props) {
   const [texto, setTexto] = useState("");
   const [ocrRodando, setOcrRodando] = useState(false);
+
+  function tentarPreSelecionarFuncao(funcaoTexto: string): string | undefined {
+    if (!funcaoTexto || !funcoes.length) return undefined;
+    const norm = funcaoTexto.toLowerCase().trim();
+    const exato = funcoes.find((f) => f.nome.toLowerCase() === norm);
+    if (exato) return exato.id;
+    const parcial = funcoes.find((f) => f.nome.toLowerCase().includes(norm) || norm.includes(f.nome.toLowerCase()));
+    return parcial?.id;
+  }
 
   function aplicarTexto(t: string) {
     setTexto(t);
@@ -25,7 +38,11 @@ export function EquipePrincipalImport({ rows, onChange }: Props) {
     if (parsed.length === 0 && t.trim().length > 0) {
       toast.error("Não consegui detectar linhas — confira o separador (vírgula/tab/ponto-e-vírgula)");
     }
-    onChange(parsed);
+    const comFuncao = parsed.map((r) => ({
+      ...r,
+      funcao_av_id: tentarPreSelecionarFuncao(r.funcao),
+    }));
+    onChange(comFuncao);
   }
 
   function baixarTemplate() {
@@ -186,7 +203,34 @@ export function EquipePrincipalImport({ rows, onChange }: Props) {
                       <Input value={r.nome} onChange={(e) => alterar(i, { nome: e.target.value })} className="h-8" />
                     </TableCell>
                     <TableCell>
-                      <Input value={r.funcao} onChange={(e) => alterar(i, { funcao: e.target.value })} className="h-8" />
+                      {funcoes.length > 0 ? (
+                        <Select
+                          value={r.funcao_av_id ?? "__none__"}
+                          onValueChange={(v) => alterar(i, { funcao_av_id: v === "__none__" ? undefined : v })}
+                        >
+                          <SelectTrigger className="h-8 text-xs">
+                            <SelectValue placeholder={r.funcao || "Selecione"} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">— não definida —</SelectItem>
+                            {Object.entries(
+                              funcoes.reduce<Record<string, FuncaoAv[]>>((acc, f) => {
+                                (acc[f.departamento] ??= []).push(f);
+                                return acc;
+                              }, {})
+                            ).map(([dept, fns]) => (
+                              <SelectGroup key={dept}>
+                                <SelectLabel className="text-xs font-semibold">{dept}</SelectLabel>
+                                {fns.map((f) => (
+                                  <SelectItem key={f.id} value={f.id}>{f.nome}</SelectItem>
+                                ))}
+                              </SelectGroup>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <Input value={r.funcao} onChange={(e) => alterar(i, { funcao: e.target.value })} className="h-8" />
+                      )}
                     </TableCell>
                     <TableCell>
                       <Input
