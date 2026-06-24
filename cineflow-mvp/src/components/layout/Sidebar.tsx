@@ -8,7 +8,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSidebar } from "@/hooks/useSidebar";
 import { Button } from "@/components/ui/button";
-import personaLogo from "@/assets/persona-logo.jpeg";
+import personaLogo from "@/assets/persona-glauber.png";
 import novaLogo from "@/assets/nova-logo-glauber.jpeg";
 
 const globalItems = [

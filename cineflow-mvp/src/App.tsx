@@ -40,6 +40,7 @@ import Som from "@/pages/Som";
 import PosProducao from "@/pages/PosProducao";
 import MapaTransporte from "@/pages/MapaTransporte";
 import Administrativo from "@/pages/Administrativo";
+import Privacidade from "@/pages/Privacidade";
 
 const qc = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, refetchOnWindowFocus: false } },
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/od/:token" element={<PublicCallSheet />} />
           <Route path="/convite" element={<InviteAccept />} />
+          <Route path="/privacidade" element={<Privacidade />} />
 
           <Route
             element={
