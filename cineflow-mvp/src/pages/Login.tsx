@@ -203,6 +203,9 @@ export default function Login() {
               Crie sua produtora
             </Link>
           </p>
+          <p className="mt-3 text-center text-xs text-muted-foreground">
+            <Link to="/privacidade" className="hover:underline">Política de Privacidade</Link>
+          </p>
         </CardContent>
       </Card>
     </div>
