@@ -121,14 +121,16 @@ export default function Cast() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("projeto_pessoas")
-        .select("id, personagem_id, pessoa:pessoas(nome)")
-        .eq("projeto_id", projetoId!);
+        .select("id, personagem_id, pessoa:pessoas(nome, departamento), funcoes:projeto_pessoa_funcoes(funcao_av:funcoes_av(departamento))")
+        .eq("projeto_id", projetoId!)
+        .is("deleted_at", null);
       if (error) throw error;
       return ((data ?? []) as any[]).map((r) => ({
         id: r.id,
         personagem_id: r.personagem_id,
-        pessoa: { nome: r.pessoa?.nome ?? "—" },
-      })) as ProjetoPessoa[];
+        pessoa: { nome: r.pessoa?.nome ?? "—", departamento: r.pessoa?.departamento },
+        funcoes: r.funcoes ?? [],
+      })) as (ProjetoPessoa & { funcoes: any[] })[];
     },
   });
 
@@ -273,7 +275,11 @@ export default function Cast() {
 
   if (isLoading) return <Loading />;
 
-  const atoresDoProjeto = elenco ?? [];
+  const atoresDoProjeto = (elenco ?? []).filter((pp: any) => {
+    const hasElencoFunc = (pp.funcoes ?? []).some((f: any) => f.funcao_av?.departamento === "elenco");
+    const hasElencoDept = pp.pessoa?.departamento === "elenco";
+    return hasElencoFunc || hasElencoDept;
+  });
 
   return (
     <div className="space-y-6">

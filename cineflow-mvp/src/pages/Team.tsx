@@ -152,6 +152,12 @@ export default function Team() {
   const [docsData, setDocsData] = useState<Record<string, string>>({});
   const [pendingDocs, setPendingDocs] = useState<Record<string, File>>({});
 
+  // Editar membro — state
+  const [editVinculo, setEditVinculo] = useState<any | null>(null);
+  const [editDept, setEditDept] = useState("");
+  const [editFuncoes, setEditFuncoes] = useState<string[]>([]);
+  const [editPrincipal, setEditPrincipal] = useState("");
+
   // Nova pessoa — multi-function state
   const [deptNova, setDeptNova] = useState("");
   const [novaFuncoes, setNovaFuncoes] = useState<string[]>([]);
@@ -182,6 +188,16 @@ export default function Team() {
 
   function resetNovaForm() {
     setDeptNova(""); setNovaFuncoes([]); setNovaPrincipal("");
+  }
+
+  function openEdit(v: any) {
+    const dept = getPrincipalDept(v) ?? "";
+    const funcoes = (v.funcoes ?? []).map((f: any) => f.funcao_av?.id).filter(Boolean);
+    const principal = (v.funcoes ?? []).find((f: any) => f.principal)?.funcao_av?.id ?? funcoes[0] ?? "";
+    setEditVinculo(v);
+    setEditDept(dept);
+    setEditFuncoes(funcoes);
+    setEditPrincipal(principal);
   }
 
   const { data: vinculos, isLoading } = useQuery({
@@ -249,6 +265,10 @@ export default function Team() {
     ? (funcoesAv ?? []).filter((f: any) => f.departamento === deptNova)
     : [];
 
+  const funcoesAvFiltEdit = editDept
+    ? (funcoesAv ?? []).filter((f: any) => f.departamento === editDept)
+    : [];
+
   async function insertFuncoes(ppId: string, funcoes: string[], principal: string) {
     if (funcoes.length === 0) return;
     const payload = funcoes.map((fid) => ({
@@ -297,6 +317,36 @@ export default function Team() {
       qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
       setOpen(false);
       resetNovaForm();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const atualizarVinculo = useMutation({
+    mutationFn: async (form: FormData) => {
+      if (!editVinculo) return;
+      const ppId = editVinculo.id;
+      const pessoaId = editVinculo.pessoa?.id;
+      if (pessoaId) {
+        const { error } = await supabase.from("pessoas").update({
+          nome: String(form.get("nome")),
+          telefone: form.get("telefone") ? String(form.get("telefone")) : null,
+          departamento: editDept || null,
+        }).eq("id", pessoaId);
+        if (error) throw error;
+      }
+      const { error: e2 } = await supabase.from("projeto_pessoas").update({
+        funcao_av_id: editPrincipal || editFuncoes[0] || null,
+        valor_contratacao: Number(form.get("valor_contratacao") ?? 0),
+      }).eq("id", ppId);
+      if (e2) throw e2;
+      const { error: e3 } = await supabase.from("projeto_pessoa_funcoes").delete().eq("projeto_pessoa_id", ppId);
+      if (e3) throw e3;
+      await insertFuncoes(ppId, editFuncoes, editPrincipal);
+    },
+    onSuccess: () => {
+      toast.success("Membro atualizado com sucesso");
+      qc.invalidateQueries({ queryKey: ["projeto-pessoas", projetoId] });
+      setEditVinculo(null);
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -539,6 +589,11 @@ export default function Team() {
                           <FolderOpen className="h-4 w-4" />
                         </Button>
                         <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
+                        {canEditEquipe && !isOwnerRow && (
+                          <Button size="icon" variant="ghost" title="Editar membro" onClick={() => openEdit(v)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                        )}
                         {canRemoverEquipe && !isOwnerRow && (
                           <Button size="icon" variant="ghost" onClick={() => desvincular.mutate(v.id)}>
                             <Trash2 className="h-4 w-4 text-destructive" />
@@ -628,6 +683,11 @@ export default function Team() {
                             <FolderOpen className="h-3.5 w-3.5" />
                           </Button>
                           <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
+                          {canEditEquipe && !isOwnerRow && (
+                            <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar membro" onClick={() => openEdit(v)}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           {canRemoverEquipe && !isOwnerRow && (
                             <Button
                               size="icon"
@@ -763,6 +823,68 @@ export default function Team() {
               </form>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: Editar membro */}
+      <Dialog open={!!editVinculo} onOpenChange={(v) => { if (!v) setEditVinculo(null); }}>
+        <DialogContent className="flex flex-col max-h-[90vh] p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-3 shrink-0">
+            <DialogTitle>Editar membro — {editVinculo?.pessoa?.nome}</DialogTitle>
+          </DialogHeader>
+          {editVinculo && (
+            <form
+              key={editVinculo.id}
+              onSubmit={(e) => { e.preventDefault(); atualizarVinculo.mutate(new FormData(e.currentTarget)); }}
+              className="flex flex-col flex-1 min-h-0"
+              autoComplete="off"
+            >
+              <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit_nome">Nome completo</Label>
+                  <Input id="edit_nome" name="nome" required defaultValue={editVinculo.pessoa?.nome ?? ""} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>E-mail (somente leitura)</Label>
+                  <Input type="email" value={editVinculo.pessoa?.email ?? ""} readOnly className="opacity-60 cursor-not-allowed bg-muted" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Departamento</Label>
+                  <Select value={editDept} onValueChange={(v) => { setEditDept(v); setEditFuncoes([]); setEditPrincipal(""); }}>
+                    <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
+                    <SelectContent>
+                      {DEPARTAMENTOS_AV.map((d) => (
+                        <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <FuncoesProjetoSelect
+                  funcoes={funcoesAvFiltEdit}
+                  selected={editFuncoes}
+                  principal={editPrincipal}
+                  onToggle={(id) => toggleFuncao(id, editFuncoes, setEditFuncoes, editPrincipal, setEditPrincipal)}
+                  onSetPrincipal={setEditPrincipal}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit_tel">Telefone</Label>
+                    <Input id="edit_tel" name="telefone" defaultValue={editVinculo.pessoa?.telefone ?? ""} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit_valor">Valor de contratação (R$)</Label>
+                    <Input id="edit_valor" name="valor_contratacao" type="number" step="0.01" defaultValue={editVinculo.valor_contratacao ?? 0} />
+                  </div>
+                </div>
+              </div>
+              <DialogFooter className="px-6 py-3 border-t shrink-0">
+                <Button type="button" variant="outline" onClick={() => setEditVinculo(null)}>Cancelar</Button>
+                <Button type="submit" disabled={atualizarVinculo.isPending}>
+                  {atualizarVinculo.isPending ? "Salvando..." : "Salvar alterações"}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>

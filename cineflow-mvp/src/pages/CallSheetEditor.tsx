@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
@@ -200,6 +200,71 @@ export default function CallSheetEditor() {
     },
   });
 
+  // Cenas do roteiro do projeto (para vincular à OD)
+  const { data: roteiroCenas } = useQuery({
+    queryKey: ["roteiro-cenas-od", od?.projeto_id],
+    enabled: !!od?.projeto_id,
+    queryFn: async () => {
+      const { data: rot } = await supabase
+        .from("roteiros")
+        .select("id")
+        .eq("projeto_id", od!.projeto_id)
+        .maybeSingle();
+      if (!rot) return [];
+      const { data, error } = await supabase
+        .from("roteiro_cenas")
+        .select("id, numero_cena, cabecalho, sinopse, personagens")
+        .eq("roteiro_id", rot.id)
+        .order("ordem");
+      if (error) return [];
+      return (data ?? []) as any[];
+    },
+  });
+
+  // Personagens do projeto (para cruzar com nomes das cenas)
+  const { data: personagensProjeto } = useQuery({
+    queryKey: ["personagens-projeto", od?.projeto_id],
+    enabled: !!od?.projeto_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("personagens")
+        .select("id, nome")
+        .eq("projeto_id", od!.projeto_id);
+      return (data ?? []) as any[];
+    },
+  });
+
+  // Elenco escalado (com personagem_id preenchido)
+  const { data: elencoEscalado } = useQuery({
+    queryKey: ["elenco-escalado", od?.projeto_id],
+    enabled: !!od?.projeto_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("projeto_pessoas")
+        .select("id, personagem_id, pessoa:pessoas(nome)")
+        .eq("projeto_id", od!.projeto_id)
+        .is("deleted_at", null)
+        .not("personagem_id", "is", null);
+      return (data ?? []) as any[];
+    },
+  });
+
+  // Atores necessários para as cenas vinculadas à OD
+  const atoresDasCenas = useMemo(() => {
+    const cenasVinculadas = (cenas ?? []).filter((c: any) => c.roteiro_cena_id);
+    if (cenasVinculadas.length === 0) return [];
+    const idsRoteiro = cenasVinculadas.map((c: any) => c.roteiro_cena_id);
+    const cenasRot = (roteiroCenas ?? []).filter((rc: any) => idsRoteiro.includes(rc.id));
+    const nomesPersonagens = new Set<string>();
+    cenasRot.forEach((rc: any) => {
+      (rc.personagens ?? []).forEach((n: string) => nomesPersonagens.add(n.toUpperCase()));
+    });
+    const idsPersonagem = (personagensProjeto ?? [])
+      .filter((p: any) => nomesPersonagens.has(p.nome.toUpperCase()))
+      .map((p: any) => p.id);
+    return (elencoEscalado ?? []).filter((pp: any) => idsPersonagem.includes(pp.personagem_id));
+  }, [cenas, roteiroCenas, personagensProjeto, elencoEscalado]);
+
   const adicionarSecao = useMutation({
     mutationFn: async (departamento: string) => {
       if (!od?.id) throw new Error("OD não carregada");
@@ -252,6 +317,30 @@ export default function CallSheetEditor() {
   const removerCena = useMutation({
     mutationFn: async (cid: string) => {
       const { error } = await supabase.from("od_cenas").delete().eq("id", cid);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["od-cenas", od?.id] }),
+  });
+
+  const vincularRoteiroCena = useMutation({
+    mutationFn: async (roteiroCenaId: string) => {
+      if (!od?.id) throw new Error("OD não carregada");
+      const { error } = await supabase.from("od_cenas").insert({
+        od_id: od.id,
+        roteiro_cena_id: roteiroCenaId,
+        numero: "",
+        descricao: "",
+        ordem: (cenas?.length ?? 0),
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["od-cenas", od?.id] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const desvincularRoteiroCena = useMutation({
+    mutationFn: async (odCenaId: string) => {
+      const { error } = await supabase.from("od_cenas").delete().eq("id", odCenaId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["od-cenas", od?.id] }),
@@ -887,7 +976,59 @@ export default function CallSheetEditor() {
         </TabsContent>
 
         {/* ─── ABA CENAS ──────────────────────────────────────── */}
-        <TabsContent value="cenas">
+        <TabsContent value="cenas" className="space-y-4">
+          {/* Seletor de cenas do roteiro */}
+          {roteiroCenas && roteiroCenas.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <FileText className="h-4 w-4" /> Cenas do roteiro
+                </CardTitle>
+                <p className="text-xs text-muted-foreground">Marque as cenas que serão filmadas neste dia.</p>
+              </CardHeader>
+              <CardContent className="space-y-1.5 max-h-60 overflow-y-auto">
+                {roteiroCenas.map((rc: any) => {
+                  const linked = (cenas ?? []).find((c: any) => c.roteiro_cena_id === rc.id);
+                  return (
+                    <label key={rc.id} className="flex items-start gap-2 rounded-md border p-2 cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 accent-primary"
+                        checked={!!linked}
+                        onChange={() => {
+                          if (linked) desvincularRoteiroCena.mutate(linked.id);
+                          else vincularRoteiroCena.mutate(rc.id);
+                        }}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium">
+                          {rc.numero_cena ? `Cena ${rc.numero_cena} — ` : ""}{rc.cabecalho ?? "Sem cabeçalho"}
+                        </p>
+                        {rc.sinopse && <p className="text-xs text-muted-foreground truncate">{rc.sinopse}</p>}
+                        {(rc.personagens ?? []).length > 0 && (
+                          <p className="text-xs text-muted-foreground">Personagens: {(rc.personagens as string[]).join(", ")}</p>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </CardContent>
+              {atoresDasCenas.length > 0 && (
+                <div className="border-t px-6 py-3">
+                  <p className="text-xs font-semibold text-muted-foreground mb-1.5">Atores necessários para as cenas marcadas:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {atoresDasCenas.map((pp: any) => (
+                      <span key={pp.id} className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                        {pp.pessoa?.nome ?? "—"}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
+
+          {/* Lista manual de cenas da OD */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Cenas a filmar</CardTitle>
@@ -895,10 +1036,15 @@ export default function CallSheetEditor() {
             </CardHeader>
             <CardContent className="space-y-3">
               {!cenas?.length ? (
-                <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma cena adicionada.</p>
+                <p className="py-4 text-center text-sm text-muted-foreground">Nenhuma cena adicionada. Use o seletor acima ou adicione manualmente.</p>
               ) : (
                 cenas.map((c: any) => (
                   <div key={c.id} className="rounded-md border p-3">
+                    {c.roteiro_cena_id && (
+                      <p className="mb-1.5 text-xs text-primary font-medium">
+                        ↳ Do roteiro: {roteiroCenas?.find((rc: any) => rc.id === c.roteiro_cena_id)?.cabecalho ?? c.roteiro_cena_id}
+                      </p>
+                    )}
                     <div className="grid grid-cols-12 gap-2">
                       <Input className="col-span-2" placeholder="Cena Nº" defaultValue={c.numero ?? ""} onBlur={(e) => atualizarCena.mutate({ ...c, numero: e.target.value })} />
                       <Input className="col-span-7" placeholder="Descrição" defaultValue={c.descricao ?? ""} onBlur={(e) => atualizarCena.mutate({ ...c, descricao: e.target.value })} />
