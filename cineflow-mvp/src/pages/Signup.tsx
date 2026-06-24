@@ -9,6 +9,9 @@ import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 const APP_URL = window.location.origin;
+// Cadastro social: trocar para true quando os providers Google/Facebook estiverem
+// configurados no painel Supabase. Mantido oculto durante a fase de testes.
+const SOCIAL_LOGIN_ENABLED = false;
 
 export default function Signup() {
   const nav = useNavigate();
@@ -86,6 +89,7 @@ export default function Signup() {
               Criar conta
             </Button>
           </form>
+          {SOCIAL_LOGIN_ENABLED && (<>
           {/* ── Separador ───────────────────────────────────── */}
           <div className="relative my-5">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t" /></div>
@@ -118,6 +122,7 @@ export default function Signup() {
               Facebook
             </Button>
           </div>
+          </>)}
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Já tem conta?{" "}
