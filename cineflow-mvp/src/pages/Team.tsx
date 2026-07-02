@@ -19,6 +19,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { formatBRL } from "@/lib/utils";
 import { toast } from "sonner";
 import { InviteButton } from "@/components/InviteButton";
+import { temDDD } from "@/lib/phone";
 
 const DEPT_LABEL: Record<string, string> = {
   desenvolvimento: "Desenvolvimento",
@@ -294,12 +295,14 @@ export default function Team() {
   const criarEVincular = useMutation({
     mutationFn: async (form: FormData) => {
       if (!orgId || !projetoId) throw new Error("Contexto inválido");
+      const telNova = String(form.get("telefone") ?? "").trim();
+      if (telNova && !temDDD(telNova)) throw new Error("Informe o telefone com DDD (ex: (81) 9 9999-9999).");
       const pessoaPayload: any = {
         org_id: orgId,
         nome: form.get("nome"),
         funcao: null,
         departamento: deptNova || null,
-        telefone: form.get("telefone") || null,
+        telefone: telNova || null,
         email: form.get("email") || null,
       };
       const { data: pessoa, error: e1 } = await supabase
@@ -337,10 +340,12 @@ export default function Team() {
       if (!editVinculo) return;
       const ppId = editVinculo.id;
       const pessoaId = editVinculo.pessoa?.id;
+      const telEdit = String(form.get("telefone") ?? "").trim();
+      if (telEdit && !temDDD(telEdit)) throw new Error("Informe o telefone com DDD (ex: (81) 9 9999-9999).");
       if (pessoaId) {
         const { error } = await supabase.from("pessoas").update({
           nome: String(form.get("nome")),
-          telefone: form.get("telefone") ? String(form.get("telefone")) : null,
+          telefone: telEdit || null,
           departamento: editDept || null,
         }).eq("id", pessoaId);
         if (error) throw error;
@@ -528,8 +533,8 @@ export default function Team() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="telefone">Telefone</Label>
-                    <Input id="telefone" name="telefone" />
+                    <Label htmlFor="telefone">Telefone (com DDD)</Label>
+                    <Input id="telefone" name="telefone" placeholder="(81) 9 9999-9999" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="email">E-mail</Label>
@@ -599,7 +604,7 @@ export default function Team() {
                         }}>
                           <FolderOpen className="h-4 w-4" />
                         </Button>
-                        <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
+                        <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} pessoaTelefone={v.pessoa?.telefone} />
                         {canEditEquipe && !isOwnerRow && (
                           <Button size="icon" variant="ghost" title="Editar membro" onClick={() => openEdit(v)}>
                             <Pencil className="h-4 w-4" />
@@ -693,7 +698,7 @@ export default function Team() {
                           }}>
                             <FolderOpen className="h-3.5 w-3.5" />
                           </Button>
-                          <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} />
+                          <InviteButton projetoPessoaId={v.id} pessoaEmail={v.pessoa?.email} pessoaNome={v.pessoa?.nome} pessoaTelefone={v.pessoa?.telefone} />
                           {canEditEquipe && !isOwnerRow && (
                             <Button size="icon" variant="ghost" className="h-7 w-7" title="Editar membro" onClick={() => openEdit(v)}>
                               <Pencil className="h-3.5 w-3.5" />
@@ -879,8 +884,8 @@ export default function Team() {
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="edit_tel">Telefone</Label>
-                    <Input id="edit_tel" name="telefone" defaultValue={editVinculo.pessoa?.telefone ?? ""} />
+                    <Label htmlFor="edit_tel">Telefone (com DDD)</Label>
+                    <Input id="edit_tel" name="telefone" placeholder="(81) 9 9999-9999" defaultValue={editVinculo.pessoa?.telefone ?? ""} />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="edit_valor">Valor de contratação (R$)</Label>

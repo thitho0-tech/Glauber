@@ -6,14 +6,16 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogD
 import { Input } from "@/components/ui/input";
 import { Mail, Copy, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { waLink, waNumero } from "@/lib/phone";
 
 interface Props {
   projetoPessoaId: string;
   pessoaEmail?: string | null;
   pessoaNome?: string | null;
+  pessoaTelefone?: string | null;
 }
 
-export function InviteButton({ projetoPessoaId, pessoaEmail, pessoaNome }: Props) {
+export function InviteButton({ projetoPessoaId, pessoaEmail, pessoaNome, pessoaTelefone }: Props) {
   const [open, setOpen] = useState(false);
   const [token, setToken] = useState<string | null>(null);
 
@@ -34,6 +36,9 @@ export function InviteButton({ projetoPessoaId, pessoaEmail, pessoaNome }: Props
   });
 
   const link = token ? `${window.location.origin}/convite?token=${token}` : "";
+  const temNumero = !!waNumero(pessoaTelefone);
+  const msgWhats = `Olá${pessoaNome ? ", " + pessoaNome : ""}! Você foi convidado(a) para o projeto no Glauber: ${link}`;
+  const whatsHref = waLink(pessoaTelefone, msgWhats);
 
   return (
     <>
@@ -69,13 +74,16 @@ export function InviteButton({ projetoPessoaId, pessoaEmail, pessoaNome }: Props
                 size="sm"
                 variant="outline"
                 asChild
+                title={temNumero
+                  ? `Abrir conversa no WhatsApp de ${pessoaNome ?? "contato"}`
+                  : "Sem telefone com DDD no cadastro — abre o WhatsApp para você escolher o contato"}
               >
                 <a
-                  href={`https://wa.me/?text=${encodeURIComponent("Você foi convidado(a) para o projeto no Glauber: " + link)}`}
+                  href={whatsHref}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  <ExternalLink className="h-4 w-4" /> WhatsApp
+                  <ExternalLink className="h-4 w-4" /> {temNumero ? "WhatsApp do contato" : "WhatsApp"}
                 </a>
               </Button>
               <Button

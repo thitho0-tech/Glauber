@@ -13,3 +13,6 @@ dist-ssr
 
 vite.config.js.timestamp-*.mjs
 vite.config.ts.timestamp-*.mjs
+
+# Cache de sessão do Cowork/Claude Code — não versionar
+.claude/

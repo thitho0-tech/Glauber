@@ -14,11 +14,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   CalendarDays, Send, Mic, Square, Trash2, MessageSquare,
-  ChevronRight, Plus,
+  ChevronRight, Plus, AlertCircle, UserCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 
 const BUCKET = "mensagens-audio";
+
+const PENDENCIA_LABEL: Record<string, string> = {
+  od: "Aprovar OD",
+  figurino: "Aprovar figurino",
+  arte: "Aprovar objeto de arte",
+  locacao: "Aprovar locação",
+};
 
 function formatDataHora(iso: string) {
   // Formata a hora "de parede" direto da string ISO, SEM converter fuso,
@@ -313,17 +320,33 @@ export default function ProjectDashboard() {
     },
   });
 
-  // Events the current user is explicitly listed as participant
+  // Events the current user is explicitly listed as participant (+ confirmação de presença)
   const { data: minhasParticipacoes } = useQuery({
     queryKey: ["minhas-participacoes-mural", myPpId],
     enabled: !!myPpId && !isSuperUser,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("agenda_participantes")
-        .select("evento_id")
+        .select("evento_id, confirmado")
         .eq("projeto_pessoa_id", myPpId!);
       if (error) throw error;
-      return new Set((data ?? []).map((r: any) => r.evento_id as string));
+      const rows = (data ?? []) as any[];
+      return {
+        todos: new Set(rows.map((r) => r.evento_id as string)),
+        naoConfirmados: new Set(rows.filter((r) => !r.confirmado).map((r) => r.evento_id as string)),
+      };
+    },
+  });
+
+  // Pendências de aprovação do usuário corrente (OD, figurino, arte, locação).
+  // O RPC já filtra pelo pode() — só volta o que ESTA pessoa pode aprovar.
+  const { data: pendencias } = useQuery({
+    queryKey: ["minhas-pendencias", projetoId],
+    enabled: !!projetoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("minhas_pendencias", { p_projeto: projetoId! });
+      if (error) throw error;
+      return (data ?? []) as { tipo: string; titulo: string; link: string; gerado_em: string }[];
     },
   });
 
@@ -370,7 +393,7 @@ export default function ProjectDashboard() {
         ev.tipo === "ordem_do_dia" ||
         ev.departamento == null ||
         ev.departamento === (funcao?.departamento ?? null) ||
-        (minhasParticipacoes?.has(ev.id) ?? false)
+        (minhasParticipacoes?.todos.has(ev.id) ?? false)
       );
 
   const canaisGeral   = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "geral");
@@ -396,7 +419,23 @@ export default function ProjectDashboard() {
             </Button>
           </CardHeader>
           <CardContent className="flex-1 overflow-y-auto space-y-2 pb-4">
-            {eventosFiltrados.length === 0 ? (
+            {/* Pendências de aprovação (topo; somem ao aprovar/rejeitar) */}
+            {(pendencias ?? []).map((p) => (
+              <Link
+                key={p.tipo + p.link + p.gerado_em}
+                to={p.link}
+                className="block rounded-lg border border-amber-300 bg-amber-50 p-3 space-y-1 hover:bg-amber-100 transition-colors cursor-pointer"
+              >
+                <div className="flex items-center gap-1.5">
+                  <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                  <Badge variant="outline" className="border-amber-400 text-amber-700 text-[10px]">Pendência</Badge>
+                  <span className="text-xs font-medium text-amber-800">{PENDENCIA_LABEL[p.tipo] ?? "Aprovar"}</span>
+                </div>
+                <p className="text-sm font-medium truncate">{p.titulo}</p>
+              </Link>
+            ))}
+
+            {eventosFiltrados.length === 0 && (pendencias ?? []).length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center gap-2 text-muted-foreground">
                 <CalendarDays className="h-8 w-8 opacity-30" />
                 <p className="text-sm">Nenhum evento próximo.</p>
@@ -415,6 +454,11 @@ export default function ProjectDashboard() {
                   <p className="text-xs text-muted-foreground">{formatDataHora(ev.data_inicio)}</p>
                   {ev.descricao && (
                     <p className="text-xs text-muted-foreground line-clamp-2">{ev.descricao}</p>
+                  )}
+                  {(minhasParticipacoes?.naoConfirmados.has(ev.id) ?? false) && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 border border-blue-300 px-2 py-0.5 text-[11px] font-medium text-blue-700">
+                      <UserCheck className="h-3 w-3" /> Confirmar presença
+                    </span>
                   )}
                 </Link>
               ))
