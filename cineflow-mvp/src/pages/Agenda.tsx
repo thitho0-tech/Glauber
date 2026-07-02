@@ -14,7 +14,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loading } from "@/components/ui/loading";
-import { Empty } from "@/components/ui/empty";
 import {
   Plus, ChevronLeft, ChevronRight, CalendarDays, Clock,
   MapPin, Users, CheckCircle2, XCircle, CalendarClock,
@@ -925,18 +924,19 @@ export default function Agenda() {
           ))}
         </div>
 
-        {/* Navegação */}
+        {/* Botão Hoje (separado da navegação) */}
+        <Button variant="ghost" size="sm" onClick={navHoje} className="text-xs">Hoje</Button>
+
+        {/* Navegação: setas flanqueando o período em tela (mês/semana/dia) */}
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={navAnterior}>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={navAnterior} aria-label="Anterior">
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="sm" onClick={navHoje} className="text-xs">Hoje</Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={navProximo}>
+          <span className="font-semibold text-sm text-center min-w-[150px]">{labelNavegacao()}</span>
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={navProximo} aria-label="Próximo">
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
-
-        <span className="font-semibold text-sm">{labelNavegacao()}</span>
 
         <div className="ml-auto">
           {canEdit && (
@@ -947,32 +947,22 @@ export default function Agenda() {
         </div>
       </div>
 
-      {/* Calendário */}
-      {allItens.length === 0 && !canEdit ? (
-        <Empty
-          icon={<CalendarDays className="h-5 w-5" />}
-          title="Nenhuma atividade"
-          description="Ainda não há eventos ou períodos de produção neste projeto."
+      {/* Calendário — sempre visível, mesmo sem itens marcados */}
+      {vista === "mes" && (
+        <CalMes
+          dataAtual={dataAtual}
+          itens={allItens}
+          onDiaClick={(d) => { setDataAtual(d); setVista("dia"); }}
+          onItemClick={setDetalhe}
         />
-      ) : (
+      )}
+      {vista === "semana" && (
+        <CalSemana dataAtual={dataAtual} itens={allItens} onItemClick={setDetalhe} />
+      )}
+      {vista === "dia" && (
         <>
-          {vista === "mes" && (
-            <CalMes
-              dataAtual={dataAtual}
-              itens={allItens}
-              onDiaClick={(d) => { setDataAtual(d); setVista("dia"); }}
-              onItemClick={setDetalhe}
-            />
-          )}
-          {vista === "semana" && (
-            <CalSemana dataAtual={dataAtual} itens={allItens} onItemClick={setDetalhe} />
-          )}
-          {vista === "dia" && (
-            <>
-              <h2 className="text-sm font-semibold text-muted-foreground">{formatDate(toDateStr(dataAtual))}</h2>
-              <CalDia dataAtual={dataAtual} itens={allItens} onItemClick={setDetalhe} />
-            </>
-          )}
+          <h2 className="text-sm font-semibold text-muted-foreground">{formatDate(toDateStr(dataAtual))}</h2>
+          <CalDia dataAtual={dataAtual} itens={allItens} onItemClick={setDetalhe} />
         </>
       )}
 
