@@ -391,8 +391,7 @@ export default function ProjectDashboard() {
     ? (proximosEventos ?? [])
     : (proximosEventos ?? []).filter((ev: any) =>
         ev.tipo === "ordem_do_dia" ||
-        ev.departamento == null ||
-        ev.departamento === (funcao?.departamento ?? null) ||
+        (ev.departamento != null && ev.departamento === (funcao?.departamento ?? null)) ||
         (minhasParticipacoes?.todos.has(ev.id) ?? false)
       );
 

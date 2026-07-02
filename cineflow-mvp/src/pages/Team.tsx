@@ -342,9 +342,12 @@ export default function Team() {
       const pessoaId = editVinculo.pessoa?.id;
       const telEdit = String(form.get("telefone") ?? "").trim();
       if (telEdit && !temDDD(telEdit)) throw new Error("Informe o telefone com DDD (ex: (81) 9 9999-9999).");
+      const emailEdit = String(form.get("email") ?? "").trim().toLowerCase();
+      if (emailEdit && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(emailEdit)) throw new Error("E-mail invalido.");
       if (pessoaId) {
         const { error } = await supabase.from("pessoas").update({
           nome: String(form.get("nome")),
+          email: emailEdit || null,
           telefone: telEdit || null,
           departamento: editDept || null,
         }).eq("id", pessoaId);
@@ -861,8 +864,8 @@ export default function Team() {
                   <Input id="edit_nome" name="nome" required defaultValue={editVinculo.pessoa?.nome ?? ""} />
                 </div>
                 <div className="space-y-1.5">
-                  <Label>E-mail (somente leitura)</Label>
-                  <Input type="email" value={editVinculo.pessoa?.email ?? ""} readOnly className="opacity-60 cursor-not-allowed bg-muted" />
+                  <Label htmlFor="edit_email">E-mail</Label>
+                  <Input id="edit_email" name="email" type="email" placeholder="nome@exemplo.com" defaultValue={editVinculo.pessoa?.email ?? ""} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Departamento</Label>

@@ -645,10 +645,10 @@ export default function Agenda() {
   const eventosFiltrados = useMemo(() => {
     const lista = eventos ?? [];
     if (isSuperUser) return lista;
+    const meuDept = funcao?.departamento ?? null;
     return lista.filter((ev: any) =>
       ev.tipo === "ordem_do_dia" ||
-      ev.departamento == null ||
-      ev.departamento === (funcao?.departamento ?? null) ||
+      (ev.departamento != null && ev.departamento === meuDept) ||
       minhasParticipacoes.has(ev.id)
     );
   }, [eventos, isSuperUser, funcao, minhasParticipacoes]);
