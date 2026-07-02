@@ -38,9 +38,9 @@ Nome homenageia Glauber Rocha. Tagline: *"Onde a criação encontra a produção
 
 ---
 
-## ESTADO ATUAL (30/06/2026)
+## ESTADO ATUAL (02/07/2026)
 
-### Migrations aplicadas em produção: **0001–0070**
+### Migrations aplicadas em produção: **0001–0072**
 
 | Bloco | Tema | Migrations |
 |-------|------|-----------|
@@ -54,6 +54,7 @@ Nome homenageia Glauber Rocha. Tagline: *"Onde a criação encontra a produção
 | Sprint 5 — Features | Status arte/locação, notif OD, fix decupagem | 0058–0062 |
 | Leva pós-teste (23/06) | Fix RLS canais, notif agenda, rebrand emails, fix OD | 0063–0068 |
 | Leva 2 (24/06) | Timeout email, função por projeto (catalog) | 0069–0070 |
+| Leva 3 (02/07) | Fix import CSV (valida e-mail), RPC criar_dm, papel default, fix trigger DELETE em projeto_pessoas | 0071–0072 |
 
 **Atenção:** migration 0049 (agenda_prep) deliberadamente não aplicada — será usada junto do C4.
 
@@ -145,6 +146,10 @@ Preços discutidos: FREE / R$149 / R$499 / R$699 (a confirmar).
 9. **`org_id` do usuário** → via `memberships`, não via `pessoas`
 10. **Funções SECURITY DEFINER novas** → sempre `revoke execute from public, anon; grant to authenticated`
 11. **Arquivos .tsx grandes no Cowork podem truncar** — para edição grande usar Claude Code
+12. **Migration aplicada via MCP → criar o arquivo .sql no repo na mesma hora** — produção e `supabase/migrations/` devem sempre ter paridade (aprendido na Leva 3: 0071/0072 foram aplicadas sem arquivo)
+13. **`git status` antes de `git add -A`** — conferir a lista; add -A da raiz varre docs, PDFs de relato e tudo mais (Leva 3 commitou 21 arquivos, incluindo relatos com nomes reais; repo privado, sem dano, mas conferir sempre)
+14. **Warnings "LF will be replaced by CRLF" são inofensivos** — só conversão de fim de linha do Windows; ignorar
+15. **Triggers BEFORE DELETE devem retornar OLD** — retornar NEW em DELETE anula a operação silenciosamente (causa do lixo órfão até 0072)
 
 ---
 
