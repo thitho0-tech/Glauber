@@ -11,9 +11,10 @@ import novaLogo from "@/assets/nova-logo-glauber.jpeg";
 import { toast } from "sonner";
 
 const APP_URL = window.location.origin;
-// Login social: trocar para true quando os providers Google/Facebook estiverem
-// configurados no painel Supabase. Mantido oculto durante a fase de testes.
-const SOCIAL_LOGIN_ENABLED = false;
+// Login social: Google liberado em produção (provider configurado no Supabase em 24/06/2026).
+const SOCIAL_LOGIN_ENABLED = true;
+// Facebook: trocar para true quando o provider Facebook estiver configurado no Supabase.
+const FACEBOOK_LOGIN_ENABLED = false;
 
 // ── Validação de senha (mínimo 8 caracteres) ─────────────────
 function validarSenha(senha: string): string | null {
@@ -175,7 +176,7 @@ export default function Login() {
           </div>
 
           {/* ── Login social ─────────────────────────────────── */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className={FACEBOOK_LOGIN_ENABLED ? "grid grid-cols-2 gap-3" : "grid grid-cols-1 gap-3"}>
             <Button
               type="button"
               variant="outline"
@@ -189,6 +190,7 @@ export default function Login() {
               </svg>
               Google
             </Button>
+            {FACEBOOK_LOGIN_ENABLED && (
             <Button
               type="button"
               variant="outline"
@@ -199,6 +201,7 @@ export default function Login() {
               </svg>
               Facebook
             </Button>
+            )}
           </div>
           </>)}
 

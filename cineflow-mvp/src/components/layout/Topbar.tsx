@@ -7,6 +7,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrgs } from "@/hooks/useOrg";
 import { useSidebar } from "@/hooks/useSidebar";
 import { NotificationBell } from "@/components/NotificationBell";
+import { useProjectRole } from "@/hooks/useProjectRole";
+
+const ROLE_LABEL: Record<string, string> = {
+  owner: "Owner",
+  admin: "Admin",
+  producao: "Produção",
+  departamento: "Equipe",
+  leitor: "Leitor",
+};
 
 export function Topbar() {
   const { user } = useAuth();
@@ -16,6 +25,7 @@ export function Topbar() {
 
   // Nome do projeto ativo (quando navegando dentro de um projeto)
   const { id: projetoId } = useParams();
+  const { role } = useProjectRole(projetoId);
   const { data: projeto } = useQuery({
     queryKey: ["topbar-projeto-nome", projetoId],
     enabled: !!projetoId,
@@ -54,7 +64,7 @@ export function Topbar() {
         </div>
         <div className="hidden text-right text-sm md:block">
           <p className="font-medium">{user?.email}</p>
-          <p className="text-xs text-muted-foreground">Owner</p>
+          {role && <p className="text-xs text-muted-foreground">{ROLE_LABEL[role] ?? role}</p>}
         </div>
         <Button variant="outline" size="sm" onClick={() => supabase.auth.signOut()}>
           <LogOut className="h-4 w-4" />

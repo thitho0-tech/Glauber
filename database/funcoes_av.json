@@ -1,0 +1,94 @@
+{
+  "_meta": {
+    "descricao": "Catálogo de funções do audiovisual brasileiro. Fonte: organograma de produção AV Brasil (60+ funções, 9 departamentos, 4 níveis). Seedado via migrations Supabase na tabela funcoes_av.",
+    "ultima_atualizacao": "2026-06-30",
+    "migration_referencia": "seed incluído nas migrations base"
+  },
+  "departamentos": [
+    "Direção",
+    "Produção",
+    "Roteiro",
+    "Fotografia",
+    "Arte",
+    "Figurino",
+    "Som",
+    "Pós-Produção",
+    "Elenco"
+  ],
+  "niveis": {
+    "1": "Chefe de departamento / Head",
+    "2": "Supervisor / Assistente sênior",
+    "3": "Assistente / Técnico",
+    "4": "Auxiliar / Estagiário"
+  },
+  "funcoes": [
+    { "departamento": "Direção", "nivel": 1, "nome": "Diretor" },
+    { "departamento": "Direção", "nivel": 2, "nome": "1º Assistente de Direção (1º AD)" },
+    { "departamento": "Direção", "nivel": 3, "nome": "2º Assistente de Direção (2º AD)" },
+    { "departamento": "Direção", "nivel": 3, "nome": "3º Assistente de Direção (3º AD)" },
+    { "departamento": "Direção", "nivel": 3, "nome": "Continuísta (Script Supervisor)" },
+    { "departamento": "Direção", "nivel": 4, "nome": "PA (Production Assistant)" },
+
+    { "departamento": "Produção", "nivel": 1, "nome": "Produtor Executivo" },
+    { "departamento": "Produção", "nivel": 1, "nome": "Diretor de Produção (DP)" },
+    { "departamento": "Produção", "nivel": 2, "nome": "Produtor Geral" },
+    { "departamento": "Produção", "nivel": 2, "nome": "Produtor de Campo" },
+    { "departamento": "Produção", "nivel": 2, "nome": "Assistente de Produção" },
+    { "departamento": "Produção", "nivel": 3, "nome": "Coordenador de Produção" },
+    { "departamento": "Produção", "nivel": 3, "nome": "Diretor de Logística" },
+    { "departamento": "Produção", "nivel": 4, "nome": "Elenqueiro / Casting" },
+    { "departamento": "Produção", "nivel": 4, "nome": "Runner" },
+
+    { "departamento": "Roteiro", "nivel": 1, "nome": "Roteirista" },
+    { "departamento": "Roteiro", "nivel": 2, "nome": "Assistente de Roteiro" },
+    { "departamento": "Roteiro", "nivel": 2, "nome": "Consultor de Roteiro" },
+
+    { "departamento": "Fotografia", "nivel": 1, "nome": "Diretor de Fotografia (DOP)" },
+    { "departamento": "Fotografia", "nivel": 2, "nome": "Operador de Câmera" },
+    { "departamento": "Fotografia", "nivel": 2, "nome": "1º Assistente de Câmera (Foco)" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "2º Assistente de Câmera (Claquete)" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "DIT (Digital Imaging Technician)" },
+    { "departamento": "Fotografia", "nivel": 2, "nome": "Gaffer (Chefe de Elétrica)" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "Eletricista" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "Auxiliar de Elétrica" },
+    { "departamento": "Fotografia", "nivel": 2, "nome": "Key Grip" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "Grip" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "Auxiliar de Grip" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "Steadicam Operator" },
+    { "departamento": "Fotografia", "nivel": 3, "nome": "Drone Operator" },
+
+    { "departamento": "Arte", "nivel": 1, "nome": "Diretor de Arte" },
+    { "departamento": "Arte", "nivel": 2, "nome": "Assistente de Direção de Arte" },
+    { "departamento": "Arte", "nivel": 2, "nome": "Cenógrafo" },
+    { "departamento": "Arte", "nivel": 3, "nome": "Assistente de Cenografia" },
+    { "departamento": "Arte", "nivel": 3, "nome": "Adereçador / Set Dresser" },
+    { "departamento": "Arte", "nivel": 3, "nome": "Contra-Regra" },
+    { "departamento": "Arte", "nivel": 4, "nome": "Auxiliar de Arte" },
+
+    { "departamento": "Figurino", "nivel": 1, "nome": "Figurinista" },
+    { "departamento": "Figurino", "nivel": 2, "nome": "Assistente de Figurino" },
+    { "departamento": "Figurino", "nivel": 2, "nome": "Camareira" },
+    { "departamento": "Figurino", "nivel": 3, "nome": "Maquiador" },
+    { "departamento": "Figurino", "nivel": 3, "nome": "Assistente de Maquiagem" },
+    { "departamento": "Figurino", "nivel": 3, "nome": "Cabelereiro / Hair Stylist" },
+    { "departamento": "Figurino", "nivel": 4, "nome": "Auxiliar de Figurino" },
+
+    { "departamento": "Som", "nivel": 1, "nome": "Diretor de Som (Sound Designer)" },
+    { "departamento": "Som", "nivel": 2, "nome": "Operador de Som Direto" },
+    { "departamento": "Som", "nivel": 3, "nome": "Microfonista (Boom Operator)" },
+    { "departamento": "Som", "nivel": 3, "nome": "Assistente de Som" },
+
+    { "departamento": "Pós-Produção", "nivel": 1, "nome": "Editor / Montador" },
+    { "departamento": "Pós-Produção", "nivel": 2, "nome": "Assistente de Montagem" },
+    { "departamento": "Pós-Produção", "nivel": 1, "nome": "Colorista (Color Grading)" },
+    { "departamento": "Pós-Produção", "nivel": 2, "nome": "Finalizador" },
+    { "departamento": "Pós-Produção", "nivel": 1, "nome": "Supervisor de Pós-Produção" },
+    { "departamento": "Pós-Produção", "nivel": 2, "nome": "Produtor de Pós" },
+    { "departamento": "Pós-Produção", "nivel": 2, "nome": "Motion Designer / VFX" },
+
+    { "departamento": "Elenco", "nivel": 1, "nome": "Ator Principal" },
+    { "departamento": "Elenco", "nivel": 2, "nome": "Ator Coadjuvante" },
+    { "departamento": "Elenco", "nivel": 3, "nome": "Ator de Apoio (Ponta)" },
+    { "departamento": "Elenco", "nivel": 4, "nome": "Figurante" }
+  ]
+}

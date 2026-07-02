@@ -36,6 +36,22 @@ function limpaCelula(s: string | undefined): string {
   return s.trim().replace(/^["']|["']$/g, "").trim();
 }
 
+// FIX: monta a linha detectando a coluna de e-mail pelo formato,
+// em vez de assumir posição fixa — evita função cair no campo e-mail
+function montaRow(cells: string[]): TeamRow {
+  let emailIdx = -1;
+  for (let i = 1; i < cells.length; i++) {
+    if (EMAIL_RX.test(cells[i])) { emailIdx = i; break; }
+  }
+  const resto = cells.filter((_, i) => i !== 0 && i !== emailIdx);
+  return {
+    nome: cells[0] ?? "",
+    funcao: resto[0] ?? "",
+    email: emailIdx >= 0 ? cells[emailIdx].toLowerCase() : "",
+    convidar: emailIdx >= 0,
+  };
+}
+
 function eMarkdownTabela(texto: string): boolean {
   // Detecta tabela em markdown:
   // | Nome | Função | E-mail |
@@ -53,12 +69,7 @@ function parseMarkdownTabela(texto: string): TeamRow[] {
     if (cells.length < 2) continue;
     // pula header
     if (eHeader(cells)) continue;
-    rows.push({
-      nome: cells[0] ?? "",
-      funcao: cells[1] ?? "",
-      email: (cells[2] ?? "").toLowerCase(),
-      convidar: true,
-    });
+    rows.push(montaRow(cells));
   }
   return rows.filter((r) => r.nome);
 }
@@ -88,12 +99,7 @@ export function parseTeamCsv(textoBruto: string): TeamRow[] {
     }
     comecou = true;
     if (!cells[0]) continue;
-    rows.push({
-      nome: cells[0],
-      funcao: cells[1] ?? "",
-      email: (cells[2] ?? "").toLowerCase(),
-      convidar: true,
-    });
+    rows.push(montaRow(cells));
   }
   return rows;
 }

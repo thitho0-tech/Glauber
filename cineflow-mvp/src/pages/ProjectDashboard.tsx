@@ -296,22 +296,6 @@ export default function ProjectDashboard() {
     },
   });
 
-  // Current user's pessoa_id (for DM creation)
-  const { data: myPessoa } = useQuery({
-    queryKey: ["my-pessoa", projetoId, user?.email],
-    enabled: !!projetoId && !!user?.email,
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("projeto_pessoas")
-        .select("pessoa:pessoas!inner(id, nome, email)")
-        .eq("projeto_id", projetoId!)
-        .is("deleted_at", null)
-        .ilike("pessoa.email", user!.email!)
-        .maybeSingle();
-      return (data as any)?.pessoa ?? null;
-    },
-  });
-
   // Current user's projeto_pessoas.id — needed to look up event participations
   const { data: myPpId } = useQuery({
     queryKey: ["my-pp-id", projetoId, user?.email],
@@ -361,45 +345,17 @@ export default function ProjectDashboard() {
 
   const criarOuAbrirDM = useMutation({
     mutationFn: async (targetPessoa: { id: string; nome: string }) => {
-      if (!myPessoa) throw new Error("Seu perfil não foi encontrado no projeto");
-
-      const canaisPrivado = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "privado");
-
-      // Check if DM already exists: find a canal where target is a member AND it's in our privado list
-      if (canaisPrivado.length > 0) {
-        const privadoIds = canaisPrivado.map((c: any) => c.id);
-        const { data: targetMembros } = await supabase
-          .from("canal_membros")
-          .select("canal_id")
-          .eq("pessoa_id", targetPessoa.id)
-          .in("canal_id", privadoIds);
-
-        if (targetMembros && targetMembros.length > 0) {
-          return { canalId: targetMembros[0].canal_id, isNew: false };
-        }
-      }
-
-      // Create new DM canal
-      const dmDept = "dm-" + crypto.randomUUID().slice(0, 8);
-      const { data: newCanal, error: e1 } = await supabase
-        .from("canais")
-        .insert({ projeto_id: projetoId!, tipo: "privado", departamento: dmDept, nome: targetPessoa.nome })
-        .select("id")
-        .single();
-      if (e1) throw e1;
-
-      const { error: e2 } = await supabase.from("canal_membros").insert([
-        { canal_id: newCanal.id, pessoa_id: myPessoa.id },
-        { canal_id: newCanal.id, pessoa_id: targetPessoa.id },
-      ]);
-      if (e2) throw e2;
-
-      return { canalId: newCanal.id, isNew: true };
+      // FIX: RPC SECURITY DEFINER — o insert direto falhava porque a policy de
+      // SELECT de canal privado bloqueava o RETURNING antes dos membros existirem
+      const { data, error } = await supabase.rpc("criar_dm", {
+        p_projeto: projetoId!,
+        p_target_pessoa: targetPessoa.id,
+      });
+      if (error) throw error;
+      return { canalId: data as string };
     },
-    onSuccess: ({ canalId, isNew }) => {
-      if (isNew) {
-        qc.invalidateQueries({ queryKey: ["canais", projetoId] });
-      }
+    onSuccess: ({ canalId }) => {
+      qc.invalidateQueries({ queryKey: ["canais", projetoId] });
       setPrivadoTarget(canalId);
       setOpenNovaDM(false);
     },

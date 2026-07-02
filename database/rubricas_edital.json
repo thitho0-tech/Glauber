@@ -1,0 +1,73 @@
+{
+  "_meta": {
+    "descricao": "Rubricas e regras dos editais brasileiros de audiovisual. Base para validações automáticas de despesas. Seedado via migrations Supabase nas tabelas editais e rubricas.",
+    "ultima_atualizacao": "2026-06-30",
+    "migration_referencia": "0002_seed_sic_recife_2024"
+  },
+  "editais": [
+    {
+      "id_ref": "funcultura_pe",
+      "nome": "Funcultura PE",
+      "orgao": "Secretaria de Cultura de Pernambuco",
+      "prazo_prestacao_meses": 2,
+      "regras_gerais": [
+        "Comprovante obrigatório para despesas acima de R$100",
+        "RPA requer CPF, banco, agência e conta do prestador",
+        "Diárias de locação precisam de contrato ou declaração",
+        "Prestação em até 60 dias após término do projeto"
+      ]
+    },
+    {
+      "id_ref": "lei_paulo_gustavo",
+      "nome": "Lei Paulo Gustavo",
+      "orgao": "Governo Federal",
+      "prazo_prestacao_meses": 3,
+      "regras_gerais": [
+        "Edital emergencial de 2022",
+        "Exige relatório de impacto/público para projetos de exibição",
+        "Comprovante obrigatório acima de R$200"
+      ]
+    },
+    {
+      "id_ref": "sic_recife_2024_fic",
+      "nome": "SIC Recife 2024 — FIC",
+      "orgao": "Secretaria de Cultura do Recife",
+      "prazo_prestacao_meses": 2,
+      "tipo_projeto": "Ficção (longas, curtas, séries)",
+      "regras_gerais": [
+        "CNPJ ou CPF válido obrigatório em todas as notas",
+        "Data da despesa deve estar no período do projeto",
+        "Regime de contratação compatível com a rubrica"
+      ]
+    },
+    {
+      "id_ref": "sic_recife_2024_mic",
+      "nome": "SIC Recife 2024 — MIC",
+      "orgao": "Secretaria de Cultura do Recife",
+      "prazo_prestacao_meses": 2,
+      "tipo_projeto": "Minisséries, webséries e conteúdo para internet",
+      "regras_gerais": [
+        "CNPJ ou CPF válido obrigatório em todas as notas",
+        "Data da despesa deve estar no período do projeto"
+      ]
+    }
+  ],
+  "rubricas": [
+    { "codigo": "1.1", "nome": "Roteirista", "tipo": "pessoal", "contratacao_aceita": ["RPA", "PJ", "CLT"] },
+    { "codigo": "1.2", "nome": "Diretor", "tipo": "pessoal", "contratacao_aceita": ["RPA", "PJ", "CLT"] },
+    { "codigo": "1.3", "nome": "Produtor Executivo", "tipo": "pessoal", "contratacao_aceita": ["RPA", "PJ", "CLT"] },
+    { "codigo": "2.1", "nome": "Equipe Técnica", "tipo": "pessoal", "contratacao_aceita": ["CLT", "MEI", "RPA"] },
+    { "codigo": "2.2", "nome": "Elenco", "tipo": "pessoal", "contratacao_aceita": ["RPA", "CLT"] },
+    { "codigo": "3.1", "nome": "Locação", "tipo": "servico", "requer_nota_fiscal": true },
+    { "codigo": "3.2", "nome": "Equipamento", "tipo": "servico", "requer_nota_fiscal": true },
+    { "codigo": "4.1", "nome": "Material de Produção", "tipo": "material", "requer_nota_fiscal": true },
+    { "codigo": "4.2", "nome": "Serviços de Pós-Produção", "tipo": "servico", "requer_nota_fiscal": true },
+    { "codigo": "5.1", "nome": "Divulgação e Marketing", "tipo": "servico", "requer_nota_fiscal": true },
+    { "codigo": "5.2", "nome": "Prestação de Contas", "tipo": "servico", "requer_nota_fiscal": false }
+  ],
+  "status_validacao": {
+    "OK": "Despesa dentro das regras — aprovada para prestação",
+    "WARN": "Despesa com ressalva — revisar antes de prestar (ex: valor próximo do teto)",
+    "FAIL": "Despesa fora das regras — bloqueia prestação de contas"
+  }
+}

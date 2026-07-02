@@ -165,7 +165,17 @@ export default function Team() {
 
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
-  const orgId = orgs?.[0]?.org.id;
+  // FIX: pessoas devem nascer no org do PROJETO, não no org pessoal de quem cadastra
+  const { data: projOrg } = useQuery({
+    queryKey: ["projeto-org", projetoId],
+    enabled: !!projetoId,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("projetos").select("org_id").eq("id", projetoId!).single();
+      if (error) throw error;
+      return data as { org_id: string };
+    },
+  });
+  const orgId = projOrg?.org_id ?? orgs?.[0]?.org.id;
   const qc = useQueryClient();
 
   function toggleFuncao(
@@ -303,6 +313,7 @@ export default function Team() {
         pessoa_id: pessoa.id,
         funcao_av_id: novaPrincipal || novaFuncoes[0] || null,
         valor_contratacao: Number(form.get("valor_contratacao") ?? 0),
+        papel_projeto: "departamento", // FIX: papel null escondia menus (agenda etc.)
       };
       const { data: pp, error: e2 } = await supabase
         .from("projeto_pessoas")
