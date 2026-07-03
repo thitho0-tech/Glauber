@@ -387,11 +387,17 @@ export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<
   const vfs: any = pdfFontsMod.default ?? pdfFontsMod
   // IMPORTANTE: na 0.3.x registrar via addVirtualFileSystem (setar .vfs não basta —
   // o loader de fontes não enxerga e o getBlob nunca chama o callback => trava).
-  if (typeof pdfMake.addVirtualFileSystem === 'function') {
-    pdfMake.addVirtualFileSystem(vfs)
-  } else {
-    pdfMake.vfs = vfs
+  const fonts = {
+    Roboto: {
+      normal: 'Roboto-Regular.ttf',
+      bold: 'Roboto-Medium.ttf',
+      italics: 'Roboto-Italic.ttf',
+      bolditalics: 'Roboto-MediumItalic.ttf',
+    },
   }
+  if (typeof pdfMake.addVirtualFileSystem === 'function') pdfMake.addVirtualFileSystem(vfs)
+  pdfMake.vfs = vfs
+  pdfMake.fonts = fonts
   const docDef = buildDocDefinition(contrato)
   return new Promise<Blob>((resolve, reject) => {
     // Timeout de segurança: nunca deixa a Promise pendurada (sem download nem erro).
@@ -400,7 +406,7 @@ export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<
       20000,
     )
     try {
-      pdfMake.createPdf(docDef).getBlob((blob: Blob) => {
+      pdfMake.createPdf(docDef, null, fonts, vfs).getBlob((blob: Blob) => {
         clearTimeout(timer)
         resolve(blob)
       })
