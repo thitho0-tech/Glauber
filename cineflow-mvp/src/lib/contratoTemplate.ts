@@ -383,15 +383,30 @@ export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<
   const pdfMakeMod: any = await import('pdfmake/build/pdfmake')
   const pdfFontsMod: any = await import('pdfmake/build/vfs_fonts')
   const pdfMake: any = pdfMakeMod.default ?? pdfMakeMod
-  const vfs =
-    pdfFontsMod.vfs ??
-    pdfFontsMod.pdfMake?.vfs ??
-    pdfFontsMod.default?.vfs ??
-    pdfFontsMod.default?.pdfMake?.vfs ??
-    pdfFontsMod.default
-  pdfMake.vfs = vfs
+  // pdfmake 0.3.x: o vfs_fonts exporta o objeto de fontes direto (module.exports = vfs)
+  const vfs: any = pdfFontsMod.default ?? pdfFontsMod
+  // IMPORTANTE: na 0.3.x registrar via addVirtualFileSystem (setar .vfs não basta —
+  // o loader de fontes não enxerga e o getBlob nunca chama o callback => trava).
+  if (typeof pdfMake.addVirtualFileSystem === 'function') {
+    pdfMake.addVirtualFileSystem(vfs)
+  } else {
+    pdfMake.vfs = vfs
+  }
   const docDef = buildDocDefinition(contrato)
-  return new Promise<Blob>((resolve) => {
-    pdfMake.createPdf(docDef).getBlob((blob: Blob) => resolve(blob))
+  return new Promise<Blob>((resolve, reject) => {
+    // Timeout de segurança: nunca deixa a Promise pendurada (sem download nem erro).
+    const timer = setTimeout(
+      () => reject(new Error('Tempo esgotado ao gerar o PDF (verifique fontes/vfs)')),
+      20000,
+    )
+    try {
+      pdfMake.createPdf(docDef).getBlob((blob: Blob) => {
+        clearTimeout(timer)
+        resolve(blob)
+      })
+    } catch (e) {
+      clearTimeout(timer)
+      reject(e)
+    }
   })
 }
