@@ -71,20 +71,27 @@ function FuncoesProjetoSelect({
   principal,
   onToggle,
   onSetPrincipal,
+  deptSelecionado = false,
+  outrosTexto = "",
+  onOutrosChange,
 }: {
   funcoes: any[];
   selected: string[];
   principal: string;
   onToggle: (id: string) => void;
   onSetPrincipal: (id: string) => void;
+  deptSelecionado?: boolean;
+  outrosTexto?: string;
+  onOutrosChange?: (v: string) => void;
 }) {
-  if (funcoes.length === 0) {
+  if (!deptSelecionado) {
     return (
       <p className="text-xs text-muted-foreground py-1">
         Selecione um departamento para ver as funções disponíveis.
       </p>
     );
   }
+  const outrosAtivo = outrosTexto.trim().length > 0;
   return (
     <div className="space-y-1">
       <Label>Funções no projeto</Label>
@@ -121,9 +128,38 @@ function FuncoesProjetoSelect({
             </div>
           );
         })}
+        {/* Opção "Outros": função fora do catálogo → entra como Leitor */}
+        {onOutrosChange && (
+        <div className="px-3 py-2 space-y-1.5 bg-muted/30">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="fn-outros"
+              checked={outrosAtivo}
+              onChange={(e) => onOutrosChange?.(e.target.checked ? " " : "")}
+              className="h-4 w-4 accent-primary cursor-pointer"
+            />
+            <label htmlFor="fn-outros" className="text-sm flex-1 cursor-pointer">
+              Outros <span className="text-muted-foreground">(descrever função)</span>
+            </label>
+          </div>
+          {outrosAtivo && (
+            <Input
+              value={outrosTexto}
+              onChange={(e) => onOutrosChange?.(e.target.value)}
+              placeholder="Ex.: Consultor de dialeto"
+              className="h-8 text-sm"
+              autoFocus
+            />
+          )}
+        </div>
+        )}
       </div>
-      {selected.length === 0 && (
+      {selected.length === 0 && !outrosAtivo && (
         <p className="text-xs text-muted-foreground">Selecione ao menos uma função para o organograma.</p>
+      )}
+      {outrosAtivo && (
+        <p className="text-xs text-amber-600">Função personalizada — a pessoa entra no projeto como <strong>Leitor</strong> (pode ser promovida depois).</p>
       )}
     </div>
   );
@@ -163,6 +199,7 @@ export default function Team() {
   const [deptNova, setDeptNova] = useState("");
   const [novaFuncoes, setNovaFuncoes] = useState<string[]>([]);
   const [novaPrincipal, setNovaPrincipal] = useState("");
+  const [novaOutros, setNovaOutros] = useState(""); // função personalizada → entra como Leitor
 
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
@@ -198,7 +235,7 @@ export default function Team() {
   }
 
   function resetNovaForm() {
-    setDeptNova(""); setNovaFuncoes([]); setNovaPrincipal("");
+    setDeptNova(""); setNovaFuncoes([]); setNovaPrincipal(""); setNovaOutros("");
   }
 
   function openEdit(v: any) {
@@ -311,12 +348,15 @@ export default function Team() {
         .select()
         .single();
       if (e1) throw e1;
+      const outrosTexto = novaOutros.trim();
       const vinculoPayload: any = {
         projeto_id: projetoId,
         pessoa_id: pessoa.id,
         funcao_av_id: novaPrincipal || novaFuncoes[0] || null,
         valor_contratacao: Number(form.get("valor_contratacao") ?? 0),
-        papel_projeto: "departamento", // FIX: papel null escondia menus (agenda etc.)
+        // Função personalizada ("Outros") → entra como Leitor; senão papel padrão do depto
+        papel_projeto: outrosTexto ? "leitor" : "departamento", // FIX: papel null escondia menus (agenda etc.)
+        papel_descricao: outrosTexto || null,
       };
       const { data: pp, error: e2 } = await supabase
         .from("projeto_pessoas")
@@ -516,7 +556,7 @@ export default function Team() {
                 {/* L8: Departamento obrigatório antes de ver funções */}
                 <div className="space-y-1.5">
                   <Label>Departamento</Label>
-                  <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); }}>
+                  <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); setNovaOutros(""); }}>
                     <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
                     <SelectContent>
                       {DEPARTAMENTOS_AV.map((d) => (
@@ -532,6 +572,9 @@ export default function Team() {
                   principal={novaPrincipal}
                   onToggle={(id) => toggleFuncao(id, novaFuncoes, setNovaFuncoes, novaPrincipal, setNovaPrincipal)}
                   onSetPrincipal={setNovaPrincipal}
+                  deptSelecionado={!!deptNova}
+                  outrosTexto={novaOutros}
+                  onOutrosChange={setNovaOutros}
                 />
 
                 <div className="grid grid-cols-2 gap-3">
@@ -884,6 +927,7 @@ export default function Team() {
                   principal={editPrincipal}
                   onToggle={(id) => toggleFuncao(id, editFuncoes, setEditFuncoes, editPrincipal, setEditPrincipal)}
                   onSetPrincipal={setEditPrincipal}
+                  deptSelecionado={!!editDept}
                 />
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">

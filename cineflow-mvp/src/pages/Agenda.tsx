@@ -520,6 +520,7 @@ export default function Agenda() {
   const [editandoCat, setEditandoCat] = useState<Categoria>("evento");
   const [fCategoria, setFCategoria] = useState<Categoria>("evento");
   const [fTipo, setFTipo] = useState("reuniao");
+  const [fTipoOutros, setFTipoOutros] = useState(""); // texto livre quando Tipo = "Outros"
   const [fTitulo, setFTitulo] = useState("");
   const [fDataInicio, setFDataInicio] = useState("");
   const [fDataFim, setFDataFim] = useState("");
@@ -699,7 +700,7 @@ export default function Agenda() {
           : fLocalTexto;
         const payload: any = {
           projeto_id: projetoId,
-          tipo: fTipo,
+          tipo: fTipo === "__outros__" ? (fTipoOutros.trim() || "Outros") : fTipo,
           titulo: fTitulo,
           data_inicio: fDataInicio,
           data_fim: fDataFim || null,
@@ -782,6 +783,7 @@ export default function Agenda() {
     setEditandoCat("evento");
     setFCategoria("evento");
     setFTipo("reuniao");
+    setFTipoOutros("");
     setFTitulo("");
     setFDataInicio("");
     setFDataFim("");
@@ -812,7 +814,15 @@ export default function Agenda() {
     setEditandoCat(item._cat);
     setFCategoria(item._cat);
     if (item._cat === "evento") {
-      setFTipo(ev.tipo ?? "reuniao");
+      // Tipo fora do catálogo → "Outros" com o texto salvo
+      const tipoConhecido = TIPOS_EVENTO.some((t) => t.value === ev.tipo);
+      if (ev.tipo && !tipoConhecido) {
+        setFTipo("__outros__");
+        setFTipoOutros(ev.tipo);
+      } else {
+        setFTipo(ev.tipo ?? "reuniao");
+        setFTipoOutros("");
+      }
       setFTitulo(ev.titulo ?? "");
       setFDataInicio(ev.data_inicio?.slice(0, 16) ?? "");
       setFDataFim(ev.data_fim?.slice(0, 16) ?? "");
@@ -1023,6 +1033,7 @@ export default function Agenda() {
               <Select value={fCategoria} onValueChange={(v: Categoria) => {
                 setFCategoria(v);
                 setFTipo(v === "evento" ? "reuniao" : "dia_gravacao");
+                setFTipoOutros("");
                 setFDataInicio("");
                 setFDataFim("");
               }}>
@@ -1041,11 +1052,22 @@ export default function Agenda() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {fCategoria === "evento"
-                    ? tipos.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)
+                    ? [
+                        ...tipos.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>),
+                        <SelectItem key="__outros__" value="__outros__">Outros</SelectItem>,
+                      ]
                     : FASES.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)
                   }
                 </SelectContent>
               </Select>
+              {fCategoria === "evento" && fTipo === "__outros__" && (
+                <Input
+                  className="mt-1.5"
+                  value={fTipoOutros}
+                  onChange={(e) => setFTipoOutros(e.target.value)}
+                  placeholder="Descreva o tipo de evento (ex.: Coletiva de imprensa)"
+                />
+              )}
             </div>
 
             {/* 3. Título */}
