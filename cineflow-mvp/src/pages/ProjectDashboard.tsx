@@ -303,6 +303,21 @@ export default function ProjectDashboard() {
     },
   });
 
+  // Membros dos DMs privados → nome exibido na aba = o OUTRO participante (perspectiva de quem olha)
+  const canalIdsPrivado = (canais ?? []).filter((c: any) => c.tipo === "privado").map((c: any) => c.id);
+  const { data: membrosPrivado } = useQuery({
+    queryKey: ["dm-membros", projetoId, canalIdsPrivado.slice().sort().join(",")],
+    enabled: canalIdsPrivado.length > 0 && !!user?.email,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("canal_membros")
+        .select("canal_id, pessoa:pessoas(nome, email)")
+        .in("canal_id", canalIdsPrivado);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+  });
+
   // Current user's projeto_pessoas.id — needed to look up event participations
   const { data: myPpId } = useQuery({
     queryKey: ["my-pp-id", projetoId, user?.email],
@@ -397,7 +412,16 @@ export default function ProjectDashboard() {
 
   const canaisGeral   = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "geral");
   const canaisDept    = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "departamento");
-  const canaisPrivado = (canais ?? []).filter((c: any) => getCanalCategoria(c) === "privado");
+  // DM: nome da aba = o outro membro (o canal guarda um nome fixo, igual p/ os dois lados)
+  const nomeDMPorCanal: Record<string, string> = {};
+  const myEmailLc = user?.email?.toLowerCase();
+  (membrosPrivado ?? []).forEach((m: any) => {
+    const email = m.pessoa?.email?.toLowerCase();
+    if (m.pessoa?.nome && email && email !== myEmailLc) nomeDMPorCanal[m.canal_id] = m.pessoa.nome;
+  });
+  const canaisPrivado = (canais ?? [])
+    .filter((c: any) => getCanalCategoria(c) === "privado")
+    .map((c: any) => ({ ...c, nome: nomeDMPorCanal[c.id] ?? c.nome }));
 
   return (
     <div className="flex flex-col overflow-hidden h-[calc(100vh-96px)] md:h-[calc(100vh-112px)]">
