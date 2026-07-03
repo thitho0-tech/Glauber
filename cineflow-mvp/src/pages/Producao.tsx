@@ -7,7 +7,7 @@ const TABS = [
   { to: "locacoes",     label: "Locações" },
   { to: "financeiro",   label: "Financeiro" },
   { to: "fornecedores", label: "Fornecedores" },
-  { to: "contrato",     label: "Contrato" },
+  { to: "contratos",    label: "Contratos" },
   { to: "prestacao",    label: "Prestação" },
 ];
 

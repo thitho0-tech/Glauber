@@ -40,7 +40,6 @@ const TIPOS = [
   { value: "rg", label: "RG" },
   { value: "cpf", label: "CPF" },
   { value: "comp_endereco", label: "Comprovante de endereço" },
-  { value: "contrato", label: "Contrato assinado" },
   { value: "foto", label: "Foto" },
   { value: "outro", label: "Outro" },
 ];

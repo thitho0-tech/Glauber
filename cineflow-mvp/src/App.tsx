@@ -24,6 +24,8 @@ import Accountability from "@/pages/Accountability";
 import Settings from "@/pages/Settings";
 import PublicCallSheet from "@/pages/PublicCallSheet";
 import Contract from "@/pages/Contract";
+import Contracts from "@/pages/Contracts";
+import ContractForm from "@/pages/ContractForm";
 import FigurinoArte from "@/pages/FigurinoArte";
 import Cast from "@/pages/Cast";
 import Roteiro from "@/pages/Roteiro";
@@ -89,12 +91,14 @@ export default function App() {
             {/* ── PRODUÇÃO HUB com sub-abas (L10) ── */}
             <Route path="/projetos/:id/producao" element={<Producao />}>
               <Route index element={<Navigate to="equipe" replace />} />
-              <Route path="equipe"       element={<Team />} />
-              <Route path="locacoes"     element={<Locations />} />
-              <Route path="financeiro"   element={<Finance />} />
-              <Route path="fornecedores" element={<Fornecedores />} />
-              <Route path="contrato"     element={<Contract />} />
-              <Route path="prestacao"    element={<Accountability />} />
+              <Route path="equipe"           element={<Team />} />
+              <Route path="locacoes"         element={<Locations />} />
+              <Route path="financeiro"       element={<Finance />} />
+              <Route path="fornecedores"     element={<Fornecedores />} />
+              <Route path="contratos"        element={<Contracts />} />
+              <Route path="contratos/:contratoId" element={<ContractForm />} />
+              <Route path="contrato"         element={<Navigate to="contratos" replace />} />
+              <Route path="prestacao"        element={<Accountability />} />
             </Route>
 
             {/* Rotas legadas individuais (backward-compat) */}
@@ -103,7 +107,7 @@ export default function App() {
             <Route path="/projetos/:id/financeiro"   element={<Finance />} />
             <Route path="/projetos/:id/prestacao"    element={<Accountability />} />
             <Route path="/projetos/:id/comunicacao"  element={<Communication />} />
-            <Route path="/projetos/:id/contrato"     element={<Contract />} />
+            <Route path="/projetos/:id/contrato"     element={<Navigate to="producao/contratos" replace />} />
             <Route path="/projetos/:id/fornecedores" element={<Fornecedores />} />
 
             {/* ── DEPARTAMENTOS (L10) ── */}
