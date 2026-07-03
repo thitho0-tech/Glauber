@@ -38,9 +38,9 @@ Nome homenageia Glauber Rocha. Tagline: *"Onde a criação encontra a produção
 
 ---
 
-## ESTADO ATUAL (02/07/2026)
+## ESTADO ATUAL (03/07/2026)
 
-### Migrations aplicadas em produção: **0001–0072**
+### Migrations aplicadas em produção: **0001–0075**
 
 | Bloco | Tema | Migrations |
 |-------|------|-----------|
@@ -55,14 +55,28 @@ Nome homenageia Glauber Rocha. Tagline: *"Onde a criação encontra a produção
 | Leva pós-teste (23/06) | Fix RLS canais, notif agenda, rebrand emails, fix OD | 0063–0068 |
 | Leva 2 (24/06) | Timeout email, função por projeto (catalog) | 0069–0070 |
 | Leva 3 (02/07) | Fix import CSV (valida e-mail), RPC criar_dm, papel default, fix trigger DELETE em projeto_pessoas | 0071–0072 |
+| Leva 4 (02/07) | RPC minhas_pendencias (Mural) | 0073 |
+| **Contratos v1** (02/07) | Reformulação: colunas partes/parcelas/clausulas (JSONB), tipo, funcao_av_id, pessoa_id, lei_incentivo, novo status (6 valores), tabela `contrato_anexos` + RLS | 0074 |
+| **Contratos v3** (02/07) | Dropa UNIQUE(projeto_id) → N contratos/projeto + coluna `origem` ('formulario'\|'upload') | 0075 |
 
 **Atenção:** migration 0049 (agenda_prep) deliberadamente não aplicada — será usada junto do C4.
 
-### Páginas React implementadas: **36**
+### Páginas React implementadas: **37+**
 (Dashboard, Projects, Team, Finance, CallSheets, Agenda, Communication/Mural,
 Roteiro, Decupagem, Locations, Cast, FigurinoArte, Accountability,
 Settings, Onboarding, InviteAccept, PublicCallSheet, MapaTransporte,
-Privacidade, Som e mais)
+Privacidade, Som, **Contracts (lista) + ContractForm (detalhe)** e mais)
+
+### Módulo CONTRATOS (Produção → Contratos) — feito 02-03/07/2026
+Sub-aba reformulada de "1 contrato/projeto (form único, URL de texto)" para repositório real:
+- **Lista** (`Contracts.tsx`) N contratos/projeto: Tipo · Contratada · Valor · Status (badge) · 📎 anexos · Abrir/Visualizar/Excluir.
+- **Detalhe** (`ContractForm.tsx`) Blocos A–H: identificação, contratante, contratada (PJ/PF), interveniente-anuente, objeto/prazos, remuneração+parcelas, cláusulas, anexos.
+- **Anexos** (`ContratoAnexos.tsx` + `AnexarContratoDialog.tsx`): upload real no bucket `documentos` (signed URL p/ ver, remove p/ excluir). Excluir contrato remove os objetos do storage ANTES do delete (cascade só apaga linhas).
+- **Anexar contrato pronto**: upload → edge `analisar-contrato` (Mistral OCR+chat) lê {tipo, contratada, valor} → dialog confirma/edita → vira linha `origem='upload'` (documento externo: validação NÃO exige form completo; enquadramento sempre editável depois).
+- **Exportar PDF** (`contratoTemplate.ts` + `valorPorExtenso.ts`): gera o contrato preenchido via **pdfmake 0.2.20** (`pdfMake.vfs = pdfFonts.pdfMake.vfs` + `createPdf(doc).getBlob()`) e salva como anexo `gerado`. Modelo único = "Prestação de Serviços Técnicos" (SIC). **NÃO usar pdfmake 0.3.x** — loader de fontes não fecha o getBlob no Vite (trava/timeout).
+- Onboarding perdeu a opção "contrato" (fica só docs pessoais).
+- Rotas: `/projetos/:id/producao/contratos` (lista) e `/contratos/:contratoId` (detalhe; `novo` = criar).
+- Commits: e5d16b1 (v1), e8b9c2f (v2), 8e76f8c (v3), 59e2cf8 (v4), 4fa7a75 (PDF final).
 
 ### Social Login
 Oculto atrás de flag `SOCIAL_LOGIN_ENABLED=false` em Login.tsx e Signup.tsx.
@@ -74,7 +88,9 @@ Oculto atrás de flag `SOCIAL_LOGIN_ENABLED=false` em Login.tsx e Signup.tsx.
 | `send-email` | Retornava 401 — requer flag `--no-verify-jwt` no deploy |
 | `notificar-od` | OK |
 | `analisar-roteiro` | OCR/decupagem IA (Tesseract) |
-| `ocr-extract` | Comprovantes |
+| `ocr-extract` | Comprovantes (Mistral OCR → salva markdown) |
+| `ocr-text-extract` | OCR genérico front-callable (Mistral) — devolve markdown |
+| `analisar-contrato` | **(03/07)** Anexar contrato pronto: Mistral OCR + chat JSON → {tipo, contratada, valor}. Front-callable (verify_jwt). Usa MISTRAL_API_KEY |
 | `aceitar-convite` | Login-free |
 
 ### Itens pendentes / não testados (Leva 2)
@@ -150,6 +166,9 @@ Preços discutidos: FREE / R$149 / R$499 / R$699 (a confirmar).
 13. **`git status` antes de `git add -A`** — conferir a lista; add -A da raiz varre docs, PDFs de relato e tudo mais (Leva 3 commitou 21 arquivos, incluindo relatos com nomes reais; repo privado, sem dano, mas conferir sempre)
 14. **Warnings "LF will be replaced by CRLF" são inofensivos** — só conversão de fim de linha do Windows; ignorar
 15. **Triggers BEFORE DELETE devem retornar OLD** — retornar NEW em DELETE anula a operação silenciosamente (causa do lixo órfão até 0072)
+16. **pdfmake FIXO em 0.2.20** — a 0.3.x (beta) não fecha o `getBlob` no Vite mesmo com vfs/fonts/addVirtualFileSystem (trava → timeout). Padrão que funciona: `pdfMake.vfs = pdfFonts.pdfMake.vfs` + `createPdf(doc).getBlob()`. Não atualizar.
+17. **OneDrive sincroniza a pasta do repo** (`Documents\...`) — causa churn de CRLF, `index.lock` travado e leituras inconsistentes/`binary file matches` no sandbox do Cowork. Fonte de verdade = `npx tsc --noEmit` + `git status` no PowerShell. Se travar lock: `Remove-Item ".git\index.lock" -Force`.
+18. **Ao excluir contrato**: remover objetos do bucket `documentos` (`storage.remove(paths)`) ANTES do `delete` — o `on delete cascade` só apaga as linhas de `contrato_anexos`, não os arquivos.
 
 ---
 
