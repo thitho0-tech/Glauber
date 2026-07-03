@@ -281,6 +281,22 @@ export default function ContractForm() {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  // ── Validação e acionamento do save ─────────────────────────────────────────
+
+  function handleSave() {
+    if (form.status !== "rascunho") {
+      const nomeContratada = partes.contratada.razao_social.trim() || partes.contratada.nome.trim()
+      const faltando: string[] = []
+      if (!nomeContratada) faltando.push("nome da contratada (Bloco C)")
+      if (!form.valor) faltando.push("valor (Bloco F)")
+      if (faltando.length > 0) {
+        toast.error("Preencha antes de salvar: " + faltando.join("; "))
+        return
+      }
+    }
+    save.mutate()
+  }
+
   // ── PDF export ────────────────────────────────────────────────────────────────
 
   async function exportarPdf() {
@@ -372,9 +388,9 @@ export default function ContractForm() {
             </Button>
           )}
           {canEdit && (
-            <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
+            <Button size="sm" onClick={handleSave} disabled={save.isPending}>
               <Save className="h-4 w-4" />
-              {save.isPending ? "Salvando..." : isNovo ? "Criar contrato" : "Salvar alterações"}
+              {save.isPending ? "Salvando..." : form.status === "rascunho" ? "Salvar rascunho" : "Salvar contrato"}
             </Button>
           )}
         </div>
@@ -730,9 +746,9 @@ export default function ContractForm() {
       {/* Botão salvar fixo no fundo em mobile */}
       {canEdit && (
         <div className="flex justify-end gap-2 pb-4">
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+          <Button onClick={handleSave} disabled={save.isPending}>
             <Save className="h-4 w-4" />
-            {save.isPending ? "Salvando..." : isNovo ? "Criar contrato" : "Salvar alterações"}
+            {save.isPending ? "Salvando..." : form.status === "rascunho" ? "Salvar rascunho" : "Salvar contrato"}
           </Button>
         </div>
       )}

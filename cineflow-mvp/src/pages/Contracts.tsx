@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,15 @@ import { Badge } from "@/components/ui/badge"
 import { Loading } from "@/components/ui/loading"
 import { Empty } from "@/components/ui/empty"
 import { usePermissions } from "@/hooks/usePermissions"
-import { FileSignature, Lock, Plus, Paperclip, Search, ExternalLink } from "lucide-react"
+import { AnexarContratoDialog } from "@/components/contracts/AnexarContratoDialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -16,6 +24,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { FileSignature, Lock, Plus, Paperclip, Search, ExternalLink, Trash2, Upload } from "lucide-react"
+import { toast } from "sonner"
 
 type ContratoStatus = "rascunho" | "enviado_assinatura" | "assinado" | "vigente" | "encerrado" | "cancelado"
 type ContratoTipo = "servicos_tecnicos" | "roteirista" | "direcao" | "elenco" | "fornecedor" | "cessao_direitos" | "coproducao" | "outro"
@@ -75,6 +85,7 @@ function contratadaNome(partes: Record<string, unknown> | null): string {
 export default function Contracts() {
   const { id: projetoId } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const { can, isLoading: permsLoading } = usePermissions(projetoId)
   const canVer = can("contratos", "ver")
   const canEdit = can("contratos", "editar")
@@ -82,6 +93,8 @@ export default function Contracts() {
   const [search, setSearch] = useState("")
   const [filterStatus, setFilterStatus] = useState<string>("__all__")
   const [filterTipo, setFilterTipo] = useState<string>("__all__")
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [anexarOpen, setAnexarOpen] = useState(false)
 
   const { data: contratos, isLoading } = useQuery({
     queryKey: ["contratos", projetoId],
@@ -95,6 +108,34 @@ export default function Contracts() {
       if (error) throw error
       return data as ContratoRow[]
     },
+  })
+
+  const deletar = useMutation({
+    mutationFn: async (id: string) => {
+      // 1. Buscar paths dos anexos para remover do storage
+      const { data: anexos } = await supabase
+        .from("contrato_anexos")
+        .select("arquivo_path")
+        .eq("contrato_id", id)
+
+      // 2. Remover arquivos do bucket (evita órfãos — cascade só apaga as linhas)
+      if (anexos && anexos.length > 0) {
+        const paths = (anexos as { arquivo_path: string }[]).map((a) => a.arquivo_path).filter(Boolean)
+        if (paths.length > 0) {
+          await supabase.storage.from("documentos").remove(paths)
+        }
+      }
+
+      // 3. Excluir contrato (on delete cascade limpa contrato_anexos)
+      const { error } = await supabase.from("contratos").delete().eq("id", id)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success("Contrato excluído")
+      setDeletingId(null)
+      qc.invalidateQueries({ queryKey: ["contratos", projetoId] })
+    },
+    onError: (e: Error) => toast.error(e.message),
   })
 
   if (permsLoading) return <Loading />
@@ -116,18 +157,31 @@ export default function Contracts() {
     return true
   })
 
+  // Contrato sendo deletado (para exibir nome no dialog)
+  const contratoParaDeletar = contratos?.find((c) => c.id === deletingId)
+
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between gap-3">
+      {/* Cabeçalho */}
+      <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-2">
           <FileSignature className="h-5 w-5 text-muted-foreground" />
           <h2 className="text-lg font-semibold">Contratos</h2>
           <span className="text-sm text-muted-foreground">({contratos?.length ?? 0})</span>
         </div>
         {canEdit && (
-          <Button size="sm" onClick={() => navigate(`/projetos/${projetoId}/producao/contratos/novo`)}>
-            <Plus className="h-4 w-4" /> Novo contrato
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAnexarOpen(true)}
+            >
+              <Upload className="h-4 w-4" /> Anexar contrato pronto
+            </Button>
+            <Button size="sm" onClick={() => navigate(`/projetos/${projetoId}/producao/contratos/novo`)}>
+              <Plus className="h-4 w-4" /> Novo contrato
+            </Button>
+          </div>
         )}
       </div>
 
@@ -170,7 +224,7 @@ export default function Contracts() {
       {filtered.length === 0 ? (
         <Empty
           title="Nenhum contrato encontrado"
-          description={contratos?.length ? "Tente ajustar os filtros." : "Crie o primeiro contrato do projeto."}
+          description={contratos?.length ? "Tente ajustar os filtros." : "Crie o primeiro contrato ou anexe um já existente."}
         />
       ) : (
         <div className="rounded-md border overflow-x-auto">
@@ -182,7 +236,7 @@ export default function Contracts() {
                 <th className="px-4 py-3 text-right font-medium">Valor</th>
                 <th className="px-4 py-3 text-center font-medium">Status</th>
                 <th className="px-4 py-3 text-center font-medium">Docs</th>
-                <th className="px-4 py-3 text-center font-medium">Ação</th>
+                <th className="px-4 py-3 text-center font-medium">Ações</th>
               </tr>
             </thead>
             <tbody>
@@ -209,16 +263,29 @@ export default function Contracts() {
                         <span className="text-muted-foreground/40">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 gap-1"
-                        onClick={() => navigate(`/projetos/${projetoId}/producao/contratos/${c.id}`)}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5" />
-                        Abrir
-                      </Button>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 gap-1"
+                          onClick={() => navigate(`/projetos/${projetoId}/producao/contratos/${c.id}`)}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          Abrir
+                        </Button>
+                        {canEdit && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => setDeletingId(c.id)}
+                            title="Excluir contrato"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -226,6 +293,47 @@ export default function Contracts() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={!!deletingId} onOpenChange={(o) => !o && setDeletingId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir contrato?</DialogTitle>
+            <DialogDescription>
+              {contratoParaDeletar
+                ? `"${contratadaNome(contratoParaDeletar.partes)}" — ${TIPO_LABELS[contratoParaDeletar.tipo] ?? contratoParaDeletar.tipo}`
+                : null}
+              <br />
+              Esta ação remove o contrato e todos os anexos. Não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeletingId(null)}
+              disabled={deletar.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingId && deletar.mutate(deletingId)}
+              disabled={deletar.isPending}
+            >
+              {deletar.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de anexar contrato pronto */}
+      {projetoId && (
+        <AnexarContratoDialog
+          projetoId={projetoId}
+          open={anexarOpen}
+          onClose={() => setAnexarOpen(false)}
+        />
       )}
     </div>
   )
