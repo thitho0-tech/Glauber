@@ -406,7 +406,7 @@ export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<
       20000,
     )
     try {
-      pdfMake.createPdf(docDef, null, fonts, vfs).getBlob((blob: Blob) => {
+      pdfMake.createPdf(docDef, { fonts, vfs }).getBlob((blob: Blob) => {
         clearTimeout(timer)
         resolve(blob)
       })
