@@ -72,6 +72,8 @@ function FuncoesProjetoSelect({
   onToggle,
   onSetPrincipal,
   deptSelecionado = false,
+  outrosAtivo = false,
+  onOutrosToggle,
   outrosTexto = "",
   onOutrosChange,
 }: {
@@ -81,6 +83,8 @@ function FuncoesProjetoSelect({
   onToggle: (id: string) => void;
   onSetPrincipal: (id: string) => void;
   deptSelecionado?: boolean;
+  outrosAtivo?: boolean;
+  onOutrosToggle?: (on: boolean) => void;
   outrosTexto?: string;
   onOutrosChange?: (v: string) => void;
 }) {
@@ -91,7 +95,6 @@ function FuncoesProjetoSelect({
       </p>
     );
   }
-  const outrosAtivo = outrosTexto.trim().length > 0;
   return (
     <div className="space-y-1">
       <Label>Funções no projeto</Label>
@@ -129,14 +132,14 @@ function FuncoesProjetoSelect({
           );
         })}
         {/* Opção "Outros": função fora do catálogo → entra como Leitor */}
-        {onOutrosChange && (
+        {onOutrosToggle && (
         <div className="px-3 py-2 space-y-1.5 bg-muted/30">
           <div className="flex items-center gap-2">
             <input
               type="checkbox"
               id="fn-outros"
               checked={outrosAtivo}
-              onChange={(e) => onOutrosChange?.(e.target.checked ? " " : "")}
+              onChange={(e) => onOutrosToggle?.(e.target.checked)}
               className="h-4 w-4 accent-primary cursor-pointer"
             />
             <label htmlFor="fn-outros" className="text-sm flex-1 cursor-pointer">
@@ -199,7 +202,8 @@ export default function Team() {
   const [deptNova, setDeptNova] = useState("");
   const [novaFuncoes, setNovaFuncoes] = useState<string[]>([]);
   const [novaPrincipal, setNovaPrincipal] = useState("");
-  const [novaOutros, setNovaOutros] = useState(""); // função personalizada → entra como Leitor
+  const [novaOutros, setNovaOutros] = useState(""); // texto da função personalizada
+  const [novaOutrosOn, setNovaOutrosOn] = useState(false); // "Outros" marcado → entra como Leitor
 
   const { user } = useAuth();
   const { data: orgs } = useOrgs(user?.id);
@@ -235,7 +239,7 @@ export default function Team() {
   }
 
   function resetNovaForm() {
-    setDeptNova(""); setNovaFuncoes([]); setNovaPrincipal(""); setNovaOutros("");
+    setDeptNova(""); setNovaFuncoes([]); setNovaPrincipal(""); setNovaOutros(""); setNovaOutrosOn(false);
   }
 
   function openEdit(v: any) {
@@ -348,7 +352,7 @@ export default function Team() {
         .select()
         .single();
       if (e1) throw e1;
-      const outrosTexto = novaOutros.trim();
+      const outrosTexto = novaOutrosOn ? novaOutros.trim() : "";
       const vinculoPayload: any = {
         projeto_id: projetoId,
         pessoa_id: pessoa.id,
@@ -556,7 +560,7 @@ export default function Team() {
                 {/* L8: Departamento obrigatório antes de ver funções */}
                 <div className="space-y-1.5">
                   <Label>Departamento</Label>
-                  <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); setNovaOutros(""); }}>
+                  <Select value={deptNova} onValueChange={(v) => { setDeptNova(v); setNovaFuncoes([]); setNovaPrincipal(""); setNovaOutros(""); setNovaOutrosOn(false); }}>
                     <SelectTrigger><SelectValue placeholder="Selecione o departamento" /></SelectTrigger>
                     <SelectContent>
                       {DEPARTAMENTOS_AV.map((d) => (
@@ -573,6 +577,8 @@ export default function Team() {
                   onToggle={(id) => toggleFuncao(id, novaFuncoes, setNovaFuncoes, novaPrincipal, setNovaPrincipal)}
                   onSetPrincipal={setNovaPrincipal}
                   deptSelecionado={!!deptNova}
+                  outrosAtivo={novaOutrosOn}
+                  onOutrosToggle={setNovaOutrosOn}
                   outrosTexto={novaOutros}
                   onOutrosChange={setNovaOutros}
                 />
