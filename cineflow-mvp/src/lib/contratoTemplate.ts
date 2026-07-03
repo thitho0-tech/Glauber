@@ -380,11 +380,18 @@ function milharPorExtenso(n: number): string {
 }
 
 export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<Blob> {
-  const pdfMake = (await import('pdfmake/build/pdfmake')) as unknown as typeof import('pdfmake/build/pdfmake')
-  const pdfFonts = (await import('pdfmake/build/vfs_fonts')) as unknown as typeof import('pdfmake/build/vfs_fonts')
-  pdfMake.vfs = pdfFonts.pdfMake.vfs
+  const pdfMakeMod: any = await import('pdfmake/build/pdfmake')
+  const pdfFontsMod: any = await import('pdfmake/build/vfs_fonts')
+  const pdfMake: any = pdfMakeMod.default ?? pdfMakeMod
+  const vfs =
+    pdfFontsMod.vfs ??
+    pdfFontsMod.pdfMake?.vfs ??
+    pdfFontsMod.default?.vfs ??
+    pdfFontsMod.default?.pdfMake?.vfs ??
+    pdfFontsMod.default
+  pdfMake.vfs = vfs
   const docDef = buildDocDefinition(contrato)
-  return new Promise((resolve) => {
-    pdfMake.createPdf(docDef).getBlob((blob) => resolve(blob))
+  return new Promise<Blob>((resolve) => {
+    pdfMake.createPdf(docDef).getBlob((blob: Blob) => resolve(blob))
   })
 }

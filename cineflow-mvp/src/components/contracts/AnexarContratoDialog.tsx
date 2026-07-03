@@ -201,7 +201,7 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleFechar()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg w-[calc(100vw-2rem)] max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Anexar contrato pronto</DialogTitle>
           <DialogDescription>
@@ -256,16 +256,16 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
         {(step === "confirmando" || step === "salvando") && (
           <div className="space-y-4">
             {/* File preview */}
-            <div className="flex items-center gap-2 rounded-md border px-3 py-2 text-sm bg-muted/30">
+            <div className="flex min-w-0 items-center gap-2 rounded-md border px-3 py-2 text-sm bg-muted/30">
               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate text-muted-foreground">{uploadNome}</span>
+              <span className="truncate min-w-0 text-muted-foreground">{uploadNome}</span>
             </div>
 
             {/* Tipo */}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Tipo de contrato</Label>
               <Select value={tipo} onValueChange={(v) => setTipo(v as ContratoTipo)}>
-                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {(Object.entries(TIPO_LABELS) as [ContratoTipo, string][]).map(([k, l]) => (
                     <SelectItem key={k} value={k}>{l}</SelectItem>
@@ -278,7 +278,7 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Contratada (nome ou razão social)</Label>
               <Input
-                className="h-9"
+                className="h-9 w-full"
                 value={contratada}
                 onChange={(e) => setContratada(e.target.value)}
                 placeholder="Nome ou razão social..."
@@ -289,7 +289,7 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Valor total (R$)</Label>
               <Input
-                className="h-9"
+                className="h-9 w-full"
                 type="number"
                 step="0.01"
                 min="0"
@@ -301,10 +301,10 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               {/* Status */}
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Status</Label>
                 <Select value={status} onValueChange={(v) => setStatus(v as ContratoStatus)}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {(Object.entries(STATUS_LABELS) as [ContratoStatus, string][]).map(([k, l]) => (
                       <SelectItem key={k} value={k}>{l}</SelectItem>
@@ -314,10 +314,10 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
               </div>
 
               {/* Rótulo do anexo */}
-              <div className="space-y-1.5">
+              <div className="min-w-0 space-y-1.5">
                 <Label className="text-xs text-muted-foreground">Rótulo do documento</Label>
                 <Select value={rotulo} onValueChange={(v) => setRotulo(v as AnexoRotulo)}>
-                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="h-9 w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="assinado">Assinado</SelectItem>
                     <SelectItem value="minuta">Minuta</SelectItem>
