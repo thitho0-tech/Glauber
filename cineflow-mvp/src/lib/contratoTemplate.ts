@@ -384,7 +384,11 @@ export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<
   const pdfFontsMod: any = await import('pdfmake/build/vfs_fonts')
   const pdfMake: any = pdfMakeMod.default ?? pdfMakeMod
   // pdfmake 0.3.x: o vfs_fonts exporta o objeto de fontes direto (module.exports = vfs)
-  const vfs: any = pdfFontsMod.default ?? pdfFontsMod
+  const vfs: any =
+    pdfFontsMod.pdfMake?.vfs ??
+    pdfFontsMod.default?.pdfMake?.vfs ??
+    pdfFontsMod.default ??
+    pdfFontsMod.vfs
   // IMPORTANTE: na 0.3.x registrar via addVirtualFileSystem (setar .vfs não basta —
   // o loader de fontes não enxerga e o getBlob nunca chama o callback => trava).
   const fonts = {
@@ -406,7 +410,7 @@ export async function exportarContratoEmPdf(contrato: ContratoParaPdf): Promise<
       20000,
     )
     try {
-      pdfMake.createPdf(docDef, { fonts, vfs }).getBlob((blob: Blob) => {
+      pdfMake.createPdf(docDef).getBlob((blob: Blob) => {
         clearTimeout(timer)
         resolve(blob)
       })
