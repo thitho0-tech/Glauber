@@ -14,6 +14,14 @@ import { exportarContratoEmPdf, type ContratoParaPdf } from "@/lib/contratoTempl
 import { valorPorExtenso } from "@/lib/valorPorExtenso"
 import { toast } from "sonner"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/components/ui/dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -120,6 +128,8 @@ export default function ContractForm() {
   const [parcelas, setParcelas] = useState<Parcela[]>([])
   const [clausulas, setClausulas] = useState<Clausulas>(defaultClausulas)
   const [exportando, setExportando] = useState(false)
+  const [origem, setOrigem] = useState<string | null>(null)
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
 
   const setF = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm(f => ({ ...f, [k]: v }))
   const updCt = (k: keyof Contratante, v: string) => setPartes(p => ({ ...p, contratante: { ...p.contratante, [k]: v } }))
@@ -183,6 +193,7 @@ export default function ContractForm() {
 
   useEffect(() => {
     if (!contrato) return
+    setOrigem(contrato.origem ?? null)
     setForm({
       tipo: contrato.tipo ?? "servicos_tecnicos",
       status: contrato.status ?? "rascunho",
@@ -281,9 +292,43 @@ export default function ContractForm() {
     onError: (e: Error) => toast.error(e.message),
   })
 
+  // ── Delete ────────────────────────────────────────────────────────────────────
+
+  const deletar = useMutation({
+    mutationFn: async () => {
+      if (!contratoId) return
+      const { data: anexos } = await supabase
+        .from("contrato_anexos")
+        .select("arquivo_path")
+        .eq("contrato_id", contratoId)
+
+      if (anexos && anexos.length > 0) {
+        const paths = (anexos as { arquivo_path: string }[]).map(a => a.arquivo_path).filter(Boolean)
+        if (paths.length > 0) {
+          await supabase.storage.from("documentos").remove(paths)
+        }
+      }
+
+      const { error } = await supabase.from("contratos").delete().eq("id", contratoId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      toast.success("Contrato excluído")
+      qc.invalidateQueries({ queryKey: ["contratos", projetoId] })
+      navigate(`/projetos/${projetoId}/producao/contratos`)
+    },
+    onError: (e: Error) => toast.error(e.message),
+  })
+
   // ── Validação e acionamento do save ─────────────────────────────────────────
 
   function handleSave() {
+    // Contrato de origem 'upload' é documento externo — nunca bloquear por campos internos
+    if (origem === "upload") {
+      save.mutate()
+      return
+    }
+    // Contrato de formulário: validar apenas se não for rascunho
     if (form.status !== "rascunho") {
       const nomeContratada = partes.contratada.razao_social.trim() || partes.contratada.nome.trim()
       const faltando: string[] = []
@@ -370,6 +415,12 @@ export default function ContractForm() {
     deptoGrupos[f.departamento]!.push(f)
   })
 
+  const salvarLabel = save.isPending
+    ? "Salvando..."
+    : (origem === "upload" || form.status === "rascunho")
+      ? "Salvar"
+      : "Salvar contrato"
+
   return (
     <div className="space-y-4 max-w-4xl">
       {/* Cabeçalho */}
@@ -382,6 +433,17 @@ export default function ContractForm() {
         </Link>
         <div className="flex gap-2">
           {!isNovo && canEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive"
+              onClick={() => setConfirmandoExclusao(true)}
+            >
+              <Trash2 className="h-4 w-4" />
+              Excluir
+            </Button>
+          )}
+          {!isNovo && canEdit && (
             <Button variant="outline" size="sm" onClick={exportarPdf} disabled={exportando}>
               <FileDown className="h-4 w-4" />
               {exportando ? "Gerando PDF..." : "Exportar PDF"}
@@ -390,7 +452,7 @@ export default function ContractForm() {
           {canEdit && (
             <Button size="sm" onClick={handleSave} disabled={save.isPending}>
               <Save className="h-4 w-4" />
-              {save.isPending ? "Salvando..." : form.status === "rascunho" ? "Salvar rascunho" : "Salvar contrato"}
+              {salvarLabel}
             </Button>
           )}
         </div>
@@ -748,10 +810,38 @@ export default function ContractForm() {
         <div className="flex justify-end gap-2 pb-4">
           <Button onClick={handleSave} disabled={save.isPending}>
             <Save className="h-4 w-4" />
-            {save.isPending ? "Salvando..." : form.status === "rascunho" ? "Salvar rascunho" : "Salvar contrato"}
+            {salvarLabel}
           </Button>
         </div>
       )}
+
+      {/* Dialog de confirmação de exclusão */}
+      <Dialog open={confirmandoExclusao} onOpenChange={(o) => !o && setConfirmandoExclusao(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Excluir este contrato?</DialogTitle>
+            <DialogDescription>
+              Esta ação remove o contrato e todos os documentos anexados. Não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmandoExclusao(false)}
+              disabled={deletar.isPending}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletar.mutate()}
+              disabled={deletar.isPending}
+            >
+              {deletar.isPending ? "Excluindo..." : "Excluir"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

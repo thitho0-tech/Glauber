@@ -164,6 +164,7 @@ export function AnexarContratoDialog({ projetoId, open, onClose }: Props) {
         projeto_id: projetoId,
         tipo,
         status,
+        origem: "upload",
         valor: valor !== "" ? parseFloat(valor) : null,
         partes: contratada ? { contratada: { razao_social: contratada } } : {},
       })

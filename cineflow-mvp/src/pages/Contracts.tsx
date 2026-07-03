@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { FileSignature, Lock, Plus, Paperclip, Search, ExternalLink, Trash2, Upload } from "lucide-react"
+import { FileSignature, Lock, Plus, Paperclip, Search, ExternalLink, Trash2, Upload, Eye } from "lucide-react"
 import { toast } from "sonner"
 
 type ContratoStatus = "rascunho" | "enviado_assinatura" | "assinado" | "vigente" | "encerrado" | "cancelado"
@@ -32,9 +32,10 @@ type ContratoTipo = "servicos_tecnicos" | "roteirista" | "direcao" | "elenco" | 
 
 type ContratoRow = {
   id: string
-  tipo: ContratoTipo
-  status: ContratoStatus
+  tipo: ContratoTipo | null
+  status: ContratoStatus | null
   valor: number | null
+  origem: string | null
   funcao_av_id: string | null
   pessoa_id: string | null
   partes: Record<string, unknown> | null
@@ -102,7 +103,7 @@ export default function Contracts() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contratos")
-        .select("id, tipo, status, valor, funcao_av_id, pessoa_id, partes, criado_em, contrato_anexos(count)")
+        .select("id, tipo, status, valor, origem, funcao_av_id, pessoa_id, partes, criado_em, contrato_anexos(count)")
         .eq("projeto_id", projetoId!)
         .order("criado_em", { ascending: false })
       if (error) throw error
@@ -137,6 +138,37 @@ export default function Contracts() {
     },
     onError: (e: Error) => toast.error(e.message),
   })
+
+  async function visualizarContrato(id: string) {
+    const { data: anexos, error } = await supabase
+      .from("contrato_anexos")
+      .select("arquivo_path")
+      .eq("contrato_id", id)
+      .order("criado_em", { ascending: false })
+      .limit(1)
+
+    if (error || !anexos || anexos.length === 0) {
+      toast.error("Nenhum documento encontrado")
+      return
+    }
+
+    const path = (anexos[0] as { arquivo_path: string }).arquivo_path
+    if (!path) {
+      toast.error("Caminho do arquivo não encontrado")
+      return
+    }
+
+    const { data: urlData, error: urlErr } = await supabase.storage
+      .from("documentos")
+      .createSignedUrl(path, 300)
+
+    if (urlErr || !urlData?.signedUrl) {
+      toast.error("Erro ao abrir o documento")
+      return
+    }
+
+    window.open(urlData.signedUrl, "_blank")
+  }
 
   if (permsLoading) return <Loading />
   if (!canVer) return (
@@ -236,22 +268,29 @@ export default function Contracts() {
                 <th className="px-4 py-3 text-right font-medium">Valor</th>
                 <th className="px-4 py-3 text-center font-medium">Status</th>
                 <th className="px-4 py-3 text-center font-medium">Docs</th>
-                <th className="px-4 py-3 text-center font-medium">Ações</th>
+                <th className="px-4 py-3 text-center font-medium min-w-[180px]">Ações</th>
               </tr>
             </thead>
             <tbody>
               {filtered.map((c) => {
                 const count = (c.contrato_anexos?.[0] as unknown as { count: number | string } | undefined)?.count
                 const nAnexos = count != null ? parseInt(String(count), 10) : 0
+                const isUpload = c.origem === "upload"
                 return (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 text-muted-foreground">{TIPO_LABELS[c.tipo] ?? c.tipo}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {c.tipo ? (TIPO_LABELS[c.tipo] ?? c.tipo) : "—"}
+                    </td>
                     <td className="px-4 py-3 font-medium">{contratadaNome(c.partes)}</td>
                     <td className="px-4 py-3 text-right tabular-nums">{fmtBRL(c.valor)}</td>
                     <td className="px-4 py-3 text-center">
-                      <Badge className={`text-[11px] border ${STATUS_CLASSES[c.status]}`}>
-                        {STATUS_LABELS[c.status] ?? c.status}
-                      </Badge>
+                      {c.status ? (
+                        <Badge className={`text-[11px] border ${STATUS_CLASSES[c.status]}`}>
+                          {STATUS_LABELS[c.status] ?? c.status}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground/40">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {nAnexos > 0 ? (
@@ -263,16 +302,27 @@ export default function Contracts() {
                         <span className="text-muted-foreground/40">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
+                        {isUpload && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 gap-1"
+                            onClick={() => visualizarContrato(c.id)}
+                          >
+                            <Eye className="h-3.5 w-3.5" />
+                            Visualizar
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-7 gap-1"
+                          className={isUpload ? "h-7 gap-1 text-xs text-muted-foreground" : "h-7 gap-1"}
                           onClick={() => navigate(`/projetos/${projetoId}/producao/contratos/${c.id}`)}
                         >
                           <ExternalLink className="h-3.5 w-3.5" />
-                          Abrir
+                          {isUpload ? "Form." : "Abrir"}
                         </Button>
                         {canEdit && (
                           <Button
@@ -302,7 +352,7 @@ export default function Contracts() {
             <DialogTitle>Excluir contrato?</DialogTitle>
             <DialogDescription>
               {contratoParaDeletar
-                ? `"${contratadaNome(contratoParaDeletar.partes)}" — ${TIPO_LABELS[contratoParaDeletar.tipo] ?? contratoParaDeletar.tipo}`
+                ? `"${contratadaNome(contratoParaDeletar.partes)}" — ${contratoParaDeletar.tipo ? (TIPO_LABELS[contratoParaDeletar.tipo] ?? contratoParaDeletar.tipo) : "sem tipo"}`
                 : null}
               <br />
               Esta ação remove o contrato e todos os anexos. Não pode ser desfeita.
