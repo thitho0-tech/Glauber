@@ -68,7 +68,7 @@ Duas equipes usam o app AGORA. Portanto:
 - **Últimas levas deployadas:** Leva 7 (03/07 — função "Outros", tipo de evento "Outros", DM mostra outro participante). Módulo **Contratos** completo (lista N/projeto, anexos no bucket `documentos`, análise IA de contrato pronto via `analisar-contrato`, export PDF com pdfmake 0.2.20).
 - **38 páginas React**; arquivos >1.000 linhas (FigurinoArte, CallSheetEditor, Agenda, Roteiro) só se editam via Claude Code.
 - **7 edge functions ativas** (send-email v20, ocr-extract, ocr-text-extract, aceitar-convite, analisar-roteiro, notificar-od, analisar-contrato).
-- **⚠️ PENDENTE DE DECISÃO (vistoria 17/07):** ver `docs/VISTORIA_CODIGO_2026-07-17.md` §2 — (1) ~~social login~~ RESOLVIDO: OAuth configurado, flag `true` é correta (confirmado pelo Thiago em 17/07); (2) `_send_email` executável por qualquer autenticado (revoke proposto); (3) policy furada em `agenda_participantes`; (4) verificação de backup/PITR antes da leva beta.
+- **⚠️ PENDENTE DE DECISÃO (vistoria 17/07):** ver `docs/VISTORIA_CODIGO_2026-07-17.md` §2 — (1) ~~social login~~ RESOLVIDO: OAuth configurado, flag `true` é correta (confirmado pelo Thiago em 17/07); (2) ~~_send_email~~ RESOLVIDO: revoke aplicado em 17/07 (migration 0076), fluxos internos verificados intactos; (3) policy furada em `agenda_participantes`; (4) verificação de backup/PITR antes da leva beta.
 - **Pendências herdadas:** Leva 2 itens 4 (som de notificação), 5 (Mural→Agenda) e 7 (testar isolamento função/projeto); hardening restante (search_path, `orgs insert`, bucket `mensagens-audio`); lote de performance pré-escala (FKs sem índice, policies duplicadas).
 - **Próximo grande evento:** feedbacks das duas equipes → leva beta (usar `docs/TEMPLATE_FEEDBACK_EQUIPES.md`).
 

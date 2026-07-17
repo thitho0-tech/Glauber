@@ -20,7 +20,7 @@ Dimensão do código: **38 páginas React** (~15.500 linhas em pages + ~5.400 em
 
 ### 2.2 🟠 Qualquer usuário logado pode disparar e-mail arbitrário
 Advisor confirma: `public._send_email(p_to, p_subject, p_html)` é SECURITY DEFINER **executável pelo papel `authenticated`** via REST. Ou seja, qualquer membro logado de qualquer equipe pode, tecnicamente, enviar e-mail com conteúdo arbitrário partindo do remetente do Glauber (vetor de phishing). É resto da vulnerabilidade mapeada em 16/06 (o revoke não cobriu esta função ou ela foi recriada depois).
-**Fix proposto (1 comando, sem impacto nas equipes):** `revoke execute on function public._send_email(text,text,text) from authenticated, anon;` — as funções internas (notificar_od etc.) continuam funcionando porque rodam como owner. **Aguardo seu ok.**
+**✅ RESOLVIDO em 17/07 (migration 0076):** revoke aplicado com ok do Thiago. Verificação prévia: os 3 chamadores internos (`criar_convite`, `notificar_participante_evento`, `request_delete_project`) são SECURITY DEFINER owned by postgres → não afetados. Verificação posterior: `has_function_privilege` = false p/ authenticated/anon, true p/ postgres. Convites, avisos de agenda e e-mail de exclusão de projeto intactos.
 
 ### 2.3 🟡 Policy furada em `agenda_participantes`
 Policy `agenda_participantes_update` (UPDATE) com `USING (true)`: qualquer usuário autenticado pode editar participação de qualquer evento de qualquer projeto. Baixo impacto prático (dado pouco sensível), mas fura o isolamento entre produções. Fix = 1 policy; mexer em RLS é vermelho → fica para janela combinada, com seu ok.
